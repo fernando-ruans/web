@@ -41,7 +41,8 @@ export default function ProfilePage() {
             setMsg('');
             setError('');
             try {
-              const res = await fetch('/api/cliente/profile', {
+              const endpoint = user.tipo === 'lojista' ? '/api/lojista/profile' : '/api/cliente/profile';
+              const res = await fetch(endpoint, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
                 body: JSON.stringify({ nome, email, avatarUrl, telefone, cpf, endereco })
@@ -52,10 +53,7 @@ export default function ProfilePage() {
                 setEditMode(false);
                 // Atualiza o usuário no AuthContext sem reload
                 if (data.user) {
-                  // Atualiza o localStorage se necessário
-                  // Atualiza o contexto global
                   if (typeof window !== 'undefined') {
-                    // Atualiza o user no contexto
                     const event = new CustomEvent('userUpdated', { detail: data.user });
                     window.dispatchEvent(event);
                   }
