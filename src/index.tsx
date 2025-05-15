@@ -1,15 +1,21 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
-import App from './App';
+import RootApp from './App';
 import reportWebVitals from './reportWebVitals';
+import RouterApp from './RouterApp';
+import { AuthProvider } from './context/AuthContext';
 
-const root = ReactDOM.createRoot(
-  document.getElementById('root') as HTMLElement
-);
+import { createRoot } from 'react-dom/client';
+
+const container = document.getElementById('root');
+const root = createRoot(container!);
 root.render(
   <React.StrictMode>
-    <App />
+    <AuthProvider>
+      <RouterApp />
+      {/* Navbar deve estar DENTRO do Router, não fora! */}
+    </AuthProvider>
   </React.StrictMode>
 );
 
