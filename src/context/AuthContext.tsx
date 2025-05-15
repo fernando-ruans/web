@@ -28,6 +28,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [token]);
 
+  // Listener para atualização do usuário após edição do perfil
+  React.useEffect(() => {
+    function handleUserUpdated(e: any) {
+      if (e.detail) setUser(e.detail);
+    }
+    window.addEventListener('userUpdated', handleUserUpdated);
+    return () => window.removeEventListener('userUpdated', handleUserUpdated);
+  }, []);
+
   const login = async (email: string, senha: string) => {
     const res = await fetch('/api/auth/login', {
       method: 'POST',

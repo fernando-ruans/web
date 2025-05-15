@@ -3,9 +3,10 @@ import React, { useRef, useState } from 'react';
 interface UploadImageProps {
   onUpload: (url: string) => void;
   label?: string;
+  buttonClassName?: string;
 }
 
-const UploadImage: React.FC<UploadImageProps> = ({ onUpload, label }) => {
+const UploadImage: React.FC<UploadImageProps> = ({ onUpload, label, buttonClassName }) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -57,7 +58,7 @@ const UploadImage: React.FC<UploadImageProps> = ({ onUpload, label }) => {
       />
       <button
         type="button"
-        className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
+        className={buttonClassName || "bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"}
         onClick={() => inputRef.current?.click()}
         disabled={loading}
       >
