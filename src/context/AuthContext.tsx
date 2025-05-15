@@ -18,7 +18,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     if (token && tipo) {
-      const endpoint = tipo === 'lojista' ? '/api/lojista/profile' : '/api/cliente/profile';
+      let endpoint = '/api/cliente/profile';
+      if (tipo === 'lojista') endpoint = '/api/lojista/profile';
+      if (tipo === 'admin') endpoint = '/api/admin/profile';
       fetch(endpoint, {
         headers: { Authorization: `Bearer ${token}` }
       })

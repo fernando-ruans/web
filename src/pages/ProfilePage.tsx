@@ -44,7 +44,9 @@ export default function ProfilePage() {
               setMsg('');
               setError('');
               try {
-                const endpoint = user.tipo === 'lojista' ? '/api/lojista/profile' : '/api/cliente/profile';
+                let endpoint = '/api/cliente/profile';
+                if (user.tipo === 'lojista') endpoint = '/api/lojista/profile';
+                if (user.tipo === 'admin') endpoint = '/api/admin/profile';
                 const res = await fetch(endpoint, {
                   method: 'PUT',
                   headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
