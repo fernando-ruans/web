@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import Card from '../components/Card';
 import List from '../components/List';
 import theme from '../theme';
+import { FaCheckCircle, FaClock, FaStar, FaUtensils } from 'react-icons/fa';
 
 interface Pedido {
   id: number;
@@ -34,16 +35,23 @@ export default function PedidosPage() {
       <List
         items={pedidos}
         renderItem={pedido => (
-          <Card>
-            <div className="flex justify-between items-center">
-              <div>
-                <div className="font-bold text-gray-900">Restaurante: {pedido.restaurant?.nome}</div>
-                <div className="text-gray-500 text-sm">Status: {pedido.status}</div>
-                <div className="text-gray-500 text-sm">Data: {new Date(pedido.data_criacao).toLocaleString()}</div>
+          <Card className="flex flex-col gap-2 p-4 rounded-xl shadow-md bg-white/90 border-t-4 border-orange-200 hover:shadow-lg transition mb-4">
+            <div className="flex justify-between items-center mb-2">
+              <div className="flex flex-col gap-1">
+                <div className="font-bold text-orange-600 flex items-center gap-2"><FaUtensils size={16} color="#fb923c" /> {pedido.restaurant?.nome}</div>
+                <div className="text-gray-500 text-xs flex items-center gap-2"><FaClock size={12} /> {new Date(pedido.data_criacao).toLocaleString()}</div>
+                <div className="text-gray-500 text-xs flex items-center gap-2">
+                  {pedido.status === 'Entregue' ? (
+                    <FaCheckCircle size={12} color="#22c55e" />
+                  ) : (
+                    <FaClock size={12} color="#fbbf24" />
+                  )}
+                  <span className={pedido.status === 'Entregue' ? 'text-green-600 font-bold' : 'text-yellow-600 font-bold'}>{pedido.status}</span>
+                </div>
                 {pedido.review ? (
-                  <div className="mt-2 text-yellow-600 text-sm">
-                    Avaliação: {pedido.review.nota} / 5<br />
-                    <span className="text-gray-600">{pedido.review.comentario}</span>
+                  <div className="mt-2 text-yellow-600 text-sm flex items-center gap-1">
+                    <FaStar size={14} color="#fbbf24" /> {pedido.review.nota} / 5
+                    <span className="text-gray-600 ml-2">{pedido.review.comentario}</span>
                   </div>
                 ) : pedido.status === 'Entregue' ? (
                   <button className="mt-2 px-3 py-1 rounded bg-orange-500 text-white font-bold hover:bg-orange-600 transition text-sm">
@@ -51,7 +59,7 @@ export default function PedidosPage() {
                   </button>
                 ) : null}
               </div>
-              <div className="text-lg font-bold text-green-500">R$ {pedido.total.toFixed(2)}</div>
+              <div className="text-lg font-bold text-green-500 whitespace-nowrap">R$ {pedido.total.toFixed(2)}</div>
             </div>
           </Card>
         )}

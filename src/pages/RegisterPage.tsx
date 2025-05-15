@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import theme from '../theme';
+import { FaUser, FaEnvelope, FaLock } from 'react-icons/fa';
 
 export default function RegisterPage() {
   const [form, setForm] = useState({ nome: '', email: '', senha: '', tipo: 'cliente' });
@@ -31,13 +32,52 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className={theme.bg + ' flex flex-col items-center justify-center'}>
-      <form onSubmit={handleSubmit} className={theme.card + ' w-full max-w-sm'}>
+    <div className={theme.bg + ' flex flex-col items-center justify-center min-h-screen'}>
+      <form onSubmit={handleSubmit} className={theme.card + ' w-full max-w-sm flex flex-col gap-4'}>
         <h2 className={theme.title + ' text-center'}>Cadastro</h2>
-        <input className={theme.input + ' w-full mb-4'} name="nome" placeholder="Nome" value={form.nome} onChange={handleChange} required />
-        <input className={theme.input + ' w-full mb-4'} name="email" type="email" placeholder="E-mail" value={form.email} onChange={handleChange} required />
-        <input className={theme.input + ' w-full mb-4'} name="senha" type="password" placeholder="Senha" value={form.senha} onChange={handleChange} required />
-        <select className={theme.input + ' w-full mb-4'} name="tipo" value={form.tipo} onChange={handleChange}>
+        <div className="relative mb-2">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-400">
+            <FaUser size={18} color="#fb923c" />
+          </span>
+          <input
+            className={theme.input + ' w-full pl-10 mb-0'}
+            name="nome"
+            placeholder="Nome"
+            value={form.nome}
+            onChange={handleChange}
+            required
+            autoFocus
+          />
+        </div>
+        <div className="relative mb-2">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-400">
+            <FaEnvelope size={18} color="#fb923c" />
+          </span>
+          <input
+            className={theme.input + ' w-full pl-10 mb-0'}
+            name="email"
+            type="email"
+            placeholder="E-mail"
+            value={form.email}
+            onChange={handleChange}
+            required
+          />
+        </div>
+        <div className="relative mb-2">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-400">
+            <FaLock size={18} color="#fb923c" />
+          </span>
+          <input
+            className={theme.input + ' w-full pl-10 mb-0'}
+            name="senha"
+            type="password"
+            placeholder="Senha"
+            value={form.senha}
+            onChange={handleChange}
+            required
+          />
+        </div>
+        <select className={theme.input + ' w-full mb-2'} name="tipo" value={form.tipo} onChange={handleChange}>
           <option value="cliente">Cliente</option>
           <option value="lojista">Lojista</option>
         </select>

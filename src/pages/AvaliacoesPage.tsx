@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Card from '../components/Card';
 import List from '../components/List';
+import { FaStar, FaUtensils, FaReceipt } from 'react-icons/fa';
 
 interface Review {
   id: number;
@@ -32,12 +33,16 @@ export default function AvaliacoesPage() {
       <List
         items={reviews}
         renderItem={review => (
-          <Card>
+          <Card className="flex flex-col gap-2 p-4 rounded-xl shadow-md bg-white/90 border-t-4 border-orange-200 hover:shadow-lg transition mb-4">
             <div className="flex flex-col gap-1">
-              <div className="font-bold text-white">Pedido #{review.order?.id}</div>
-              <div className="text-yellow-400">Nota: {review.nota} / 5</div>
-              <div className="text-gray-300">{review.comentario}</div>
-              {review.restaurant && <div className="text-gray-400 text-xs">Restaurante: {review.restaurant.nome}</div>}
+              <div className="font-bold text-orange-600 flex items-center gap-2"><FaReceipt size={14} color="#fb923c" /> Pedido #{review.order?.id}</div>
+              <div className="flex items-center gap-2 text-yellow-500 font-bold text-lg">
+                <FaStar size={16} color="#fbbf24" /> {review.nota} / 5
+              </div>
+              <div className="text-gray-600 text-sm">{review.comentario}</div>
+              {review.restaurant && (
+                <div className="text-gray-400 text-xs flex items-center gap-1"><FaUtensils size={12} /> Restaurante: {review.restaurant.nome}</div>
+              )}
             </div>
           </Card>
         )}

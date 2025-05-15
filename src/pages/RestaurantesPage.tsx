@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Card from '../components/Card';
 import List from '../components/List';
+import { FaMapMarkerAlt, FaClock, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
 
 interface Restaurante {
   id: number;
@@ -34,18 +35,24 @@ export default function RestaurantesPage() {
       <List
         items={restaurantes}
         renderItem={rest => (
-          <Card className="flex items-center gap-4">
+          <Card className="flex items-center gap-4 p-4 rounded-xl shadow-md bg-white/90 border-t-4 border-orange-200 hover:shadow-lg transition">
             <img
               src={rest.imagem || '/logo192.png'}
               alt={rest.nome}
-              className="w-20 h-20 object-cover rounded"
+              className="w-20 h-20 object-cover rounded-lg border border-orange-100 shadow-sm"
               onError={e => (e.currentTarget.src = '/logo192.png')}
             />
-            <div>
-              <div className="text-lg font-bold text-gray-900">{rest.nome}</div>
-              <div className="text-gray-500 text-sm">Cidade: {rest.cidade}</div>
-              <div className="text-gray-500 text-sm">Entrega: R$ {rest.taxa_entrega.toFixed(2)} | {rest.tempo_entrega} min</div>
-              <div className="text-xs text-green-500">{rest.status}</div>
+            <div className="flex-1 flex flex-col gap-1">
+              <div className="text-lg font-bold text-orange-600 flex items-center gap-2">{rest.nome}</div>
+              <div className="text-gray-500 text-sm flex items-center gap-2"><FaMapMarkerAlt size={14} color="#fb923c" /> {rest.cidade}</div>
+              <div className="text-gray-500 text-sm flex items-center gap-2"><FaClock size={14} color="#fb923c" /> {rest.tempo_entrega} min &bull; Entrega: R$ {rest.taxa_entrega.toFixed(2)}</div>
+              <div className="text-xs flex items-center gap-1 mt-1">
+                {rest.status === 'ativo' ? (
+                  <><FaCheckCircle size={14} color="#22c55e" /> <span className="text-green-600 font-bold">Ativo</span></>
+                ) : (
+                  <><FaTimesCircle size={14} color="#f87171" /> <span className="text-red-400 font-bold">{rest.status}</span></>
+                )}
+              </div>
             </div>
           </Card>
         )}
