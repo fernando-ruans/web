@@ -54,8 +54,12 @@ export default function Navbar() {
                 <span className="font-semibold text-gray-800 text-sm leading-tight group-hover:text-orange-500 transition">{user.nome}</span>
                 <span className="text-xs text-gray-400">{user.email}</span>
               </div>
-              <div className="w-9 h-9 rounded-full bg-orange-200 flex items-center justify-center font-bold text-orange-700 text-lg group-hover:ring-2 group-hover:ring-orange-400 transition">
-                {user.nome?.[0]?.toUpperCase() || 'U'}
+              <div className="w-9 h-9 rounded-full bg-orange-200 flex items-center justify-center font-bold text-orange-700 text-lg group-hover:ring-2 group-hover:ring-orange-400 transition overflow-hidden">
+                {user.avatarUrl ? (
+                  <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover rounded-full" />
+                ) : (
+                  user.nome?.[0]?.toUpperCase() || 'U'
+                )}
               </div>
               <button
                 onClick={e => { e.stopPropagation(); logout(); navigate('/login'); }}
