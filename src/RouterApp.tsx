@@ -13,6 +13,7 @@ import Navbar from './components/Navbar';
 import ProfilePage from './pages/ProfilePage';
 import AdminPage from './pages/AdminPage';
 import AdminRestaurantesPage from './pages/AdminRestaurantesPage';
+import Footer from './components/Footer';
 
 function PrivateRoute({ children }: { children: ReactNode }) {
   const auth = useAuth();
@@ -41,6 +42,7 @@ export default function RouterApp() {
         <Route path="/admin/restaurantes" element={<PrivateRoute><AdminRestaurantesPage /></PrivateRoute>} />
         {/* Exemplo: <Route path="/admin/users" element={<PrivateRoute><AdminUsersPage /></PrivateRoute>} /> */}
       </Routes>
+      <Footer />
     </BrowserRouter>
   );
 }
