@@ -11,6 +11,8 @@ import ResetPasswordPage from './pages/ResetPasswordPage';
 import RegisterPage from './pages/RegisterPage';
 import Navbar from './components/Navbar';
 import ProfilePage from './pages/ProfilePage';
+import AdminPage from './pages/AdminPage';
+import AdminRestaurantesPage from './pages/AdminRestaurantesPage';
 
 function PrivateRoute({ children }: { children: ReactNode }) {
   const auth = useAuth();
@@ -35,6 +37,9 @@ export default function RouterApp() {
         <Route path="/pedidos" element={<PrivateRoute><PedidosPage /></PrivateRoute>} />
         <Route path="/avaliacoes" element={<PrivateRoute><AvaliacoesPage /></PrivateRoute>} />
         <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
+        <Route path="/admin" element={<PrivateRoute><AdminPage /></PrivateRoute>} />
+        <Route path="/admin/restaurantes" element={<PrivateRoute><AdminRestaurantesPage /></PrivateRoute>} />
+        {/* Exemplo: <Route path="/admin/users" element={<PrivateRoute><AdminUsersPage /></PrivateRoute>} /> */}
       </Routes>
     </BrowserRouter>
   );

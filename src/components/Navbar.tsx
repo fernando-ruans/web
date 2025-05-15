@@ -69,6 +69,9 @@ export default function Navbar() {
             </div>
           )}
         </div>
+        {user && user.tipo === 'admin' && (
+          <Link to="/admin" className="px-4 py-2 rounded font-bold bg-orange-500 text-white hover:bg-orange-600 transition">Painel Admin</Link>
+        )}
       </div>
     </nav>
   );
