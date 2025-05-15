@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import theme from '../theme';
 
 export default function ResetPasswordPage() {
   const { token } = useParams();
@@ -26,20 +27,20 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900">
-      <form onSubmit={handleSubmit} className="bg-gray-800 p-8 rounded shadow w-full max-w-sm">
-        <h2 className="text-2xl font-bold text-blue-400 mb-6 text-center">Redefinir Senha</h2>
+    <div className={theme.bg + ' flex flex-col items-center justify-center min-h-screen'}>
+      <form onSubmit={handleSubmit} className={theme.card + ' w-full max-w-sm'}>
+        <h2 className={theme.title + ' text-center'}>Redefinir Senha</h2>
         <input
-          className="w-full p-2 mb-4 rounded bg-gray-700 text-white"
+          className={theme.input + ' w-full mb-4'}
           type="password"
           placeholder="Nova senha"
           value={senha}
           onChange={e => setSenha(e.target.value)}
           required
         />
-        {msg && <div className="text-green-400 mb-2 text-center">{msg}</div>}
+        {msg && <div className="text-green-500 mb-2 text-center">{msg}</div>}
         {error && <div className="text-red-400 mb-2 text-center">{error}</div>}
-        <button type="submit" className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 rounded">Redefinir</button>
+        <button type="submit" className={theme.primary + ' w-full font-bold py-2 rounded'}>Redefinir</button>
       </form>
     </div>
   );

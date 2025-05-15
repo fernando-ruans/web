@@ -29,6 +29,7 @@ export default function RouterApp() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/" element={<PrivateRoute><HomePage /></PrivateRoute>} />
         <Route path="/restaurantes" element={<PrivateRoute><RestaurantesPage /></PrivateRoute>} />
         <Route path="/pedidos" element={<PrivateRoute><PedidosPage /></PrivateRoute>} />
