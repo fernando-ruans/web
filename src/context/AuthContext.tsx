@@ -13,11 +13,13 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<any>(null);
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
+  const [tipo, setTipo] = useState<string | null>(localStorage.getItem('tipo'));
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (token) {
-      fetch('/api/cliente/profile', {
+    if (token && tipo) {
+      const endpoint = tipo === 'lojista' ? '/api/lojista/profile' : '/api/cliente/profile';
+      fetch(endpoint, {
         headers: { Authorization: `Bearer ${token}` }
       })
         .then(res => res.ok ? res.json() : null)
@@ -26,7 +28,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } else {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, tipo]);
 
   // Listener para atualização do usuário após edição do perfil
   React.useEffect(() => {
@@ -46,8 +48,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (res.ok) {
       const data = await res.json();
       setToken(data.token);
+      setTipo(data.user.tipo);
       setUser(data.user);
       localStorage.setItem('token', data.token);
+      localStorage.setItem('tipo', data.user.tipo);
       return true;
     }
     return false;
@@ -56,7 +60,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const logout = () => {
     setUser(null);
     setToken(null);
+    setTipo(null);
     localStorage.removeItem('token');
+    localStorage.removeItem('tipo');
   };
 
   return (
