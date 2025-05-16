@@ -106,8 +106,12 @@ export default function AdminUsuariosPage() {
           <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {usuarios.map((u: any) => (
               <div key={u.id} className="bg-white rounded-2xl shadow-lg p-6 flex flex-col items-center gap-3 border-t-4 border-orange-100 hover:shadow-2xl transition">
-                <div className="w-16 h-16 rounded-full bg-orange-100 flex items-center justify-center text-3xl font-bold text-orange-500 shadow">
-                  {u.nome?.[0]?.toUpperCase() || <FaUser />}
+                <div className="w-16 h-16 rounded-full bg-orange-100 flex items-center justify-center text-3xl font-bold text-orange-500 shadow overflow-hidden">
+                  {u.avatarUrl ? (
+                    <img src={u.avatarUrl} alt={u.nome} className="w-full h-full object-cover rounded-full" />
+                  ) : (
+                    u.nome?.[0]?.toUpperCase() || <FaUser />
+                  )}
                 </div>
                 <div className="text-lg font-bold text-orange-700 flex items-center gap-2">{u.nome}</div>
                 <div className="text-gray-600 text-sm break-all">{u.email}</div>
