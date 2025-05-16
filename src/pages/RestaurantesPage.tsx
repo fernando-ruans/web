@@ -19,7 +19,10 @@ export default function RestaurantesPage() {
   const [erro, setErro] = useState('');
 
   useEffect(() => {
-    fetch('/api/cliente/restaurants')
+    const token = localStorage.getItem('token');
+    fetch('/api/cliente/restaurants', {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined
+    })
       .then(res => res.ok ? res.json() : Promise.reject(res))
       .then(data => setRestaurantes(data.data || []))
       .catch(() => setErro('Erro ao carregar restaurantes'))
