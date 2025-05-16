@@ -37,40 +37,40 @@ export default function RestaurantesPage() {
       <h1 className="text-2xl sm:text-3xl font-bold text-blue-400 mb-4 sm:mb-6 text-left">Restaurantes</h1>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 justify-start">
         {restaurantes.map(rest => (
-          <Card key={rest.id} className="relative w-full max-w-full sm:max-w-[420px] h-[340px] rounded-xl shadow-md bg-white/90 border border-orange-100 overflow-hidden hover:shadow-lg transition flex flex-col p-0 m-0">
-            {/* Banner de fundo, preenchendo topo e laterais do card */}
-            <div className="absolute top-0 left-0 w-full" style={{height: '180px', zIndex: 1}}>
+          <Card key={rest.id} className="relative w-full max-w-full sm:max-w-[420px] min-h-[220px] h-auto rounded-2xl shadow-lg bg-white border border-orange-100 overflow-hidden hover:shadow-xl transition flex flex-col p-0 m-0">
+            {/* Banner de fundo */}
+            <div className="relative w-full" style={{height: '120px', zIndex: 1}}>
               <img
                 src={rest.banner || '/banner-default.png'}
                 alt={rest.nome + ' banner'}
-                className="w-full h-full object-cover p-0 m-0 border-none shadow-none"
+                className="w-full h-full object-cover border-none shadow-none"
                 onError={e => (e.currentTarget.src = '/banner-default.png')}
                 style={{ display: 'block' }}
               />
-            </div>
-            {/* Logo sobreposto, sem margem branca */}
-            <div className="absolute left-4 sm:left-6" style={{top: '130px', zIndex: 2}}>
-              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl shadow-lg bg-transparent flex items-center justify-center p-0 m-0">
+              {/* Logo sobreposto */}
+              <div className="absolute left-4 sm:left-6 -bottom-8 sm:-bottom-10 w-16 h-16 sm:w-20 sm:h-20 rounded-xl shadow-lg bg-white flex items-center justify-center border-2 border-white">
                 <img
                   src={rest.imagem || '/logo192.png'}
                   alt={rest.nome}
-                  className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-2xl p-0 m-0 border-4 border-white/80"
+                  className="w-14 h-14 sm:w-16 sm:h-16 object-cover rounded-lg"
                   onError={e => (e.currentTarget.src = '/logo192.png')}
-                  style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.12)' }}
                 />
               </div>
             </div>
             {/* Detalhes */}
-            <div className="relative z-10 flex-1 flex flex-col justify-end pt-8 pb-4 px-3 sm:px-5 gap-1" style={{marginTop: '180px'}}>
-              <div className="text-base sm:text-lg font-bold text-orange-600 flex items-center gap-2">{rest.nome}</div>
-              <div className="text-gray-500 text-xs flex items-center gap-2"><FaMapMarkerAlt size={12} color="#fb923c" /> {rest.cidade}</div>
-              <div className="text-gray-500 text-xs flex items-center gap-2"><FaClock size={12} color="#fb923c" /> {rest.tempo_entrega} min &bull; Entrega: R$ {rest.taxa_entrega.toFixed(2)}</div>
-              <div className="text-xs flex items-center gap-1 mt-1">
+            <div className="flex flex-col justify-between flex-1 pt-12 sm:pt-14 pb-4 px-4 sm:px-6 gap-1">
+              <div className="flex items-center gap-2">
+                <span className="text-base sm:text-lg font-bold text-orange-600 flex items-center gap-2"><span className="hidden sm:inline">🍽️</span> {rest.nome}</span>
                 {rest.status === 'ativo' ? (
-                  <><FaCheckCircle size={12} color="#22c55e" /> <span className="text-green-600 font-bold">Ativo</span></>
+                  <span className="flex items-center gap-1 text-green-600 text-xs font-bold bg-green-50 px-2 py-0.5 rounded-full"><FaCheckCircle size={12} /> Ativo</span>
                 ) : (
-                  <><FaTimesCircle size={12} color="#f87171" /> <span className="text-red-400 font-bold">{rest.status}</span></>
+                  <span className="flex items-center gap-1 text-red-400 text-xs font-bold bg-red-50 px-2 py-0.5 rounded-full"><FaTimesCircle size={12} /> {rest.status}</span>
                 )}
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-gray-500 text-xs mt-1">
+                <span className="flex items-center gap-1"><FaMapMarkerAlt size={12} color="#fb923c" /> {rest.cidade}</span>
+                <span className="flex items-center gap-1"><FaClock size={12} color="#fb923c" /> {rest.tempo_entrega} min</span>
+                <span className="flex items-center gap-1">• Entrega: R$ {rest.taxa_entrega.toFixed(2)}</span>
               </div>
             </div>
           </Card>
