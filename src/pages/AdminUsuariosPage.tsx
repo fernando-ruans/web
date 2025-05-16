@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { FaUserEdit, FaTrashAlt, FaUser, FaUserShield, FaUserTie, FaUserPlus } from 'react-icons/fa';
 import theme from '../theme';
+import { useAuth } from '../context/AuthContext';
 
 export default function AdminUsuariosPage() {
+  const { user } = useAuth();
   const [usuarios, setUsuarios] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState('');
@@ -37,6 +39,10 @@ export default function AdminUsuariosPage() {
       if (res.ok) {
         setUsuarios(usuarios.map(u => u.id === id ? { ...u, tipo: novoTipo } : u));
         setMsg('Usuário promovido com sucesso!');
+        // Se o usuário logado se rebaixou, recarrega a página para atualizar permissões
+        if (user && user.id === id && user.tipo !== novoTipo) {
+          setTimeout(() => window.location.reload(), 500);
+        }
       } else {
         setErro('Erro ao promover usuário');
       }
@@ -53,7 +59,7 @@ export default function AdminUsuariosPage() {
     setErro('');
     setMsg('');
     try {
-      const res = await fetch(`/api/admin/users/${id}/demote`, {
+      const res = await fetch(`/api/admin/users/${id}/promote`, { // Corrigido para usar promote
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -64,6 +70,10 @@ export default function AdminUsuariosPage() {
       if (res.ok) {
         setUsuarios(usuarios.map(u => u.id === id ? { ...u, tipo: novoTipo } : u));
         setMsg('Usuário rebaixado com sucesso!');
+        // Se o usuário logado se rebaixou, recarrega a página para atualizar permissões
+        if (user && user.id === id && user.tipo !== novoTipo) {
+          setTimeout(() => window.location.reload(), 500);
+        }
       } else {
         setErro('Erro ao rebaixar usuário');
       }
@@ -102,48 +112,51 @@ export default function AdminUsuariosPage() {
                 <div className="text-lg font-bold text-orange-700 flex items-center gap-2">{u.nome}</div>
                 <div className="text-gray-600 text-sm break-all">{u.email}</div>
                 <div>{tipoBadge(u.tipo)}</div>
-                <div className="flex flex-col gap-2 w-full mt-2">
-                  {u.tipo === 'cliente' && (
-                    <button
-                      className={`px-3 py-2 rounded-lg bg-yellow-400 text-gray-900 font-bold hover:bg-yellow-500 transition flex items-center gap-1 shadow disabled:opacity-60 disabled:cursor-not-allowed`}
-                      title="Promover para Lojista"
-                      disabled={promovendo === u.id + '-lojista'}
-                      onClick={() => promoverUsuario(u.id, 'lojista')}
-                    ><FaUserTie /> Promover para Lojista</button>
-                  )}
-                  {u.tipo === 'lojista' && (
-                    <button
-                      className={`px-3 py-2 rounded-lg bg-green-400 text-white font-bold hover:bg-green-500 transition flex items-center gap-1 shadow disabled:opacity-60 disabled:cursor-not-allowed`}
-                      title="Rebaixar para Cliente"
-                      disabled={promovendo === u.id + '-cliente'}
-                      onClick={() => rebaixarUsuario(u.id, 'cliente')}
-                    ><FaUser /> Rebaixar para Cliente</button>
-                  )}
-                  {u.tipo === 'admin' && (
-                    <>
+                {/* Só mostra botões se for admin */}
+                {user?.tipo === 'admin' && (
+                  <div className="flex flex-col gap-2 w-full mt-2">
+                    {u.tipo === 'cliente' && (
                       <button
-                        className={`px-3 py-2 rounded-lg bg-blue-400 text-white font-bold hover:bg-blue-500 transition flex items-center gap-1 shadow disabled:opacity-60 disabled:cursor-not-allowed`}
-                        title="Rebaixar para Lojista"
+                        className={`px-3 py-2 rounded-lg bg-yellow-400 text-gray-900 font-bold hover:bg-yellow-500 transition flex items-center gap-1 shadow disabled:opacity-60 disabled:cursor-not-allowed`}
+                        title="Promover para Lojista"
                         disabled={promovendo === u.id + '-lojista'}
-                        onClick={() => rebaixarUsuario(u.id, 'lojista')}
-                      ><FaUserTie /> Rebaixar para Lojista</button>
+                        onClick={() => promoverUsuario(u.id, 'lojista')}
+                      ><FaUserTie /> Promover para Lojista</button>
+                    )}
+                    {u.tipo === 'lojista' && (
                       <button
                         className={`px-3 py-2 rounded-lg bg-green-400 text-white font-bold hover:bg-green-500 transition flex items-center gap-1 shadow disabled:opacity-60 disabled:cursor-not-allowed`}
                         title="Rebaixar para Cliente"
                         disabled={promovendo === u.id + '-cliente'}
                         onClick={() => rebaixarUsuario(u.id, 'cliente')}
                       ><FaUser /> Rebaixar para Cliente</button>
-                    </>
-                  )}
-                  {u.tipo !== 'admin' && (
-                    <button
-                      className={`px-3 py-2 rounded-lg bg-orange-400 text-white font-bold hover:bg-orange-500 transition flex items-center gap-1 shadow disabled:opacity-60 disabled:cursor-not-allowed`}
-                      title="Promover para Admin"
-                      disabled={promovendo === u.id + '-admin'}
-                      onClick={() => promoverUsuario(u.id, 'admin')}
-                    ><FaUserShield /> Promover para Admin</button>
-                  )}
-                </div>
+                    )}
+                    {u.tipo === 'admin' && (
+                      <>
+                        <button
+                          className={`px-3 py-2 rounded-lg bg-blue-400 text-white font-bold hover:bg-blue-500 transition flex items-center gap-1 shadow disabled:opacity-60 disabled:cursor-not-allowed`}
+                          title="Rebaixar para Lojista"
+                          disabled={promovendo === u.id + '-lojista'}
+                          onClick={() => rebaixarUsuario(u.id, 'lojista')}
+                        ><FaUserTie /> Rebaixar para Lojista</button>
+                        <button
+                          className={`px-3 py-2 rounded-lg bg-green-400 text-white font-bold hover:bg-green-500 transition flex items-center gap-1 shadow disabled:opacity-60 disabled:cursor-not-allowed`}
+                          title="Rebaixar para Cliente"
+                          disabled={promovendo === u.id + '-cliente'}
+                          onClick={() => rebaixarUsuario(u.id, 'cliente')}
+                        ><FaUser /> Rebaixar para Cliente</button>
+                      </>
+                    )}
+                    {u.tipo !== 'admin' && (
+                      <button
+                        className={`px-3 py-2 rounded-lg bg-orange-400 text-white font-bold hover:bg-orange-500 transition flex items-center gap-1 shadow disabled:opacity-60 disabled:cursor-not-allowed`}
+                        title="Promover para Admin"
+                        disabled={promovendo === u.id + '-admin'}
+                        onClick={() => promoverUsuario(u.id, 'admin')}
+                      ><FaUserShield /> Promover para Admin</button>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>
