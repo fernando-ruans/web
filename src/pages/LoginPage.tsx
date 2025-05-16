@@ -56,8 +56,8 @@ export default function LoginPage() {
     <div className="min-h-screen flex flex-col md:flex-row items-center justify-center bg-gradient-to-br from-yellow-50 via-yellow-100 to-orange-100">
       {/* Info lateral */}
       <div className="w-full md:w-1/2 flex flex-col items-center justify-center p-8 md:p-16 gap-6">
-        <img src="/logo192.png" alt="Logo" className="w-24 h-24 mb-4" />
-        <h1 className="text-3xl md:text-4xl font-extrabold text-orange-500 mb-2 text-center">DeliveryX</h1>
+        <img src="/logo192.png" alt="Logo" className="w-40 h-40 mb-4" />
+        {/* <h1 className="text-3xl md:text-4xl font-extrabold text-orange-500 mb-2 text-center">DeliveryX</h1> Removido conforme solicitado */}
         <p className="text-gray-700 text-lg text-center max-w-md">O DeliveryX conecta você aos melhores restaurantes da sua cidade, com entrega rápida, fácil e segura. Faça seu pedido em poucos cliques!</p>
         <ul className="text-gray-600 text-sm mt-4 space-y-2 max-w-md">
           <li>🍔 Diversidade de restaurantes e culinárias</li>

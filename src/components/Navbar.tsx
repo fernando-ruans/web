@@ -7,7 +7,7 @@ import { FaUserCircle, FaSignOutAlt, FaUserShield } from 'react-icons/fa';
 
 const navItems = [
   { to: '/restaurantes', label: 'Restaurantes', icon: '🍔' },
-  { to: '/pedidos', label: 'Pedidos', icon: '🛒' },
+  { to: '/pedidos', label: 'Pedidos', icon: '🧾' },
 ];
 
 export default function Navbar() {
@@ -22,8 +22,7 @@ export default function Navbar() {
       <div className="max-w-5xl mx-auto flex flex-wrap items-center justify-between px-4 py-2 gap-y-2 relative">
         {/* Logo/Brand */}
         <Link to={user ? "/restaurantes" : "/"} className="flex items-center gap-2 select-none group min-w-[140px]">
-          <span className="text-3xl">🍽️</span>
-          <span className="font-extrabold text-2xl text-orange-500 tracking-tight group-hover:text-orange-600 transition">DeliveryX</span>
+          <img src="/logo192.png" alt="Logo" className="h-14 w-14 object-contain" />
         </Link>
         {/* Menu Hamburguer Mobile */}
         <div className="block md:hidden">
@@ -109,14 +108,14 @@ export default function Navbar() {
           <div className="fixed inset-0 z-50 bg-black/40 flex md:hidden">
             <div className="w-72 max-w-[90vw] bg-white h-full shadow-2xl flex flex-col p-0 animate-slideInLeft rounded-r-2xl overflow-hidden border-r-2 border-orange-100">
               <div className="flex items-center justify-between px-4 py-4 border-b border-orange-100 bg-gradient-to-r from-orange-50 to-white">
-                <span className="flex items-center gap-2 text-2xl font-extrabold text-orange-500"><span className='text-3xl'>🍽️</span> DeliveryX</span>
+                <img src="/logo192.png" alt="Logo" className="h-10 w-10 object-contain mr-2" />
                 <button onClick={() => setMenuOpen(false)} className="p-2 rounded hover:bg-orange-50 focus:outline-none">
                   <svg className="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
               </div>
               <ul className="flex flex-col gap-1 py-4 px-2">
                 <li><Link to="/restaurantes" className="flex items-center gap-2 px-4 py-3 rounded-lg font-semibold text-orange-600 hover:bg-orange-50 transition text-base" onClick={() => setMenuOpen(false)}>🍔 Restaurantes</Link></li>
-                <li><Link to="/pedidos" className="flex items-center gap-2 px-4 py-3 rounded-lg font-semibold text-orange-600 hover:bg-orange-50 transition text-base" onClick={() => setMenuOpen(false)}>🛒 Pedidos</Link></li>
+                <li><Link to="/pedidos" className="flex items-center gap-2 px-4 py-3 rounded-lg font-semibold text-orange-600 hover:bg-orange-50 transition text-base" onClick={() => setMenuOpen(false)}>🧾 Pedidos</Link></li>
                 <li><Link to="/carrinho" className="flex items-center gap-2 px-4 py-3 rounded-lg font-semibold text-orange-600 hover:bg-orange-50 transition text-base" onClick={() => setMenuOpen(false)}>🛒 Carrinho {cartItems.length > 0 && (<span className="ml-1 bg-orange-500 text-white rounded-full px-2 py-0.5 text-xs font-bold">{cartItems.length}</span>)}</Link></li>
                 {user && user.tipo === 'admin' && (
                   <li><Link to="/admin" className="flex items-center gap-2 px-4 py-3 rounded-lg font-semibold text-orange-600 hover:bg-orange-50 transition text-base" onClick={() => setMenuOpen(false)}><FaUserShield size={18} /> Admin</Link></li>
@@ -126,7 +125,7 @@ export default function Navbar() {
               <div className="flex flex-col gap-1 py-4 px-2">
                 {!user ? (
                   <>
-                    <Link to="/login" className="px-4 py-3 rounded-lg font-bold text-orange-500 border border-orange-300 hover:bg-orange-50 transition text-base mb-1" onClick={() => setMenuOpen(false)}>Entrar</Link>
+                    <Link to="/login" className="px-4 py-3 rounded-lg font-bold text-orange-500 border border-orange-300 hover:bg-orange-50 transition text-base mb-1 flex justify-center items-center" onClick={() => setMenuOpen(false)}>Entrar</Link>
                     <button
                       className="px-4 py-3 rounded-lg font-bold bg-orange-500 text-white hover:bg-orange-600 transition text-base"
                       onClick={() => { setMenuOpen(false); navigate('/login?tab=register'); }}
