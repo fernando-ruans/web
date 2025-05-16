@@ -217,24 +217,50 @@ export default function AdminRestaurantesPage() {
         {loading ? (
           <div className="text-center text-gray-400">Carregando restaurantes...</div>
         ) : (
-          <div className="w-full flex flex-col gap-2 mt-2">
-            {restaurantes.length === 0 && <div className="text-center text-gray-400">Nenhum restaurante cadastrado.</div>}
+          <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-2">
+            {restaurantes.length === 0 && <div className="text-center text-gray-400 col-span-3">Nenhum restaurante cadastrado.</div>}
             {restaurantes.map((r: any) => (
-              <div key={r.id} className="flex flex-col md:flex-row items-center justify-between gap-2 bg-white rounded-lg shadow p-3 border border-orange-100 flex-wrap">
-                <div className="flex flex-col md:flex-row items-center gap-3 flex-1 w-full md:w-auto">
-                  <span className="font-bold text-orange-600 flex items-center gap-2"><FaStore size={18} /> {r.nome}</span>
-                  <span className="text-gray-500 flex items-center gap-1"><FaTimesCircle size={14} color="#fb923c" /> {r.cidade}</span>
-                  <span className="text-xs px-2 py-1 rounded-full font-bold " style={{ background: r.status === 'aprovado' ? '#dcfce7' : '#fef3c7', color: r.status === 'aprovado' ? '#22c55e' : '#f59e42' }}>
+              <div key={r.id} className="bg-white rounded-2xl shadow p-0 flex flex-col items-center border border-orange-100 overflow-hidden relative">
+                {/* Banner do restaurante */}
+                <div className="w-full h-24 sm:h-28 bg-orange-50 relative">
+                  <img
+                    src={r.banner || '/banner-default.png'}
+                    alt={r.nome + ' banner'}
+                    className="w-full h-full object-cover object-center border-none shadow-none"
+                    onError={e => (e.currentTarget.src = '/banner-default.png')}
+                  />
+                  {/* Logo sobreposta */}
+                  <div className="absolute left-1/2 -bottom-8 transform -translate-x-1/2 w-16 h-16 sm:w-20 sm:h-20 rounded-full shadow-lg bg-white flex items-center justify-center border-4 border-white overflow-hidden">
+                    {r.imagem ? (
+                      <img src={r.imagem} alt={r.nome} className="w-full h-full object-cover rounded-full" onError={e => (e.currentTarget.src = '/logo192.png')} />
+                    ) : (
+                      <FaStore size={32} color="#fb923c" />
+                    )}
+                  </div>
+                </div>
+                {/* Conteúdo do card */}
+                <div className="flex flex-col items-center gap-1 pt-12 pb-4 px-4 w-full">
+                  <div className="text-lg font-bold text-orange-700 flex items-center gap-2 mb-1 mt-2"><FaStore size={18} /> {r.nome}</div>
+                  <div className="text-gray-600 text-sm mb-1 flex items-center gap-1"><FaTimesCircle size={14} color="#fb923c" /> {r.cidade}</div>
+                  <span className="text-xs px-2 py-1 rounded-full font-bold mb-2" style={{ background: r.status === 'aprovado' ? '#dcfce7' : '#fef3c7', color: r.status === 'aprovado' ? '#22c55e' : '#f59e42' }}>
                     {r.status === 'aprovado' ? <FaCheckCircle size={12} color="#22c55e" /> : <FaTimesCircle size={12} color="#f59e42" />} {r.status}
                   </span>
-                </div>
-                <div className="flex flex-wrap gap-2 w-full md:w-auto justify-center md:justify-end">
-                  <button onClick={() => openEditForm(r)} className="px-3 py-1 rounded bg-blue-500 text-white font-bold hover:bg-blue-600 transition flex items-center gap-1" title="Editar"><FaEdit size={14} /> Editar</button>
-                  {r.status !== 'aprovado' && (
-                    <button onClick={() => handleAprovar(r.id)} className="px-3 py-1 rounded bg-green-500 text-white font-bold hover:bg-green-600 transition flex items-center gap-1" title="Aprovar"><FaCheckCircle size={14} /> Aprovar</button>
-                  )}
-                  <button onClick={() => handleExcluir(r.id)} className="px-3 py-1 rounded bg-red-500 text-white font-bold hover:bg-red-600 transition flex items-center gap-1" title="Excluir"><FaTrashAlt size={14} /> Excluir</button>
-                  <button onClick={() => openDelegateModal(r)} className="px-3 py-1 rounded bg-yellow-400 text-gray-900 font-bold hover:bg-yellow-500 transition flex items-center gap-1" title="Delegar Lojista"><FaUserTie size={14} /> Delegar Lojista</button>
+                  <div className="flex flex-wrap gap-2 w-full justify-center text-xs text-gray-500 mb-2">
+                    <span>Entrega: R$ {Number(r.taxa_entrega).toFixed(2)}</span>
+                    <span>|</span>
+                    <span>Tempo: {r.tempo_entrega} min</span>
+                    <span>|</span>
+                    <span>CNPJ: {r.cnpj}</span>
+                  </div>
+                  {/* Botões de ação */}
+                  <div className="flex flex-col gap-2 w-full mt-2">
+                    <button onClick={() => openEditForm(r)} className="w-full px-3 py-2 rounded-lg bg-blue-500 text-white font-bold hover:bg-blue-600 transition flex items-center justify-center gap-1 shadow" title="Editar"><FaEdit size={14} /> Editar</button>
+                    {r.status !== 'aprovado' && (
+                      <button onClick={() => handleAprovar(r.id)} className="w-full px-3 py-2 rounded-lg bg-green-500 text-white font-bold hover:bg-green-600 transition flex items-center justify-center gap-1 shadow" title="Aprovar"><FaCheckCircle size={14} /> Aprovar</button>
+                    )}
+                    <button onClick={() => handleExcluir(r.id)} className="w-full px-3 py-2 rounded-lg bg-red-500 text-white font-bold hover:bg-red-600 transition flex items-center justify-center gap-1 shadow" title="Excluir"><FaTrashAlt size={14} /> Excluir</button>
+                    <button onClick={() => openDelegateModal(r)} className="w-full px-3 py-2 rounded-lg bg-yellow-400 text-gray-900 font-bold hover:bg-yellow-500 transition flex items-center justify-center gap-1 shadow" title="Delegar Lojista"><FaUserTie size={14} /> Delegar Lojista</button>
+                  </div>
                 </div>
               </div>
             ))}
