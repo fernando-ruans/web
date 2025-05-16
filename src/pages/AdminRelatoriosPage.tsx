@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import theme from '../theme';
-import { FaChartBar, FaStore, FaUser, FaMoneyBillWave, FaSpinner } from 'react-icons/fa';
+import { FaChartBar, FaStore, FaUser, FaMoneyBillWave, FaSpinner, FaReceipt, FaUserPlus, FaPercent, FaTrophy, FaTimesCircle } from 'react-icons/fa';
 
 interface RelatorioResumo {
   totalVendas: number;
@@ -8,6 +8,10 @@ interface RelatorioResumo {
   totalRestaurantes: number;
   totalClientes: number;
   faturamento: number;
+  ticketMedio: number;
+  pedidosCancelados: number;
+  novosClientesMes: number;
+  restauranteTop?: { id: number; nome: string; faturamento: number } | null;
 }
 
 export default function AdminRelatoriosPage() {
@@ -58,10 +62,32 @@ export default function AdminRelatoriosPage() {
               <div className="text-gray-600 text-sm">Clientes Cadastrados</div>
             </div>
             <div className="bg-purple-50 rounded-xl p-6 flex flex-col items-center gap-2 shadow col-span-1 sm:col-span-2">
-              <FaChartBar size={32} color="#a21caf" />
+              <FaReceipt size={32} color="#a21caf" />
               <div className="text-2xl font-bold text-purple-700">{resumo.totalPedidos}</div>
-              <div className="text-gray-600 text-sm">Pedidos Realizados</div>
+              <div className="text-gray-600 text-sm">Pedidos Entregues</div>
             </div>
+            <div className="bg-pink-50 rounded-xl p-6 flex flex-col items-center gap-2 shadow">
+              <FaPercent size={32} color="#db2777" />
+              <div className="text-2xl font-bold text-pink-700">R$ {resumo.ticketMedio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+              <div className="text-gray-600 text-sm">Ticket Médio</div>
+            </div>
+            <div className="bg-red-50 rounded-xl p-6 flex flex-col items-center gap-2 shadow">
+              <FaTimesCircle size={32} color="#ef4444" />
+              <div className="text-2xl font-bold text-red-700">{resumo.pedidosCancelados}</div>
+              <div className="text-gray-600 text-sm">Pedidos Cancelados</div>
+            </div>
+            <div className="bg-lime-50 rounded-xl p-6 flex flex-col items-center gap-2 shadow">
+              <FaUserPlus size={32} color="#65a30d" />
+              <div className="text-2xl font-bold text-lime-700">{resumo.novosClientesMes}</div>
+              <div className="text-gray-600 text-sm">Novos Clientes no Mês</div>
+            </div>
+            {resumo.restauranteTop && (
+              <div className="bg-indigo-50 rounded-xl p-6 flex flex-col items-center gap-2 shadow col-span-1 sm:col-span-2">
+                <FaTrophy size={32} color="#6366f1" />
+                <div className="text-lg font-bold text-indigo-700">{resumo.restauranteTop.nome}</div>
+                <div className="text-gray-600 text-sm">Restaurante com maior faturamento: R$ {resumo.restauranteTop.faturamento.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+              </div>
+            )}
           </div>
         )}
       </div>
