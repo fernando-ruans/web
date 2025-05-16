@@ -271,8 +271,27 @@ export default function AdminRestaurantesPage() {
           <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
             <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md flex flex-col gap-4 border border-orange-200">
               <h3 className="text-xl font-bold text-orange-600 flex items-center gap-2"><FaUserTie size={20} /> Delegar Lojista</h3>
-              <div className="text-gray-700">Restaurante: <span className="font-bold text-orange-500">{selectedRestaurante?.nome}</span></div>
-              <form onSubmit={handleDelegate} className="flex flex-col gap-3">
+              {/* Novo select para escolher o restaurante */}
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-bold text-orange-500">Restaurante:</label>
+                <select
+                  className={theme.input}
+                  value={selectedRestaurante?.id || ''}
+                  onChange={e => {
+                    const rest = restaurantes.find((r: any) => r.id === Number(e.target.value));
+                    setSelectedRestaurante(rest);
+                    setDelegateMsg('');
+                    setDelegateError('');
+                  }}
+                  required
+                >
+                  <option value="">Selecione o restaurante</option>
+                  {restaurantes.map((r: any) => (
+                    <option key={r.id} value={r.id}>{r.nome} ({r.cidade})</option>
+                  ))}
+                </select>
+              </div>
+              <form onSubmit={handleDelegate} className="flex flex-col gap-3 mt-2">
                 <select className={theme.input} value={selectedLojista} onChange={e => setSelectedLojista(e.target.value)} required>
                   <option value="">Selecione um lojista</option>
                   {lojistas.map(l => (
