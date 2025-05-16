@@ -37,7 +37,7 @@ export default function RestaurantesPage() {
       <h1 className="text-2xl sm:text-3xl font-bold text-blue-400 mb-4 sm:mb-6 text-left">Restaurantes</h1>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 justify-start">
         {restaurantes.map(rest => (
-          <Card key={rest.id} className="relative w-full max-w-full sm:max-w-[420px] min-h-[220px] h-auto rounded-2xl shadow-lg bg-white border border-orange-100 overflow-hidden hover:shadow-xl transition flex flex-col p-0 m-0">
+          <Card key={rest.id} className="relative w-full max-w-full sm:max-w-[420px] min-h-[220px] h-auto rounded-2xl shadow-lg bg-white border border-orange-100 overflow-hidden hover:shadow-xl transition flex flex-col p-0 m-0 cursor-pointer" onClick={() => window.location.href = `/restaurantes/${rest.id}` }>
             {/* Banner de fundo */}
             <div className="relative w-full" style={{height: '120px', zIndex: 1}}>
               <img

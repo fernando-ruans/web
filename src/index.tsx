@@ -5,6 +5,7 @@ import RootApp from './App';
 import reportWebVitals from './reportWebVitals';
 import RouterApp from './RouterApp';
 import { AuthProvider } from './context/AuthContext';
+import { CartProvider } from './context/CartContext';
 
 import { createRoot } from 'react-dom/client';
 
@@ -13,8 +14,9 @@ const root = createRoot(container!);
 root.render(
   <React.StrictMode>
     <AuthProvider>
-      <RouterApp />
-      {/* Navbar deve estar DENTRO do Router, não fora! */}
+      <CartProvider>
+        <RouterApp />
+      </CartProvider>
     </AuthProvider>
   </React.StrictMode>
 );

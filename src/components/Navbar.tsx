@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useCart } from '../context/CartContext';
 import theme from '../theme';
 import { FaUserCircle, FaSignOutAlt, FaUserShield } from 'react-icons/fa';
 
@@ -12,6 +13,7 @@ const navItems = [
 export default function Navbar() {
   const location = useLocation();
   const { user, logout } = useAuth();
+  const { items: cartItems } = useCart();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -44,6 +46,17 @@ export default function Navbar() {
                 (location.pathname.startsWith('/pedidos') ? 'bg-orange-100 text-orange-600 shadow' : 'text-gray-700 hover:bg-orange-50 hover:text-orange-500')
               }>Pedidos</Link>
             </li>
+            <li>
+              <Link to="/carrinho" className={
+                'px-4 py-2 rounded-lg font-semibold flex items-center gap-2 transition-all duration-150 ' +
+                (location.pathname.startsWith('/carrinho') ? 'bg-orange-100 text-orange-600 shadow' : 'text-gray-700 hover:bg-orange-50 hover:text-orange-500')
+              }>
+                🛒 Carrinho
+                {cartItems.length > 0 && (
+                  <span className="ml-1 bg-orange-500 text-white rounded-full px-2 py-0.5 text-xs font-bold">{cartItems.length}</span>
+                )}
+              </Link>
+            </li>
             {user && user.tipo === 'admin' && (
               <li>
                 <Link to="/admin" className={
@@ -61,7 +74,10 @@ export default function Navbar() {
           {!user ? (
             <>
               <Link to="/login" className="px-4 py-2 rounded font-bold text-orange-500 border border-orange-300 hover:bg-orange-50 transition">Entrar</Link>
-              <Link to="/register" className="px-4 py-2 rounded font-bold bg-orange-500 text-white hover:bg-orange-600 transition">Cadastrar</Link>
+              <button
+                className="px-4 py-2 rounded font-bold bg-orange-500 text-white hover:bg-orange-600 transition"
+                onClick={() => navigate('/login?tab=register')}
+              >Cadastrar</button>
             </>
           ) : (
             <div className="relative group" tabIndex={0}>
@@ -101,6 +117,7 @@ export default function Navbar() {
               <ul className="flex flex-col gap-1 py-4 px-2">
                 <li><Link to="/restaurantes" className="flex items-center gap-2 px-4 py-3 rounded-lg font-semibold text-orange-600 hover:bg-orange-50 transition text-base" onClick={() => setMenuOpen(false)}>🍔 Restaurantes</Link></li>
                 <li><Link to="/pedidos" className="flex items-center gap-2 px-4 py-3 rounded-lg font-semibold text-orange-600 hover:bg-orange-50 transition text-base" onClick={() => setMenuOpen(false)}>🛒 Pedidos</Link></li>
+                <li><Link to="/carrinho" className="flex items-center gap-2 px-4 py-3 rounded-lg font-semibold text-orange-600 hover:bg-orange-50 transition text-base" onClick={() => setMenuOpen(false)}>🛒 Carrinho {cartItems.length > 0 && (<span className="ml-1 bg-orange-500 text-white rounded-full px-2 py-0.5 text-xs font-bold">{cartItems.length}</span>)}</Link></li>
                 {user && user.tipo === 'admin' && (
                   <li><Link to="/admin" className="flex items-center gap-2 px-4 py-3 rounded-lg font-semibold text-orange-600 hover:bg-orange-50 transition text-base" onClick={() => setMenuOpen(false)}><FaUserShield size={18} /> Admin</Link></li>
                 )}
@@ -110,7 +127,10 @@ export default function Navbar() {
                 {!user ? (
                   <>
                     <Link to="/login" className="px-4 py-3 rounded-lg font-bold text-orange-500 border border-orange-300 hover:bg-orange-50 transition text-base mb-1" onClick={() => setMenuOpen(false)}>Entrar</Link>
-                    <Link to="/register" className="px-4 py-3 rounded-lg font-bold bg-orange-500 text-white hover:bg-orange-600 transition text-base" onClick={() => setMenuOpen(false)}>Cadastrar</Link>
+                    <button
+                      className="px-4 py-3 rounded-lg font-bold bg-orange-500 text-white hover:bg-orange-600 transition text-base"
+                      onClick={() => { setMenuOpen(false); navigate('/login?tab=register'); }}
+                    >Cadastrar</button>
                   </>
                 ) : (
                   <>
