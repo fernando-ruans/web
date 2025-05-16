@@ -20,8 +20,8 @@ const UploadImage: React.FC<UploadImageProps> = ({ onUpload, label, buttonClassN
       setError('Apenas imagens são permitidas.');
       return;
     }
-    if (file.size > 2 * 1024 * 1024) {
-      setError('Tamanho máximo: 2MB.');
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Tamanho máximo: 5MB.');
       return;
     }
     setPreview(URL.createObjectURL(file));
