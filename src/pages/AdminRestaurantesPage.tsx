@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import theme from '../theme';
 import { FaPlus, FaStore, FaCheckCircle, FaTrashAlt, FaTimesCircle, FaUserTie, FaEdit } from 'react-icons/fa';
 import UploadImage from '../components/UploadImage';
+import { useLocation } from 'react-router-dom';
 
 export default function AdminRestaurantesPage() {
   const [showForm, setShowForm] = useState(false);
@@ -24,6 +25,7 @@ export default function AdminRestaurantesPage() {
   const [delegateError, setDelegateError] = useState('');
   const [editMode, setEditMode] = useState(false);
   const [editId, setEditId] = useState<number|null>(null);
+  const location = useLocation();
 
   async function fetchRestaurantes() {
     setLoading(true);
@@ -45,7 +47,17 @@ export default function AdminRestaurantesPage() {
     }
   }
 
-  useEffect(() => { fetchRestaurantes(); }, []);
+  useEffect(() => {
+    fetchRestaurantes();
+    // Se vier da tela de admin com ?delegar=1, abre o modal de delegação no primeiro restaurante
+    const params = new URLSearchParams(location.search);
+    if (params.get('delegar') && restaurantes.length > 0) {
+      setSelectedRestaurante(restaurantes[0]);
+      setShowDelegate(true);
+      fetchLojistas();
+    }
+    // eslint-disable-next-line
+  }, [location.search, restaurantes.length]);
 
   async function handleAprovar(id: number) {
     setError('');

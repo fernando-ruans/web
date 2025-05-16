@@ -36,7 +36,7 @@ export default function AdminPage() {
               ><FaPlus /> Adicionar Restaurante</button>
               <button
                 className="bg-orange-200 hover:bg-orange-300 text-orange-700 font-bold py-2 px-4 rounded w-full flex items-center justify-center gap-2 transition"
-                onClick={() => alert('Funcionalidade de delegar lojista em breve!')}
+                onClick={() => navigate('/admin/restaurantes?delegar=1')}
               ><FaUserTie /> Delegar Lojista</button>
             </div>
           </div>
@@ -47,7 +47,7 @@ export default function AdminPage() {
             <p className="text-gray-500 text-center mb-2">Visualize, edite e gerencie todos os usuários do sistema.</p>
             <button
               className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded w-full flex items-center justify-center gap-2 transition"
-              onClick={() => alert('Funcionalidade de gerenciamento de usuários em breve!')}
+              onClick={() => navigate('/admin/usuarios')}
             ><FaUserCog /> Gerenciar Usuários</button>
           </div>
         </div>
