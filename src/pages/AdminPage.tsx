@@ -13,7 +13,7 @@ export default function AdminPage() {
   }
 
   return (
-    <div className={theme.bg + ' flex flex-col items-center justify-center min-h-screen'}>
+    <div className={theme.bg + ' flex flex-col items-center justify-center min-h-screen pb-24 sm:pb-32'}>
       <div className="w-full max-w-5xl flex flex-col items-center gap-8 py-10">
         <h2 className="text-4xl font-extrabold text-orange-500 mb-2 flex items-center gap-3">
           <FaUserCog size={32} color="#fb923c" /> Painel do Administrador

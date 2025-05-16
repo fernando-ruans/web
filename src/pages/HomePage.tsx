@@ -6,5 +6,9 @@ export default function HomePage() {
   useEffect(() => {
     navigate('/restaurantes');
   }, [navigate]);
-  return null;
+  return (
+    <div className="min-h-screen pb-24 sm:pb-32">
+      {/* Conteúdo da página inicial, se houver */}
+    </div>
+  );
 }

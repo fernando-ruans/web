@@ -30,7 +30,7 @@ export default function PedidosPage() {
   if (erro) return <div className="text-center text-red-400 mt-10">{erro}</div>;
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className="max-w-4xl mx-auto p-6 min-h-screen pb-24 sm:pb-32">
       <h1 className={theme.title + ' mb-6 text-center'}>Meus Pedidos</h1>
       <List
         items={pedidos}

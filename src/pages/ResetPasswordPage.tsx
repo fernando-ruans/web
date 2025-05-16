@@ -28,7 +28,7 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div className={theme.bg + ' flex flex-col items-center justify-center min-h-screen'}>
+    <div className={theme.bg + ' flex flex-col items-center justify-center min-h-screen pb-24 sm:pb-32'}>
       <form onSubmit={handleSubmit} className={theme.card + ' w-full max-w-sm flex flex-col gap-4'}>
         <h2 className={theme.title + ' text-center'}>Redefinir Senha</h2>
         <div className="relative mb-2">

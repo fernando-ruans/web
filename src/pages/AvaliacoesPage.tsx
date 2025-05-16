@@ -28,7 +28,7 @@ export default function AvaliacoesPage() {
   if (erro) return <div className="text-center text-red-400 mt-10">{erro}</div>;
 
   return (
-    <div className="min-h-screen bg-gray-900 p-6">
+    <div className="min-h-screen pb-24 sm:pb-32 bg-gray-900 p-6">
       <h1 className="text-3xl font-bold text-blue-400 mb-6 text-center">Minhas Avaliações</h1>
       <List
         items={reviews}

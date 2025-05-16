@@ -53,7 +53,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row items-center justify-center bg-gradient-to-br from-yellow-50 via-yellow-100 to-orange-100">
+    <div className="min-h-screen pb-24 sm:pb-32 flex flex-col md:flex-row items-center justify-center bg-gradient-to-br from-yellow-50 via-yellow-100 to-orange-100">
       {/* Info lateral */}
       <div className="w-full md:w-1/2 flex flex-col items-center justify-center p-8 md:p-16 gap-6">
         <img src="/logo192.png" alt="Logo" className="w-40 h-40 mb-4" />

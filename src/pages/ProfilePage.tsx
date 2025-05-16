@@ -24,7 +24,7 @@ export default function ProfilePage() {
   else if (user.tipo === 'admin') tipoLabel = 'Administrador';
 
   return (
-    <div className={theme.bg + ' flex flex-col items-center justify-center min-h-screen'}>
+    <div className={theme.bg + ' flex flex-col items-center justify-center min-h-screen pb-24 sm:pb-32'}>
       <div className="w-full max-w-xl flex flex-col items-center gap-8 py-10">
         <div className="bg-white rounded-2xl shadow-xl p-10 flex flex-col items-center gap-4 border-t-4 border-orange-400 w-full max-w-lg">
           <h2 className="text-3xl font-extrabold text-orange-500 mb-2 flex items-center gap-2">

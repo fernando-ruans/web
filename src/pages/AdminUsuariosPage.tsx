@@ -92,7 +92,7 @@ export default function AdminUsuariosPage() {
   };
 
   return (
-    <div className={theme.bg + ' flex flex-col items-center justify-center min-h-screen'}>
+    <div className={theme.bg + ' flex flex-col items-center justify-center min-h-screen pb-24 sm:pb-32'}>
       <div className="w-full max-w-5xl mx-auto flex flex-col items-center gap-6 py-10">
         <div className="w-full flex flex-col items-center gap-4 shadow-xl bg-white rounded-2xl p-8 border-t-4 border-orange-100">
           <h2 className="text-3xl font-extrabold text-orange-500 mb-2 flex items-center gap-2"><FaUserShield size={28} color="#fb923c" /> Gerenciar Usuários</h2>

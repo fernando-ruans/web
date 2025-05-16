@@ -21,7 +21,7 @@ export default function CarrinhoPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto p-4">
+    <div className="min-h-screen pb-24 sm:pb-32 max-w-2xl mx-auto p-4">
       <h1 className="text-2xl font-bold text-orange-500 mb-6">Seu Carrinho</h1>
       {items.length === 0 ? (
         <div className="text-gray-500 text-center">Seu carrinho está vazio.</div>
