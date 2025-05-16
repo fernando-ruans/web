@@ -121,8 +121,7 @@ export default function Navbar() {
                   <li><Link to="/admin" className="flex items-center gap-2 px-4 py-3 rounded-lg font-semibold text-orange-600 hover:bg-orange-50 transition text-base" onClick={() => setMenuOpen(false)}><FaUserShield size={18} /> Admin</Link></li>
                 )}
               </ul>
-              <hr className="mx-4 border-orange-100" />
-              <div className="flex flex-col gap-1 py-4 px-2">
+              <div className="flex flex-col gap-1 py-4 px-2 border-t border-orange-100">
                 {!user ? (
                   <>
                     <Link to="/login" className="px-4 py-3 rounded-lg font-bold text-orange-500 border border-orange-300 hover:bg-orange-50 transition text-base mb-1 flex justify-center items-center" onClick={() => setMenuOpen(false)}>Entrar</Link>
@@ -133,8 +132,8 @@ export default function Navbar() {
                   </>
                 ) : (
                   <>
-                    <button onClick={() => { setMenuOpen(false); navigate('/profile'); }} className="w-full text-left px-4 py-3 rounded-lg hover:bg-orange-50 text-gray-700 text-base">Meu Perfil</button>
-                    <button onClick={() => { setMenuOpen(false); navigate('/pedidos'); }} className="w-full text-left px-4 py-3 rounded-lg hover:bg-orange-50 text-gray-700 text-base">Meus Pedidos</button>
+                    <button onClick={() => { setMenuOpen(false); navigate('/profile'); }} className="w-full text-left px-4 py-3 rounded-lg hover:bg-orange-50 text-gray-700 text-base flex items-center gap-2"><FaUserCircle size={18} color="#fb923c" /> Meu Perfil</button>
+                    <button onClick={() => { setMenuOpen(false); navigate('/pedidos'); }} className="w-full text-left px-4 py-3 rounded-lg hover:bg-orange-50 text-orange-500 text-base font-semibold flex items-center gap-2"><span className="text-lg">🧾</span> Meus Pedidos</button>
                     <button onClick={() => { setMenuOpen(false); logout(); navigate('/login'); }} className="w-full text-left px-4 py-3 rounded-lg hover:bg-red-50 text-red-500 flex items-center gap-2 text-base"><FaSignOutAlt size={16} /> Sair</button>
                   </>
                 )}
