@@ -8,6 +8,7 @@ interface Restaurante {
   nome: string;
   cidade: string;
   imagem: string;
+  banner: string; // novo campo
   taxa_entrega: number;
   tempo_entrega: number;
   status: string;
@@ -38,23 +39,31 @@ export default function RestaurantesPage() {
       <List
         items={restaurantes}
         renderItem={rest => (
-          <Card className="flex items-center gap-4 p-4 rounded-xl shadow-md bg-white/90 border-t-4 border-orange-200 hover:shadow-lg transition">
+          <Card className="flex flex-col md:flex-row items-center gap-4 p-4 rounded-xl shadow-md bg-white/90 border-t-4 border-orange-200 hover:shadow-lg transition">
             <img
-              src={rest.imagem || '/logo192.png'}
-              alt={rest.nome}
-              className="w-20 h-20 object-cover rounded-lg border border-orange-100 shadow-sm"
-              onError={e => (e.currentTarget.src = '/logo192.png')}
+              src={rest.banner || '/banner-default.png'}
+              alt={rest.nome + ' banner'}
+              className="w-full md:w-60 h-24 object-cover rounded-lg border border-orange-100 shadow-sm mb-2 md:mb-0"
+              onError={e => (e.currentTarget.src = '/banner-default.png')}
             />
-            <div className="flex-1 flex flex-col gap-1">
-              <div className="text-lg font-bold text-orange-600 flex items-center gap-2">{rest.nome}</div>
-              <div className="text-gray-500 text-sm flex items-center gap-2"><FaMapMarkerAlt size={14} color="#fb923c" /> {rest.cidade}</div>
-              <div className="text-gray-500 text-sm flex items-center gap-2"><FaClock size={14} color="#fb923c" /> {rest.tempo_entrega} min &bull; Entrega: R$ {rest.taxa_entrega.toFixed(2)}</div>
-              <div className="text-xs flex items-center gap-1 mt-1">
-                {rest.status === 'ativo' ? (
-                  <><FaCheckCircle size={14} color="#22c55e" /> <span className="text-green-600 font-bold">Ativo</span></>
-                ) : (
-                  <><FaTimesCircle size={14} color="#f87171" /> <span className="text-red-400 font-bold">{rest.status}</span></>
-                )}
+            <div className="flex items-center gap-4">
+              <img
+                src={rest.imagem || '/logo192.png'}
+                alt={rest.nome}
+                className="w-20 h-20 object-cover rounded-lg border border-orange-100 shadow-sm"
+                onError={e => (e.currentTarget.src = '/logo192.png')}
+              />
+              <div className="flex-1 flex flex-col gap-1">
+                <div className="text-lg font-bold text-orange-600 flex items-center gap-2">{rest.nome}</div>
+                <div className="text-gray-500 text-sm flex items-center gap-2"><FaMapMarkerAlt size={14} color="#fb923c" /> {rest.cidade}</div>
+                <div className="text-gray-500 text-sm flex items-center gap-2"><FaClock size={14} color="#fb923c" /> {rest.tempo_entrega} min &bull; Entrega: R$ {rest.taxa_entrega.toFixed(2)}</div>
+                <div className="text-xs flex items-center gap-1 mt-1">
+                  {rest.status === 'ativo' ? (
+                    <><FaCheckCircle size={14} color="#22c55e" /> <span className="text-green-600 font-bold">Ativo</span></>
+                  ) : (
+                    <><FaTimesCircle size={14} color="#f87171" /> <span className="text-red-400 font-bold">{rest.status}</span></>
+                  )}
+                </div>
               </div>
             </div>
           </Card>

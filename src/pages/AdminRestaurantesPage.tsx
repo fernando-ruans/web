@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import theme from '../theme';
-import { FaPlus, FaStore, FaCheckCircle, FaTrashAlt, FaTimesCircle, FaUserTie } from 'react-icons/fa';
+import { FaPlus, FaStore, FaCheckCircle, FaTrashAlt, FaTimesCircle, FaUserTie, FaEdit } from 'react-icons/fa';
+import UploadImage from '../components/UploadImage';
 
 export default function AdminRestaurantesPage() {
   const [showForm, setShowForm] = useState(false);
@@ -9,6 +10,8 @@ export default function AdminRestaurantesPage() {
   const [cidade, setCidade] = useState('');
   const [taxa_entrega, setTaxaEntrega] = useState('');
   const [tempo_entrega, setTempoEntrega] = useState('');
+  const [banner, setBanner] = useState('');
+  const [imagem, setImagem] = useState('');
   const [msg, setMsg] = useState('');
   const [error, setError] = useState('');
   const [restaurantes, setRestaurantes] = useState([]);
@@ -19,6 +22,8 @@ export default function AdminRestaurantesPage() {
   const [selectedLojista, setSelectedLojista] = useState('');
   const [delegateMsg, setDelegateMsg] = useState('');
   const [delegateError, setDelegateError] = useState('');
+  const [editMode, setEditMode] = useState(false);
+  const [editId, setEditId] = useState<number|null>(null);
 
   async function fetchRestaurantes() {
     setLoading(true);
@@ -69,11 +74,11 @@ export default function AdminRestaurantesPage() {
     const res = await fetch('/api/admin/restaurants', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
-      body: JSON.stringify({ nome, cnpj, cidade, taxa_entrega, tempo_entrega })
+      body: JSON.stringify({ nome, cnpj, cidade, taxa_entrega, tempo_entrega, banner, imagem })
     });
     if (res.ok) {
       setMsg('Restaurante cadastrado com sucesso!');
-      setNome(''); setCnpj(''); setCidade(''); setTaxaEntrega(''); setTempoEntrega('');
+      setNome(''); setCnpj(''); setCidade(''); setTaxaEntrega(''); setTempoEntrega(''); setBanner(''); setImagem('');
       setShowForm(false);
       fetchRestaurantes();
     } else {
@@ -125,6 +130,42 @@ export default function AdminRestaurantesPage() {
     }
   }
 
+  function openEditForm(restaurante: any) {
+    setEditId(restaurante.id);
+    setNome(restaurante.nome);
+    setCnpj(restaurante.cnpj);
+    setCidade(restaurante.cidade);
+    setTaxaEntrega(restaurante.taxa_entrega);
+    setTempoEntrega(restaurante.tempo_entrega);
+    setBanner(restaurante.banner || '');
+    setImagem(restaurante.imagem || '');
+    setEditMode(true);
+    setShowForm(true);
+    setMsg('');
+    setError('');
+  }
+
+  const handleEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setMsg('');
+    setError('');
+    if (!editId) return;
+    const res = await fetch(`/api/admin/restaurants/${editId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
+      body: JSON.stringify({ nome, cnpj, cidade, taxa_entrega, tempo_entrega, banner, imagem })
+    });
+    if (res.ok) {
+      setMsg('Restaurante atualizado com sucesso!');
+      setNome(''); setCnpj(''); setCidade(''); setTaxaEntrega(''); setTempoEntrega(''); setBanner(''); setImagem('');
+      setEditId(null); setEditMode(false); setShowForm(false);
+      fetchRestaurantes();
+    } else {
+      const data = await res.json();
+      setError(data.error || 'Erro ao atualizar restaurante');
+    }
+  };
+
   return (
     <div className={theme.bg + ' flex flex-col items-center justify-center min-h-screen'}>
       <div className={theme.card + ' w-full max-w-3xl flex flex-col items-center gap-4 shadow-xl'}>
@@ -137,15 +178,22 @@ export default function AdminRestaurantesPage() {
           <FaPlus /> {showForm ? 'Cancelar' : 'Adicionar Restaurante'}
         </button>
         {showForm && (
-          <form onSubmit={handleSubmit} className="w-full flex flex-col gap-2 bg-orange-50 rounded-xl p-4 border border-orange-200 mb-2">
+          <form onSubmit={editMode ? handleEdit : handleSubmit} className="w-full flex flex-col gap-2 bg-orange-50 rounded-xl p-4 border border-orange-200 mb-2">
             <input className={theme.input + ' w-full'} placeholder="Nome" value={nome} onChange={e => setNome(e.target.value)} required />
             <input className={theme.input + ' w-full'} placeholder="CNPJ" value={cnpj} onChange={e => setCnpj(e.target.value)} required />
             <input className={theme.input + ' w-full'} placeholder="Cidade" value={cidade} onChange={e => setCidade(e.target.value)} required />
             <input className={theme.input + ' w-full'} placeholder="Taxa de entrega" type="number" min="0" step="0.01" value={taxa_entrega} onChange={e => setTaxaEntrega(e.target.value)} required />
             <input className={theme.input + ' w-full'} placeholder="Tempo de entrega (min)" type="number" min="1" value={tempo_entrega} onChange={e => setTempoEntrega(e.target.value)} required />
+            <UploadImage label="Banner do restaurante" onUpload={setBanner} />
+            {banner && <img src={banner} alt="Banner" className="w-full max-h-32 object-cover rounded" />}
+            <UploadImage label="Logo do restaurante" onUpload={setImagem} />
+            {imagem && <img src={imagem} alt="Logo" className="w-24 h-24 object-cover rounded mx-auto" />}
             {msg && <div className="text-green-500 text-center">{msg}</div>}
             {error && <div className="text-red-400 text-center">{error}</div>}
-            <button type="submit" className={theme.primary + ' w-full font-bold py-2 rounded'}>Cadastrar</button>
+            <div className="flex gap-2">
+              <button type="submit" className={theme.primary + ' w-full font-bold py-2 rounded'}>{editMode ? 'Salvar Alterações' : 'Cadastrar'}</button>
+              {editMode && <button type="button" className={theme.secondary + ' w-full font-bold py-2 rounded'} onClick={() => { setEditMode(false); setShowForm(false); setEditId(null); }}>Cancelar</button>}
+            </div>
           </form>
         )}
         {loading ? (
@@ -163,6 +211,7 @@ export default function AdminRestaurantesPage() {
                   </span>
                 </div>
                 <div className="flex gap-2">
+                  <button onClick={() => openEditForm(r)} className="px-3 py-1 rounded bg-blue-500 text-white font-bold hover:bg-blue-600 transition flex items-center gap-1" title="Editar"><FaEdit size={14} /> Editar</button>
                   {r.status !== 'aprovado' && (
                     <button onClick={() => handleAprovar(r.id)} className="px-3 py-1 rounded bg-green-500 text-white font-bold hover:bg-green-600 transition flex items-center gap-1" title="Aprovar"><FaCheckCircle size={14} /> Aprovar</button>
                   )}
