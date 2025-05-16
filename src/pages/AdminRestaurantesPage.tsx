@@ -172,7 +172,7 @@ export default function AdminRestaurantesPage() {
         <h2 className={theme.title + ' text-center flex items-center gap-2'}><FaStore size={28} color="#fb923c" /> Gerenciar Restaurantes</h2>
         <div className="text-gray-500 mb-2 text-center">Aqui você pode aprovar, editar, excluir restaurantes, delegar lojista e ver avaliações.</div>
         <button
-          className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded flex items-center gap-2 mb-2"
+          className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded flex items-center gap-2 mb-2 w-full sm:w-auto justify-center"
           onClick={() => setShowForm(v => !v)}
         >
           <FaPlus /> {showForm ? 'Cancelar' : 'Adicionar Restaurante'}
@@ -182,15 +182,21 @@ export default function AdminRestaurantesPage() {
             <input className={theme.input + ' w-full'} placeholder="Nome" value={nome} onChange={e => setNome(e.target.value)} required />
             <input className={theme.input + ' w-full'} placeholder="CNPJ" value={cnpj} onChange={e => setCnpj(e.target.value)} required />
             <input className={theme.input + ' w-full'} placeholder="Cidade" value={cidade} onChange={e => setCidade(e.target.value)} required />
-            <input className={theme.input + ' w-full'} placeholder="Taxa de entrega" type="number" min="0" step="0.01" value={taxa_entrega} onChange={e => setTaxaEntrega(e.target.value)} required />
-            <input className={theme.input + ' w-full'} placeholder="Tempo de entrega (min)" type="number" min="1" value={tempo_entrega} onChange={e => setTempoEntrega(e.target.value)} required />
-            <UploadImage label="Banner do restaurante" onUpload={setBanner} />
-            {banner && <img src={banner} alt="Banner" className="w-full max-h-32 object-cover rounded" />}
-            <UploadImage label="Logo do restaurante" onUpload={setImagem} />
-            {imagem && <img src={imagem} alt="Logo" className="w-24 h-24 object-cover rounded mx-auto" />}
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input className={theme.input + ' w-full'} placeholder="Taxa de entrega" type="number" min="0" step="0.01" value={taxa_entrega} onChange={e => setTaxaEntrega(e.target.value)} required />
+              <input className={theme.input + ' w-full'} placeholder="Tempo de entrega (min)" type="number" min="1" value={tempo_entrega} onChange={e => setTempoEntrega(e.target.value)} required />
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <div className="flex-1"><UploadImage label="Banner do restaurante" onUpload={setBanner} /></div>
+              <div className="flex-1"><UploadImage label="Logo do restaurante" onUpload={setImagem} /></div>
+            </div>
+            <div className="flex flex-row gap-2 items-center justify-center">
+              {banner && <img src={banner} alt="Banner" className="w-32 h-20 object-cover rounded" />}
+              {imagem && <img src={imagem} alt="Logo" className="w-16 h-16 object-cover rounded" />}
+            </div>
             {msg && <div className="text-green-500 text-center">{msg}</div>}
             {error && <div className="text-red-400 text-center">{error}</div>}
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <button type="submit" className={theme.primary + ' w-full font-bold py-2 rounded'}>{editMode ? 'Salvar Alterações' : 'Cadastrar'}</button>
               {editMode && <button type="button" className={theme.secondary + ' w-full font-bold py-2 rounded'} onClick={() => { setEditMode(false); setShowForm(false); setEditId(null); }}>Cancelar</button>}
             </div>
@@ -202,15 +208,15 @@ export default function AdminRestaurantesPage() {
           <div className="w-full flex flex-col gap-2 mt-2">
             {restaurantes.length === 0 && <div className="text-center text-gray-400">Nenhum restaurante cadastrado.</div>}
             {restaurantes.map((r: any) => (
-              <div key={r.id} className="flex flex-col md:flex-row items-center justify-between gap-2 bg-white rounded-lg shadow p-3 border border-orange-100">
-                <div className="flex flex-col md:flex-row items-center gap-3 flex-1">
+              <div key={r.id} className="flex flex-col md:flex-row items-center justify-between gap-2 bg-white rounded-lg shadow p-3 border border-orange-100 flex-wrap">
+                <div className="flex flex-col md:flex-row items-center gap-3 flex-1 w-full md:w-auto">
                   <span className="font-bold text-orange-600 flex items-center gap-2"><FaStore size={18} /> {r.nome}</span>
                   <span className="text-gray-500 flex items-center gap-1"><FaTimesCircle size={14} color="#fb923c" /> {r.cidade}</span>
                   <span className="text-xs px-2 py-1 rounded-full font-bold " style={{ background: r.status === 'aprovado' ? '#dcfce7' : '#fef3c7', color: r.status === 'aprovado' ? '#22c55e' : '#f59e42' }}>
                     {r.status === 'aprovado' ? <FaCheckCircle size={12} color="#22c55e" /> : <FaTimesCircle size={12} color="#f59e42" />} {r.status}
                   </span>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2 w-full md:w-auto justify-center md:justify-end">
                   <button onClick={() => openEditForm(r)} className="px-3 py-1 rounded bg-blue-500 text-white font-bold hover:bg-blue-600 transition flex items-center gap-1" title="Editar"><FaEdit size={14} /> Editar</button>
                   {r.status !== 'aprovado' && (
                     <button onClick={() => handleAprovar(r.id)} className="px-3 py-1 rounded bg-green-500 text-white font-bold hover:bg-green-600 transition flex items-center gap-1" title="Aprovar"><FaCheckCircle size={14} /> Aprovar</button>

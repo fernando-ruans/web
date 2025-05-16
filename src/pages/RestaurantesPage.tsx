@@ -33,11 +33,11 @@ export default function RestaurantesPage() {
   if (erro) return <div className="text-center text-red-400 mt-10">{erro}</div>;
 
   return (
-    <div className="max-w-5xl mx-auto p-4">
-      <h1 className="text-3xl font-bold text-blue-400 mb-6 text-left">Restaurantes</h1>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 justify-start">
+    <div className="max-w-5xl mx-auto p-2 sm:p-4">
+      <h1 className="text-2xl sm:text-3xl font-bold text-blue-400 mb-4 sm:mb-6 text-left">Restaurantes</h1>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 justify-start">
         {restaurantes.map(rest => (
-          <Card key={rest.id} className="relative w-full max-w-[420px] h-[340px] rounded-xl shadow-md bg-white/90 border border-orange-100 overflow-hidden hover:shadow-lg transition flex flex-col p-0 m-0">
+          <Card key={rest.id} className="relative w-full max-w-full sm:max-w-[420px] h-[340px] rounded-xl shadow-md bg-white/90 border border-orange-100 overflow-hidden hover:shadow-lg transition flex flex-col p-0 m-0">
             {/* Banner de fundo, preenchendo topo e laterais do card */}
             <div className="absolute top-0 left-0 w-full" style={{height: '180px', zIndex: 1}}>
               <img
@@ -49,20 +49,20 @@ export default function RestaurantesPage() {
               />
             </div>
             {/* Logo sobreposto, sem margem branca */}
-            <div className="absolute left-6" style={{top: '130px', zIndex: 2}}>
-              <div className="w-24 h-24 rounded-2xl shadow-lg bg-transparent flex items-center justify-center p-0 m-0">
+            <div className="absolute left-4 sm:left-6" style={{top: '130px', zIndex: 2}}>
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl shadow-lg bg-transparent flex items-center justify-center p-0 m-0">
                 <img
                   src={rest.imagem || '/logo192.png'}
                   alt={rest.nome}
-                  className="w-24 h-24 object-cover rounded-2xl p-0 m-0 border-4 border-white/80"
+                  className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-2xl p-0 m-0 border-4 border-white/80"
                   onError={e => (e.currentTarget.src = '/logo192.png')}
                   style={{ boxShadow: '0 4px 16px rgba(0,0,0,0.12)' }}
                 />
               </div>
             </div>
             {/* Detalhes */}
-            <div className="relative z-10 flex-1 flex flex-col justify-end pt-8 pb-4 px-5 gap-1" style={{marginTop: '180px'}}>
-              <div className="text-lg font-bold text-orange-600 flex items-center gap-2">{rest.nome}</div>
+            <div className="relative z-10 flex-1 flex flex-col justify-end pt-8 pb-4 px-3 sm:px-5 gap-1" style={{marginTop: '180px'}}>
+              <div className="text-base sm:text-lg font-bold text-orange-600 flex items-center gap-2">{rest.nome}</div>
               <div className="text-gray-500 text-xs flex items-center gap-2"><FaMapMarkerAlt size={12} color="#fb923c" /> {rest.cidade}</div>
               <div className="text-gray-500 text-xs flex items-center gap-2"><FaClock size={12} color="#fb923c" /> {rest.tempo_entrega} min &bull; Entrega: R$ {rest.taxa_entrega.toFixed(2)}</div>
               <div className="text-xs flex items-center gap-1 mt-1">
