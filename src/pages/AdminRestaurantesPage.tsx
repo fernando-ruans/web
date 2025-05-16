@@ -59,6 +59,14 @@ export default function AdminRestaurantesPage() {
     // eslint-disable-next-line
   }, [location.search, restaurantes.length]);
 
+  // Novo useEffect para abrir o formulário de cadastro se vier de ?add=1
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('add')) {
+      setShowForm(true);
+    }
+  }, [location.search]);
+
   async function handleAprovar(id: number) {
     setError('');
     const res = await fetch(`/api/admin/restaurants/${id}/approve`, {
