@@ -22,7 +22,7 @@ export default function Navbar() {
       <div className="max-w-5xl mx-auto flex flex-wrap items-center justify-between px-4 py-2 gap-y-2 relative">
         {/* Logo/Brand */}
         <Link to={user ? "/restaurantes" : "/"} className="flex items-center gap-2 select-none group min-w-[140px]">
-          <img src="/logo192.png" alt="Logo" className="h-14 w-14 object-contain" />
+          <img src="/logo192.png" alt="Logo" className="h-20 w-20 object-contain" />
         </Link>
         {/* Menu Hamburguer Mobile */}
         <div className="block md:hidden">
