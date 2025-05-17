@@ -81,15 +81,32 @@ export default function LojistaProdutosPage() {
     e.preventDefault();
     setError(null);
     try {
+      // Validação local
+      if (!categoriaId || !nome || !descricao || !preco) {
+        setError('Preencha todos os campos obrigatórios');
+        return;
+      }
+
+      const produtoData = {
+        categoryId: Number(categoriaId),
+        nome,
+        descricao,
+        preco: Number(preco),
+        imagem
+      };
+
       if (editId) {
         // Editar produto
         const res = await fetch(`/api/lojista/products/${editId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({ nome, preco, descricao, categoriaId, imagem })
+          body: JSON.stringify(produtoData)
         });
-        if (!res.ok) throw new Error('Erro ao editar produto');
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.error || 'Erro ao editar produto');
+        }
         const updated = await res.json();
         setProdutos(produtos.map(p => p.id === editId ? updated : p));
       } else {
@@ -98,15 +115,23 @@ export default function LojistaProdutosPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify({ nome, preco, descricao, categoriaId, imagem })
+          body: JSON.stringify(produtoData)
         });
-        if (!res.ok) throw new Error('Erro ao cadastrar produto');
+        if (!res.ok) {
+          const errorData = await res.json();
+          throw new Error(errorData.error || 'Erro ao cadastrar produto');
+        }
         const novo = await res.json();
         setProdutos([...produtos, novo]);
       }
+      // Limpa o formulário e fecha
       setShowForm(false);
       setEditId(null);
-      setNome(''); setPreco(''); setDescricao(''); setCategoriaId(''); setImagem('');
+      setNome(''); 
+      setPreco(''); 
+      setDescricao(''); 
+      setCategoriaId(''); 
+      setImagem('');
     } catch (err: any) {
       setError(err.message || 'Erro desconhecido');
     }
