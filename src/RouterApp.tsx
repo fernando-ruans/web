@@ -18,6 +18,10 @@ import RestauranteMenuPage from './pages/RestauranteMenuPage';
 import CarrinhoPage from './pages/CarrinhoPage';
 import AdminUsuariosPage from './pages/AdminUsuariosPage';
 import AdminRelatoriosPage from './pages/AdminRelatoriosPage';
+import LojistaDashboardPage from './pages/LojistaDashboardPage';
+import LojistaProdutosPage from './pages/LojistaProdutosPage';
+import LojistaPedidosPage from './pages/LojistaPedidosPage';
+import LojistaPerfilPage from './pages/LojistaPerfilPage';
 
 function PrivateRoute({ children }: { children: ReactNode }) {
   const auth = useAuth();
@@ -48,6 +52,10 @@ export default function RouterApp() {
           <Route path="/admin/restaurantes" element={<PrivateRoute><AdminRestaurantesPage /></PrivateRoute>} />
           <Route path="/admin/usuarios" element={<PrivateRoute><AdminUsuariosPage /></PrivateRoute>} />
           <Route path="/admin/relatorios" element={<PrivateRoute><AdminRelatoriosPage /></PrivateRoute>} />
+          <Route path="/lojista" element={<LojistaDashboardPage />} />
+          <Route path="/lojista/produtos" element={<LojistaProdutosPage />} />
+          <Route path="/lojista/pedidos" element={<LojistaPedidosPage />} />
+          <Route path="/lojista/perfil" element={<LojistaPerfilPage />} />
           {/* Exemplo: <Route path="/admin/users" element={<PrivateRoute><AdminUsersPage /></PrivateRoute>} /> */}
         </Routes>
         <Footer />

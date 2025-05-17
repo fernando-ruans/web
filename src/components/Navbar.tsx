@@ -66,6 +66,16 @@ export default function Navbar() {
                 </Link>
               </li>
             )}
+            {user && user.tipo === 'lojista' && (
+              <li>
+                <Link to="/lojista" className={
+                  'px-4 py-2 rounded-lg font-semibold transition-all duration-150 flex items-center gap-2 ' +
+                  (location.pathname.startsWith('/lojista') ? 'bg-blue-100 text-blue-700 shadow' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-600')
+                }>
+                  <span role="img" aria-label="Lojista">🏪</span> Painel Lojista
+                </Link>
+              </li>
+            )}
           </ul>
         </div>
         {/* Usuário/Autenticação - desktop */}
@@ -119,6 +129,9 @@ export default function Navbar() {
                 <li><Link to="/carrinho" className="flex items-center gap-2 px-4 py-3 rounded-lg font-semibold text-orange-600 hover:bg-orange-50 transition text-base" onClick={() => setMenuOpen(false)}>🛒 Carrinho {cartItems.length > 0 && (<span className="ml-1 bg-orange-500 text-white rounded-full px-2 py-0.5 text-xs font-bold">{cartItems.length}</span>)}</Link></li>
                 {user && user.tipo === 'admin' && (
                   <li><Link to="/admin" className="flex items-center gap-2 px-4 py-3 rounded-lg font-semibold text-orange-600 hover:bg-orange-50 transition text-base" onClick={() => setMenuOpen(false)}><FaUserShield size={18} /> Admin</Link></li>
+                )}
+                {user && user.tipo === 'lojista' && (
+                  <li><Link to="/lojista" className="flex items-center gap-2 px-4 py-3 rounded-lg font-semibold text-blue-700 hover:bg-blue-50 transition text-base" onClick={() => setMenuOpen(false)}>🏪 Painel Lojista</Link></li>
                 )}
               </ul>
               <div className="flex flex-col gap-1 py-4 px-2 border-t border-orange-100">
