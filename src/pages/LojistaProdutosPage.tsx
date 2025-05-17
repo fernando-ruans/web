@@ -66,6 +66,7 @@ export default function LojistaProdutosPage() {
         const res = await fetch('/api/lojista/restaurants', { credentials: 'include' });
         if (res.ok) {
           const data = await res.json();
+          console.log('Restaurantes retornados para o lojista:', data); // DEPURAÇÃO
           setRestaurante(data[0] || null);
         }
       } finally {
