@@ -25,6 +25,7 @@ export default function AdminRestaurantesPage() {
   const [delegateError, setDelegateError] = useState('');
   const [editMode, setEditMode] = useState(false);
   const [editId, setEditId] = useState<number|null>(null);
+  const [filtro, setFiltro] = useState<string>('');
   const location = useLocation();
 
   async function fetchRestaurantes() {
@@ -222,12 +223,34 @@ export default function AdminRestaurantesPage() {
             </div>
           </form>
         )}
+        <div className="flex flex-col sm:flex-row gap-2 mb-4">
+          <input
+            type="text"
+            className={theme.input + ' w-full'}
+            placeholder="Pesquisar por nome, cidade ou CNPJ..."
+            value={filtro}
+            onChange={e => setFiltro(e.target.value)}
+          />
+          <button
+            className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded"
+            onClick={() => setFiltro('')}
+            type="button"
+          >Limpar</button>
+        </div>
         {loading ? (
           <div className="text-center text-gray-400">Carregando restaurantes...</div>
         ) : (
           <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-2">
             {restaurantes.length === 0 && <div className="text-center text-gray-400 col-span-3">Nenhum restaurante cadastrado.</div>}
-            {restaurantes.map((r: any) => (
+            {(restaurantes as any[]).filter(r => {
+              if (!filtro) return true;
+              const f = filtro.toLowerCase();
+              return (
+                (r.nome && r.nome.toLowerCase().includes(f)) ||
+                (r.cidade && r.cidade.toLowerCase().includes(f)) ||
+                (r.cnpj && r.cnpj.toLowerCase().includes(f))
+              );
+            }).map((r: any) => (
               <div key={r.id} className="bg-white rounded-2xl shadow p-0 flex flex-col items-center border border-orange-100 overflow-hidden relative">
                 {/* Banner do restaurante */}
                 <div className="w-full h-24 sm:h-28 bg-orange-50 relative">

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { FaUserEdit, FaTrashAlt, FaUser, FaUserShield, FaUserTie, FaUserPlus } from 'react-icons/fa';
+import { FaUserEdit, FaTrashAlt, FaUser, FaUserShield, FaUserTie, FaUserPlus, FaEnvelope } from 'react-icons/fa';
 import theme from '../theme';
 import { useAuth } from '../context/AuthContext';
 
@@ -10,6 +10,7 @@ export default function AdminUsuariosPage() {
   const [erro, setErro] = useState('');
   const [msg, setMsg] = useState('');
   const [promovendo, setPromovendo] = useState<string | null>(null);
+  const [filtro, setFiltro] = useState<string>('');
 
   useEffect(() => {
     setLoading(true);
@@ -99,6 +100,20 @@ export default function AdminUsuariosPage() {
           <div className="text-gray-500 mb-4 text-center">Visualize e promova usuários do sistema.</div>
           {msg && <div className="w-full text-center text-green-600 font-bold bg-green-50 border border-green-200 rounded py-2 mb-2 animate-fade-in">{msg}</div>}
           {erro && <div className="w-full text-center text-red-500 font-bold bg-red-50 border border-red-200 rounded py-2 mb-2 animate-fade-in">{erro}</div>}
+          <div className="flex flex-col sm:flex-row gap-2 mb-4">
+            <input
+              type="text"
+              className={theme.input + ' w-full'}
+              placeholder="Pesquisar por nome ou e-mail..."
+              value={filtro}
+              onChange={e => setFiltro(e.target.value)}
+            />
+            <button
+              className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded"
+              onClick={() => setFiltro('')}
+              type="button"
+            >Limpar</button>
+          </div>
           {loading ? (
             <div className="text-center py-8 text-gray-400">Carregando usuários...</div>
           ) : usuarios.length === 0 ? (
@@ -106,7 +121,14 @@ export default function AdminUsuariosPage() {
           ) : (
             <div className="w-full flex flex-col gap-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {usuarios.map((u: any) => (
+                {(usuarios as any[]).filter(u => {
+                  if (!filtro) return true;
+                  const f = filtro.toLowerCase();
+                  return (
+                    (u.nome && u.nome.toLowerCase().includes(f)) ||
+                    (u.email && u.email.toLowerCase().includes(f))
+                  );
+                }).map((u: any) => (
                   <div key={u.id} className="bg-white rounded-2xl shadow p-6 flex flex-col items-center gap-3 border border-orange-100">
                     <div className="w-16 h-16 rounded-full bg-orange-100 flex items-center justify-center text-3xl font-bold text-orange-500 shadow overflow-hidden">
                       {u.avatarUrl ? (
