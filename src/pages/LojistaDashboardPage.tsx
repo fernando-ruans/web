@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import theme from '../theme';
@@ -7,12 +7,28 @@ import { FaStore, FaBoxOpen, FaClipboardList, FaUserEdit } from 'react-icons/fa'
 export default function LojistaDashboardPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [restaurante, setRestaurante] = useState<any>(null);
+  const [restLoading, setRestLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
     if (user.tipo !== 'lojista') {
       navigate('/');
     }
+    // Buscar restaurante do lojista
+    async function fetchRestaurante() {
+      setRestLoading(true);
+      try {
+        const res = await fetch('/api/lojista/restaurants', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          setRestaurante(data[0] || null);
+        }
+      } finally {
+        setRestLoading(false);
+      }
+    }
+    fetchRestaurante();
   }, [user, navigate]);
 
   return (
@@ -22,6 +38,13 @@ export default function LojistaDashboardPage() {
           <h2 className="text-3xl font-extrabold text-orange-500 mb-2 flex items-center gap-2">
             <FaStore size={28} color="#fb923c" /> Painel do Lojista
           </h2>
+          {restLoading ? (
+            <div className="text-gray-400 text-center">Carregando restaurante...</div>
+          ) : restaurante ? (
+            <div className="text-orange-600 font-bold text-lg text-center">Gerenciando: {restaurante.nome}</div>
+          ) : (
+            <div className="text-red-500 font-bold text-center">Nenhum restaurante cadastrado!</div>
+          )}
           <div className="text-gray-600 mb-2 text-center text-lg">Gerencie seus produtos, pedidos e perfil de lojista.</div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 w-full">
             <button

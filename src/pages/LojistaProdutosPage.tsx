@@ -23,6 +23,8 @@ export default function LojistaProdutosPage() {
   const [catError, setCatError] = useState<string|null>(null);
   const [catEditId, setCatEditId] = useState<number|null>(null);
   const [catEditNome, setCatEditNome] = useState('');
+  const [restaurante, setRestaurante] = useState<any>(null);
+  const [restLoading, setRestLoading] = useState(true);
 
   // Busca real dos produtos do lojista
   useEffect(() => {
@@ -30,7 +32,7 @@ export default function LojistaProdutosPage() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch('/lojista/products', { credentials: 'include' });
+        const res = await fetch('/api/lojista/products', { credentials: 'include' });
         if (!res.ok) throw new Error('Erro ao buscar produtos');
         const data = await res.json();
         setProdutos(data);
@@ -47,13 +49,30 @@ export default function LojistaProdutosPage() {
   useEffect(() => {
     async function fetchCategorias() {
       try {
-        const res = await fetch('/lojista/categories', { credentials: 'include' });
+        const res = await fetch('/api/lojista/categories', { credentials: 'include' });
         if (!res.ok) throw new Error('Erro ao buscar categorias');
         const data = await res.json();
         setCategorias(data);
       } catch {}
     }
     fetchCategorias();
+  }, []);
+
+  // Buscar restaurante do lojista
+  useEffect(() => {
+    async function fetchRestaurante() {
+      setRestLoading(true);
+      try {
+        const res = await fetch('/api/lojista/restaurants', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          setRestaurante(data[0] || null);
+        }
+      } finally {
+        setRestLoading(false);
+      }
+    }
+    fetchRestaurante();
   }, []);
 
   // Adiciona/cria produto no backend
@@ -63,7 +82,7 @@ export default function LojistaProdutosPage() {
     try {
       if (editId) {
         // Editar produto
-        const res = await fetch(`/lojista/products/${editId}`, {
+        const res = await fetch(`/api/lojista/products/${editId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
@@ -74,7 +93,7 @@ export default function LojistaProdutosPage() {
         setProdutos(produtos.map(p => p.id === editId ? updated : p));
       } else {
         // Criar produto
-        const res = await fetch('/lojista/products', {
+        const res = await fetch('/api/lojista/products', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
@@ -96,7 +115,7 @@ export default function LojistaProdutosPage() {
   async function handleDelete(id: string) {
     setError(null);
     try {
-      const res = await fetch(`/lojista/products/${id}`, {
+      const res = await fetch(`/api/lojista/products/${id}`, {
         method: 'DELETE',
         credentials: 'include'
       });
@@ -124,12 +143,12 @@ export default function LojistaProdutosPage() {
     setCatLoading(true);
     try {
       // Busca o restaurante do lojista (assume 1 restaurante por lojista)
-      const resRest = await fetch('/lojista/restaurants', { credentials: 'include' });
+      const resRest = await fetch('/api/lojista/restaurants', { credentials: 'include' });
       const restaurantes = await resRest.json();
       if (!restaurantes[0]) throw new Error('Restaurante não encontrado');
       const restaurantId = restaurantes[0].id;
       // Cria categoria
-      const res = await fetch('/lojista/categories', {
+      const res = await fetch('/api/lojista/categories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -150,7 +169,7 @@ export default function LojistaProdutosPage() {
     setCatError(null);
     setCatLoading(true);
     try {
-      const res = await fetch(`/lojista/categories/${id}`, {
+      const res = await fetch(`/api/lojista/categories/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -172,7 +191,7 @@ export default function LojistaProdutosPage() {
     setCatError(null);
     setCatLoading(true);
     try {
-      const res = await fetch(`/lojista/categories/${id}`, {
+      const res = await fetch(`/api/lojista/categories/${id}`, {
         method: 'DELETE',
         credentials: 'include'
       });
@@ -193,24 +212,30 @@ export default function LojistaProdutosPage() {
           <h2 className="text-2xl font-extrabold text-orange-500 mb-2 flex items-center gap-2">
             Produtos do Lojista
           </h2>
-          <div className="text-gray-600 mb-2 text-center text-lg">Aqui você poderá cadastrar, editar e remover seus produtos.</div>
-          <button className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded flex items-center gap-2 mb-4" onClick={() => setShowForm(true)}><FaPlus /> Adicionar Produto</button>
+          {restLoading ? (
+            <div className="text-gray-400 text-center">Carregando restaurante...</div>
+          ) : restaurante ? (
+            <div className="text-orange-600 font-bold text-lg text-center">Gerenciando: {restaurante.nome}</div>
+          ) : (
+            <div className="text-red-500 font-bold text-center">Nenhum restaurante cadastrado! Cadastre um restaurante para liberar o cadastro de produtos e categorias.</div>
+          )}
+          <button className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded flex items-center gap-2 mb-4" onClick={() => setShowForm(true)} disabled={!restaurante}><FaPlus /> Adicionar Produto</button>
           {showForm && (
             <form onSubmit={handleAddOrEdit} className="w-full flex flex-col gap-2 bg-orange-50 rounded-xl p-4 border border-orange-200 mb-2">
-              <select className={theme.input + ' w-full'} value={categoriaId} onChange={e => setCategoriaId(e.target.value)} required>
+              <select className={theme.input + ' w-full'} value={categoriaId} onChange={e => setCategoriaId(e.target.value)} required disabled={!restaurante}>
                 <option value="">Selecione a categoria</option>
                 {categorias.map((cat: any) => (
                   <option key={cat.id} value={cat.id}>{cat.nome}</option>
                 ))}
               </select>
-              <input className={theme.input + ' w-full'} placeholder="Nome do produto" value={nome} onChange={e => setNome(e.target.value)} required />
-              <input className={theme.input + ' w-full'} placeholder="Preço" type="number" min="0" step="0.01" value={preco} onChange={e => setPreco(e.target.value)} required />
-              <textarea className={theme.input + ' w-full'} placeholder="Descrição" value={descricao} onChange={e => setDescricao(e.target.value)} />
+              <input className={theme.input + ' w-full'} placeholder="Nome do produto" value={nome} onChange={e => setNome(e.target.value)} required disabled={!restaurante} />
+              <input className={theme.input + ' w-full'} placeholder="Preço" type="number" min="0" step="0.01" value={preco} onChange={e => setPreco(e.target.value)} required disabled={!restaurante} />
+              <textarea className={theme.input + ' w-full'} placeholder="Descrição" value={descricao} onChange={e => setDescricao(e.target.value)} disabled={!restaurante} />
               <UploadImage onUpload={url => setImagem(url)} label="Imagem do produto" />
               {imagem && <div className="text-xs text-gray-500 break-all">URL: {imagem}</div>}
               <div className="flex gap-2">
-                <button type="submit" className={theme.primary + ' w-full font-bold py-2 rounded'}>{editId ? 'Salvar' : 'Cadastrar'}</button>
-                <button type="button" className={theme.secondary + ' w-full font-bold py-2 rounded'} onClick={() => { setShowForm(false); setEditId(null); setNome(''); setPreco(''); setDescricao(''); setCategoriaId(''); setImagem(''); }}>Cancelar</button>
+                <button type="submit" className={theme.primary + ' w-full font-bold py-2 rounded'} disabled={!restaurante}>{editId ? 'Salvar' : 'Cadastrar'}</button>
+                <button type="button" className={theme.secondary + ' w-full font-bold py-2 rounded'} onClick={() => { setShowForm(false); setEditId(null); setNome(''); setPreco(''); setDescricao(''); setCategoriaId(''); setImagem(''); }} disabled={!restaurante}>Cancelar</button>
               </div>
             </form>
           )}
@@ -223,12 +248,12 @@ export default function LojistaProdutosPage() {
                 onChange={e => setNovaCategoria(e.target.value)}
                 list="sugestoes-categorias"
                 required
-                disabled={catLoading}
+                disabled={catLoading || !restaurante}
               />
               <datalist id="sugestoes-categorias">
                 {sugestoesCategorias.map(s => <option key={s} value={s} />)}
               </datalist>
-              <button type="submit" className="bg-orange-500 hover:bg-orange-600 text-white font-bold px-4 py-2 rounded" disabled={catLoading}>
+              <button type="submit" className="bg-orange-500 hover:bg-orange-600 text-white font-bold px-4 py-2 rounded" disabled={catLoading || !restaurante}>
                 {catLoading ? 'Adicionando...' : 'Adicionar'}
               </button>
             </form>
