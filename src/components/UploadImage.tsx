@@ -4,9 +4,10 @@ interface UploadImageProps {
   onUpload: (url: string) => void;
   label?: string;
   buttonClassName?: string;
+  className?: string;
 }
 
-const UploadImage: React.FC<UploadImageProps> = ({ onUpload, label, buttonClassName }) => {
+const UploadImage: React.FC<UploadImageProps> = ({ onUpload, label, buttonClassName, className }) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -47,7 +48,7 @@ const UploadImage: React.FC<UploadImageProps> = ({ onUpload, label, buttonClassN
   };
 
   return (
-    <div className="flex flex-col items-center gap-2">
+    <div className={`flex flex-col items-center gap-2 ${className || ''}`}>
       {label && <label className="text-gray-300 mb-1">{label}</label>}
       <input
         ref={inputRef}

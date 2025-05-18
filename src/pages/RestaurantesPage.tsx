@@ -96,13 +96,18 @@ export default function RestaurantesPage() {
                       onError={e => (e.currentTarget.src = '/logo192.png')}
                     />
                   </div>
-                  {/* Status overlay */}
-                  <div className={`absolute top-2 right-2 px-3 py-1 rounded-full text-sm font-bold ${
+                  {/* Status badge */}
+                  <div className={`absolute top-4 right-4 px-3 py-1.5 rounded-full flex items-center gap-2 ${
                     rest.aberto 
-                      ? 'bg-green-100 text-green-600'
-                      : 'bg-red-100 text-red-600'
+                      ? 'bg-green-100 text-green-700 border border-green-200'
+                      : 'bg-red-100 text-red-700 border border-red-200'
                   }`}>
-                    {rest.aberto ? '🟢 Aberto' : '🔴 Fechado'}
+                    <span className={`w-2 h-2 rounded-full ${
+                      rest.aberto ? 'bg-green-500 animate-pulse' : 'bg-red-500'
+                    }`} />
+                    <span className="text-sm font-semibold">
+                      {rest.aberto ? 'Aberto' : 'Fechado'}
+                    </span>
                   </div>
                 </div>
 

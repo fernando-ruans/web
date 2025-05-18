@@ -2,14 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import theme from '../theme';
+import { FaMapMarkerAlt, FaPhone, FaClock, FaMoneyBill } from 'react-icons/fa';
 
 interface Produto {
   id: number;
   nome: string;
-  descricao?: string;
+  descricao: string;
   preco: number;
-  imagem?: string;
-  quantidade?: number;
+  imagem: string;
+  ativo: boolean;
 }
 
 interface Categoria {
@@ -21,13 +22,13 @@ interface Categoria {
 interface Restaurante {
   id: number;
   nome: string;
-  imagem: string;
+  endereco?: string;
+  cidade?: string;
+  telefone?: string;
+  banner?: string;
+  imagem?: string;
   taxa_entrega: number;
   tempo_entrega: number;
-  telefone: string;
-  cidade: string;
-  endereco: string;
-  cep: string;
   aberto: boolean;
 }
 
@@ -57,36 +58,74 @@ export default function RestauranteMenuPage() {
   return (
     <div className="max-w-3xl mx-auto p-4 min-h-screen pb-24 sm:pb-32">
       {restaurante && (
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-orange-500">{restaurante.nome}</h1>
-          <div className="text-gray-600 mt-2 flex flex-col gap-2 text-sm">
-            <div className="flex items-center gap-4">
-              <span>🚚 Entrega: R$ {restaurante.taxa_entrega.toFixed(2)}</span>
-              <span>⏱️ {restaurante.tempo_entrega} min</span>
-            </div>
-            <div className="flex flex-col gap-1">
-              {restaurante.endereco && <span>📍 {restaurante.endereco} - {restaurante.cidade}</span>}
-              {restaurante.telefone && <span>📞 {restaurante.telefone}</span>}
-              {!restaurante.endereco && <span>📍 {restaurante.cidade}</span>}
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-8 relative overflow-hidden">
+          {/* Banner com gradiente */}          <div className="absolute top-0 left-0 w-full h-40">
+            <div className="w-full h-full relative">
+              <img
+                src={restaurante.banner || '/banner-default.png'}
+                alt={restaurante.nome}
+                className="w-full h-full object-cover"
+                onError={e => {e.currentTarget.src = '/banner-default.png'}}
+              />
+              <div className="absolute inset-0 bg-gradient-to-b from-orange-500/20 to-white"></div>
             </div>
           </div>
-        </div>
-      )}
 
-      {restaurante && (
-        <div className={`flex items-center gap-2 px-4 py-2 rounded-lg mb-4 ${
-          restaurante.aberto 
-            ? 'bg-green-100 text-green-700'
-            : 'bg-red-100 text-red-700'
-        }`}>
-          <span className="text-xl">
-            {restaurante.aberto ? '🟢' : '🔴'}
-          </span>
-          <span className="font-bold">
-            {restaurante.aberto 
-              ? 'Restaurante Aberto' 
-              : 'Restaurante Fechado - não está aceitando pedidos'}
-          </span>
+          {/* Container com logo e informações */}
+          <div className="relative z-10 pt-4 flex flex-col items-center text-center">
+            {/* Logo com dimensões fixas e espaçamento ajustado */}            
+            <div className="w-[160px] h-[160px] rounded-xl shadow-lg bg-white p-2 mb-6 border-4 border-white">
+              <img
+                src={restaurante.imagem || '/logo192.png'}
+                alt={restaurante.nome}
+                className="w-full h-full object-cover rounded-lg"
+                onError={e => {e.currentTarget.src = '/logo192.png'}}
+              />
+            </div>
+
+            <h1 className="text-2xl font-bold text-gray-800 mb-2">{restaurante.nome}</h1>
+
+            {/* Status Badge */}
+            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full mb-4 ${
+              restaurante.aberto 
+                ? 'bg-green-100 text-green-700 border border-green-200'
+                : 'bg-red-100 text-red-700 border border-red-200'
+            }`}>
+              <span className={`w-2.5 h-2.5 rounded-full ${
+                restaurante.aberto ? 'bg-green-500 animate-pulse' : 'bg-red-500'
+              }`} />
+              <span className="font-semibold">
+                {restaurante.aberto ? 'Aberto agora' : 'Fechado no momento'}
+              </span>
+              {!restaurante.aberto && (
+                <span className="text-sm ml-1">(não está aceitando pedidos)</span>
+              )}
+            </div>
+
+            {/* Informações do restaurante */}
+            <div className="flex flex-wrap justify-center gap-4 text-sm text-gray-600">
+              {restaurante.endereco && (
+                <span className="flex items-center gap-1">
+                  <FaMapMarkerAlt size={16} color="#f97316" />
+                  {restaurante.endereco} - {restaurante.cidade}
+                </span>
+              )}
+              {restaurante.telefone && (
+                <span className="flex items-center gap-1">
+                  <FaPhone size={16} color="#f97316" />
+                  {restaurante.telefone}
+                </span>
+              )}
+              <span className="flex items-center gap-1">
+                <FaClock size={16} color="#f97316" />
+                {restaurante.tempo_entrega} min
+              </span>
+              <span className="flex items-center gap-1">
+                <FaMoneyBill size={16} color="#f97316" />
+                Taxa de entrega: R$ {restaurante.taxa_entrega.toFixed(2)}
+              </span>
+            </div>
+          </div>
         </div>
       )}
 

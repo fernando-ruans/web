@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import theme from '../theme';
 import UploadImage from '../components/UploadImage';
-import { FaStore, FaPhone, FaMapMarkerAlt, FaClock, FaMoneyBill, FaIdCard } from 'react-icons/fa';
+import { FaStore, FaPhone, FaMapMarkerAlt, FaClock, FaMoneyBill, FaIdCard, FaEdit } from 'react-icons/fa';
 import { buscarCEP, formatarEndereco } from '../utils/cepUtils';
 
 interface Restaurant {
@@ -174,151 +174,298 @@ export default function LojistaPerfilPage() {
 
   return (
     <div className={theme.bg + ' min-h-screen flex flex-col items-center justify-center pb-24 sm:pb-32'}>
-      <div className="w-full max-w-2xl mx-auto flex flex-col items-center gap-6 py-10">
-        <div className="bg-white/90 rounded-2xl shadow-lg p-8 border-t-4 border-orange-400 w-full flex flex-col items-center gap-6">          <h2 className="text-2xl font-extrabold text-orange-500 mb-2 flex items-center gap-2">
-            <FaStore size={24} color="#f97316" /> Perfil do Restaurante
-          </h2>
-          
-          {/* Imagem do Restaurante */}
-          <div className="w-32 h-32 rounded-full bg-orange-100 flex items-center justify-center text-4xl font-bold text-orange-400 relative overflow-hidden border-4 border-orange-200">
-            {imagem ? (
-              <img src={imagem} alt={nome} className="w-full h-full object-cover" />
-            ) : (
-              <FaStore size={48} />
+      <div className="w-full max-w-4xl mx-auto flex flex-col items-center gap-6 py-10">
+        <div className="bg-white/90 rounded-2xl shadow-lg p-8 border-t-4 border-orange-400 w-full">
+          <div className="flex flex-col items-center gap-6">
+            <h2 className="text-2xl font-extrabold text-orange-500 mb-2 flex items-center gap-2">
+              <FaStore size={24} /> Perfil do Restaurante
+            </h2>
+
+            {restaurant && (
+              <>
+                {editMode ? (
+                  <form onSubmit={handleSave} className="w-full max-w-3xl">
+                    <div className="relative w-full h-48 mb-4 rounded-xl overflow-hidden bg-gray-100">
+                      <UploadImage label="Alterar banner" onUpload={setBanner} className="absolute inset-0" />
+                      {banner && (
+                        <img
+                          src={banner}
+                          alt="Banner do restaurante"
+                          className="w-full h-full object-cover"
+                        />
+                      )}
+                      <div className="absolute left-1/2 transform -translate-x-1/2" style={{bottom: '20px', width: '160px', height: '160px'}}>
+                        <div className="w-full h-full bg-white shadow-lg p-2 rounded-xl border-4 border-white">
+                          <UploadImage label="Alterar logo" onUpload={setImagem} className="w-full h-full rounded-lg" />
+                          {imagem && (
+                            <img
+                              src={imagem}
+                              alt="Logo do restaurante"
+                              className="w-full h-full object-cover rounded-lg"
+                            />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+                      <div className="bg-orange-50 p-4 rounded-xl flex items-start gap-3">
+                        <FaStore size={20} color="#f97316" />
+                        <div className="flex-1">
+                          <p className="text-sm text-gray-600">Nome do Restaurante</p>
+                          <input
+                            className="w-full bg-transparent text-lg font-semibold text-gray-900 focus:outline-none"
+                            placeholder="Nome do restaurante"
+                            value={nome}
+                            onChange={(e) => setNome(e.target.value)}
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <div className="bg-orange-50 p-4 rounded-xl flex items-start gap-3">
+                        <FaIdCard size={20} color="#f97316" />
+                        <div className="flex-1">
+                          <p className="text-sm text-gray-600">CNPJ</p>
+                          <input
+                            className="w-full bg-transparent text-lg font-semibold text-gray-900 focus:outline-none"
+                            placeholder="CNPJ"
+                            value={cnpj}
+                            onChange={(e) => setCnpj(e.target.value)}
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <div className="bg-orange-50 p-4 rounded-xl flex items-start gap-3">
+                        <FaMapMarkerAlt size={20} color="#f97316" />
+                        <div className="flex-1">
+                          <p className="text-sm text-gray-600">CEP</p>
+                          <input
+                            className="w-full bg-transparent text-lg font-semibold text-gray-900 focus:outline-none"
+                            placeholder="CEP"
+                            value={cep}
+                            onChange={(e) => setCep(e.target.value)}
+                            onBlur={handleCepBlur}
+                          />
+                          {loadingCep && <div className="text-sm text-orange-500">Buscando CEP...</div>}
+                        </div>
+                      </div>
+
+                      <div className="bg-orange-50 p-4 rounded-xl flex items-start gap-3">
+                        <FaPhone size={20} color="#f97316" />
+                        <div className="flex-1">
+                          <p className="text-sm text-gray-600">Telefone</p>
+                          <input
+                            className="w-full bg-transparent text-lg font-semibold text-gray-900 focus:outline-none"
+                            placeholder="Telefone"
+                            value={telefone}
+                            onChange={(e) => setTelefone(e.target.value)}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="bg-orange-50 p-4 rounded-xl flex items-start gap-3 md:col-span-2">
+                        <FaMapMarkerAlt size={20} color="#f97316" />
+                        <div className="flex-1">
+                          <p className="text-sm text-gray-600">Endereço</p>
+                          <input
+                            className="w-full bg-transparent text-lg font-semibold text-gray-900 focus:outline-none"
+                            placeholder="Endereço completo"
+                            value={endereco}
+                            onChange={(e) => setEndereco(e.target.value)}
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <div className="bg-orange-50 p-4 rounded-xl flex items-start gap-3">
+                        <FaMoneyBill size={20} color="#f97316" />
+                        <div className="flex-1">
+                          <p className="text-sm text-gray-600">Taxa de Entrega</p>
+                          <input
+                            className="w-full bg-transparent text-lg font-semibold text-gray-900 focus:outline-none"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder="Taxa de entrega"
+                            value={taxaEntrega}
+                            onChange={(e) => setTaxaEntrega(e.target.value)}
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <div className="bg-orange-50 p-4 rounded-xl flex items-start gap-3">
+                        <FaClock size={20} color="#f97316" />
+                        <div className="flex-1">
+                          <p className="text-sm text-gray-600">Tempo de Entrega</p>
+                          <input
+                            className="w-full bg-transparent text-lg font-semibold text-gray-900 focus:outline-none"
+                            type="number"
+                            min="1"
+                            placeholder="Tempo em minutos"
+                            value={tempoEntrega}
+                            onChange={(e) => setTempoEntrega(e.target.value)}
+                            required
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {msg && <div className="text-green-500 text-center mt-4">{msg}</div>}
+                    {error && <div className="text-red-400 text-center mt-4">{error}</div>}
+
+                    <div className="flex gap-4 justify-end mt-8">
+                      <button
+                        type="button"
+                        onClick={() => setEditMode(false)}
+                        className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg font-semibold"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-lg font-semibold"
+                      >
+                        Salvar Alterações
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <div className="w-full max-w-3xl">
+                    {/* Header com Banner e Logo */}
+                    <div className="relative w-full h-48 mb-8 rounded-xl overflow-hidden bg-gray-100">
+                      {/* Banner com seu botão no topo */}
+                      <div className="relative w-full h-full">
+                        <img
+                          src={banner || '/banner-default.png'}
+                          alt="Banner do restaurante"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute top-2 right-2">
+                          <UploadImage 
+                            label="Alterar banner" 
+                            onUpload={setBanner} 
+                            buttonClassName="bg-white/90 backdrop-blur-sm text-orange-500 px-4 py-2 rounded-lg font-semibold shadow-lg hover:bg-white"
+                          />
+                        </div>
+                      </div>
+                      {/* Container da logo centralizada */}
+                      <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                        <div className="w-[120px] h-[120px] bg-white shadow-lg rounded-xl border-4 border-white">
+                          {imagem ? (
+                            <div className="relative w-full h-full group">
+                              <img
+                                src={imagem}
+                                alt="Logo do restaurante"
+                                className="w-full h-full object-cover rounded-lg"
+                              />
+                              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 rounded-lg">
+                                <UploadImage 
+                                  label="Alterar logo" 
+                                  onUpload={setImagem} 
+                                  buttonClassName="bg-white/90 backdrop-blur-sm text-orange-500 px-4 py-2 rounded-lg font-semibold shadow-lg hover:bg-white"
+                                />
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <UploadImage 
+                                label="Alterar logo" 
+                                onUpload={setImagem} 
+                                buttonClassName="bg-white/90 backdrop-blur-sm text-orange-500 px-4 py-2 rounded-lg font-semibold shadow-lg hover:bg-white"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Informações do Restaurante em Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+                      <div className="bg-orange-50 p-4 rounded-xl flex items-start gap-3">
+                        <FaStore size={20} color="#f97316" />
+                        <div>
+                          <p className="text-sm text-gray-600">Nome do Restaurante</p>
+                          <p className="text-lg font-semibold text-gray-900">{nome}</p>
+                        </div>
+                      </div>
+
+                      <div className="bg-orange-50 p-4 rounded-xl flex items-start gap-3">
+                        <FaIdCard size={20} color="#f97316" />
+                        <div>
+                          <p className="text-sm text-gray-600">CNPJ</p>
+                          <p className="text-lg font-semibold text-gray-900">{cnpj}</p>
+                        </div>
+                      </div>
+
+                      <div className="bg-orange-50 p-4 rounded-xl flex items-start gap-3">
+                        <FaMapMarkerAlt size={20} color="#f97316" />
+                        <div>
+                          <p className="text-sm text-gray-600">CEP</p>
+                          <p className="text-lg font-semibold text-gray-900">{cep}</p>
+                        </div>
+                      </div>
+
+                      <div className="bg-orange-50 p-4 rounded-xl flex items-start gap-3">
+                        <FaPhone size={20} color="#f97316" />
+                        <div>
+                          <p className="text-sm text-gray-600">Telefone</p>
+                          <p className="text-lg font-semibold text-gray-900">{telefone || '-'}</p>
+                        </div>
+                      </div>
+
+                      <div className="bg-orange-50 p-4 rounded-xl flex items-start gap-3 md:col-span-2">
+                        <FaMapMarkerAlt size={20} color="#f97316" />
+                        <div>
+                          <p className="text-sm text-gray-600">Endereço</p>
+                          <p className="text-lg font-semibold text-gray-900">{endereco || '-'}</p>
+                        </div>
+                      </div>
+
+                      <div className="bg-orange-50 p-4 rounded-xl flex items-start gap-3">
+                        <FaMoneyBill size={20} color="#f97316" />
+                        <div>
+                          <p className="text-sm text-gray-600">Taxa de Entrega</p>
+                          <p className="text-lg font-semibold text-gray-900">R$ {Number(taxaEntrega).toFixed(2)}</p>
+                        </div>
+                      </div>
+
+                      <div className="bg-orange-50 p-4 rounded-xl flex items-start gap-3">
+                        <FaClock size={20} color="#f97316" />
+                        <div>
+                          <p className="text-sm text-gray-600">Tempo de Entrega</p>
+                          <p className="text-lg font-semibold text-gray-900">{tempoEntrega} minutos</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-8 flex justify-end">
+                      <button
+                        onClick={() => setEditMode(true)}
+                        className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-lg font-semibold flex items-center gap-2"
+                      >
+                        <FaEdit /> Editar Dados
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {!restaurant && (
+              <div className="text-center text-gray-500 py-8">
+                <p className="text-lg mb-4">Você ainda não cadastrou seu restaurante</p>
+                <button
+                  onClick={() => setEditMode(true)}
+                  className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-lg font-semibold"
+                >
+                  Cadastrar Restaurante
+                </button>
+              </div>
             )}
           </div>
-
-          {editMode ? (
-            <form onSubmit={handleSave} className="flex flex-col gap-4">
-              <input className={theme.input} placeholder="Nome do Restaurante" value={nome} onChange={e => setNome(e.target.value)} required />
-              <div className="flex flex-col sm:flex-row gap-2">
-                <div className="flex-1">
-                  <input 
-                    className={theme.input + ' w-full'} 
-                    placeholder="CEP (apenas números)" 
-                    value={cep} 
-                    onChange={e => setCep(e.target.value.replace(/\D/g, ''))} 
-                    onBlur={handleCepBlur}
-                    maxLength={8}
-                    required 
-                  />
-                  {loadingCep && <div className="text-sm text-gray-500 mt-1">Buscando CEP...</div>}
-                </div>
-                <input className={theme.input + ' w-full flex-1'} placeholder="Telefone" value={telefone} onChange={e => setTelefone(e.target.value)} />
-              </div>
-              <input className={theme.input} placeholder="CNPJ (opcional)" value={cnpj} onChange={e => setCnpj(e.target.value)} />
-              <input 
-                className={theme.input} 
-                placeholder="Endereço completo" 
-                value={endereco} 
-                onChange={e => setEndereco(e.target.value)} 
-                required 
-              />
-              <div className="flex flex-col sm:flex-row gap-2">
-                <input className={theme.input} type="number" min="0" step="0.01" placeholder="Taxa de entrega" value={taxaEntrega} onChange={e => setTaxaEntrega(e.target.value)} required />
-                <input className={theme.input} type="number" min="1" placeholder="Tempo de entrega (min)" value={tempoEntrega} onChange={e => setTempoEntrega(e.target.value)} required />
-              </div>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <div className="flex-1"><UploadImage label="Banner do restaurante" onUpload={setBanner} /></div>
-                <div className="flex-1"><UploadImage label="Logo do restaurante" onUpload={setImagem} /></div>
-              </div>
-              {msg && <div className="text-green-500 text-center">{msg}</div>}
-              {error && <div className="text-red-500 text-center">{error}</div>}
-              
-              <div className="flex gap-2">
-                <button type="submit" className={theme.primary + ' flex-1'}>Salvar</button>
-                <button type="button" className={theme.secondary + ' flex-1'} onClick={() => setEditMode(false)}>Cancelar</button>
-              </div>
-            </form>
-          ) : (
-            <div className="w-full max-w-md">
-              {restaurant ? (
-                <div className="grid gap-4">                  <div className="flex items-center gap-2">
-                    <FaStore size={20} color="#f97316" />
-                    <div>
-                      <div className="text-sm text-gray-500">Nome do Restaurante</div>
-                      <div className="text-lg text-gray-700">{nome}</div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <FaIdCard size={20} color="#f97316" />
-                    <div>
-                      <div className="text-sm text-gray-500">CNPJ</div>
-                      <div className="text-lg text-gray-700">{cnpj}</div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <FaMapMarkerAlt size={20} color="#f97316" />
-                    <div>
-                      <div className="text-sm text-gray-500">CEP</div>
-                      <div className="text-lg text-gray-700">{cep}</div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <FaPhone size={20} color="#f97316" />
-                    <div>
-                      <div className="text-sm text-gray-500">Telefone</div>
-                      <div className="text-lg text-gray-700">{telefone || '-'}</div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <FaMapMarkerAlt size={20} color="#f97316" />
-                    <div>
-                      <div className="text-sm text-gray-500">Endereço</div>
-                      <div className="text-lg text-gray-700">{endereco || '-'}</div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <FaMoneyBill size={20} color="#f97316" />
-                    <div>
-                      <div className="text-sm text-gray-500">Taxa de Entrega</div>
-                      <div className="text-lg text-gray-700">R$ {Number(taxaEntrega).toFixed(2)}</div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <FaClock size={20} color="#f97316" />
-                    <div>
-                      <div className="text-sm text-gray-500">Tempo de Entrega</div>
-                      <div className="text-lg text-gray-700">{tempoEntrega} minutos</div>
-                    </div>
-                  </div>
-
-                  {banner && (
-                    <div className="mt-4">
-                      <div className="text-sm text-gray-500 mb-2">Banner do Restaurante</div>
-                      <img src={banner} alt="Banner" className="w-full h-48 object-cover rounded-lg" />
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="text-center text-gray-500">
-                  Você ainda não cadastrou seu restaurante
-                </div>
-              )}
-
-              {restaurant && (
-                <button 
-                  onClick={handleToggleOpen}
-                  className={`${restaurant.aberto ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'} text-white font-bold py-2 px-4 rounded-full flex items-center gap-2 w-full justify-center mb-4`}
-                >
-                  {restaurant.aberto ? '🔒 Fechar Restaurante' : '🔓 Abrir Restaurante'}
-                </button>
-              )}
-
-              <button 
-                onClick={() => setEditMode(true)}
-                className={theme.primary + ' w-full mt-6'}
-              >
-                {restaurant ? 'Editar Dados do Restaurante' : 'Cadastrar Restaurante'}
-              </button>
-            </div>
-          )}
         </div>
       </div>
     </div>
