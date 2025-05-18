@@ -382,6 +382,20 @@ export default function LojistaPerfilPage() {
                       </div>
                     </div>
 
+                    {/* Switch abrir/fechar restaurante */}
+                    <div className="flex items-center justify-end mb-6">
+                      <span className={`mr-3 font-semibold ${restaurant?.aberto ? 'text-green-600' : 'text-red-500'}`}>{restaurant?.aberto ? 'Aberto' : 'Fechado'}</span>
+                      <button
+                        onClick={handleToggleOpen}
+                        className={`relative inline-flex items-center h-7 rounded-full w-14 transition-colors focus:outline-none ${restaurant?.aberto ? 'bg-green-400' : 'bg-gray-300'}`}
+                        title={restaurant?.aberto ? 'Clique para fechar o restaurante' : 'Clique para abrir o restaurante'}
+                      >
+                        <span
+                          className={`inline-block w-7 h-7 transform bg-white rounded-full shadow transition-transform duration-200 ${restaurant?.aberto ? 'translate-x-7' : 'translate-x-0'}`}
+                        />
+                      </button>
+                    </div>
+
                     {/* Informações do Restaurante em Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
                       <div className="bg-orange-50 p-4 rounded-xl flex items-start gap-3">
