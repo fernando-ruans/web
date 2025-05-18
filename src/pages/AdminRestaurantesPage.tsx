@@ -3,12 +3,16 @@ import theme from '../theme';
 import { FaPlus, FaStore, FaCheckCircle, FaTrashAlt, FaTimesCircle, FaUserTie, FaEdit } from 'react-icons/fa';
 import UploadImage from '../components/UploadImage';
 import { useLocation } from 'react-router-dom';
+import { buscarCEP, formatarEndereco } from '../utils/cepUtils';
 
 export default function AdminRestaurantesPage() {
   const [showForm, setShowForm] = useState(false);
   const [nome, setNome] = useState('');
   const [cnpj, setCnpj] = useState('');
-  const [cidade, setCidade] = useState('');
+  const [cep, setCep] = useState('');
+  const [telefone, setTelefone] = useState('');
+  const [endereco, setEndereco] = useState('');
+  const [loadingCep, setLoadingCep] = useState(false);
   const [taxa_entrega, setTaxaEntrega] = useState('');
   const [tempo_entrega, setTempoEntrega] = useState('');
   const [banner, setBanner] = useState('');
@@ -95,11 +99,11 @@ export default function AdminRestaurantesPage() {
     const res = await fetch('/api/admin/restaurants', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
-      body: JSON.stringify({ nome, cnpj, cidade, taxa_entrega, tempo_entrega, banner, imagem })
+      body: JSON.stringify({ nome, cnpj, cep, telefone, endereco, taxa_entrega, tempo_entrega, banner, imagem })
     });
     if (res.ok) {
       setMsg('Restaurante cadastrado com sucesso!');
-      setNome(''); setCnpj(''); setCidade(''); setTaxaEntrega(''); setTempoEntrega(''); setBanner(''); setImagem('');
+      setNome(''); setCnpj(''); setCep(''); setTelefone(''); setEndereco(''); setTaxaEntrega(''); setTempoEntrega(''); setBanner(''); setImagem('');
       setShowForm(false);
       fetchRestaurantes();
     } else {
@@ -151,11 +155,28 @@ export default function AdminRestaurantesPage() {
     }
   }
 
+  const handleCepBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
+    const cepValue = e.target.value;
+    if (cepValue.length === 8 || cepValue.length === 9) {
+      setLoadingCep(true);
+      try {
+        const enderecoCep = await buscarCEP(cepValue);
+        if (enderecoCep) {
+          setEndereco(formatarEndereco(enderecoCep));
+        }
+      } finally {
+        setLoadingCep(false);
+      }
+    }
+  };
+
   function openEditForm(restaurante: any) {
     setEditId(restaurante.id);
     setNome(restaurante.nome);
     setCnpj(restaurante.cnpj);
-    setCidade(restaurante.cidade);
+    setCep(restaurante.cep || '');
+    setTelefone(restaurante.telefone || '');
+    setEndereco(restaurante.endereco || '');
     setTaxaEntrega(restaurante.taxa_entrega);
     setTempoEntrega(restaurante.tempo_entrega);
     setBanner(restaurante.banner || '');
@@ -174,11 +195,11 @@ export default function AdminRestaurantesPage() {
     const res = await fetch(`/api/admin/restaurants/${editId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
-      body: JSON.stringify({ nome, cnpj, cidade, taxa_entrega, tempo_entrega, banner, imagem })
+      body: JSON.stringify({ nome, cnpj, cep, telefone, endereco, taxa_entrega, tempo_entrega, banner, imagem })
     });
     if (res.ok) {
       setMsg('Restaurante atualizado com sucesso!');
-      setNome(''); setCnpj(''); setCidade(''); setTaxaEntrega(''); setTempoEntrega(''); setBanner(''); setImagem('');
+      setNome(''); setCnpj(''); setCep(''); setTelefone(''); setEndereco(''); setTaxaEntrega(''); setTempoEntrega(''); setBanner(''); setImagem('');
       setEditId(null); setEditMode(false); setShowForm(false);
       fetchRestaurantes();
     } else {
@@ -200,9 +221,29 @@ export default function AdminRestaurantesPage() {
         </button>
         {showForm && (
           <form onSubmit={editMode ? handleEdit : handleSubmit} className="w-full flex flex-col gap-2 bg-orange-50 rounded-xl p-4 border border-orange-200 mb-2">
-            <input className={theme.input + ' w-full'} placeholder="Nome" value={nome} onChange={e => setNome(e.target.value)} required />
-            <input className={theme.input + ' w-full'} placeholder="CNPJ" value={cnpj} onChange={e => setCnpj(e.target.value)} required />
-            <input className={theme.input + ' w-full'} placeholder="Cidade" value={cidade} onChange={e => setCidade(e.target.value)} required />
+            <input className={theme.input + ' w-full'} placeholder="Nome do Restaurante" value={nome} onChange={e => setNome(e.target.value)} required />
+            <div className="flex flex-col sm:flex-row gap-2">
+              <div className="flex-1">
+                <input 
+                  className={theme.input + ' w-full'} 
+                  placeholder="CEP (apenas números)" 
+                  value={cep} 
+                  onChange={e => setCep(e.target.value.replace(/\D/g, ''))} 
+                  onBlur={handleCepBlur}
+                  maxLength={8}
+                  required 
+                />
+                {loadingCep && <div className="text-sm text-gray-500 mt-1">Buscando CEP...</div>}
+              </div>
+              <input className={theme.input + ' w-full flex-1'} placeholder="Telefone" value={telefone} onChange={e => setTelefone(e.target.value)} />
+            </div>
+            <input 
+              className={theme.input + ' w-full'} 
+              placeholder="Endereço completo" 
+              value={endereco} 
+              onChange={e => setEndereco(e.target.value)} 
+              required 
+            />
             <div className="flex flex-col sm:flex-row gap-2">
               <input className={theme.input + ' w-full'} placeholder="Taxa de entrega" type="number" min="0" step="0.01" value={taxa_entrega} onChange={e => setTaxaEntrega(e.target.value)} required />
               <input className={theme.input + ' w-full'} placeholder="Tempo de entrega (min)" type="number" min="1" value={tempo_entrega} onChange={e => setTempoEntrega(e.target.value)} required />

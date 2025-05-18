@@ -10,7 +10,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<any>(null);
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [tipo, setTipo] = useState<string | null>(localStorage.getItem('tipo'));
@@ -25,20 +25,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         headers: { Authorization: `Bearer ${token}` }
       })
         .then(res => res.ok ? res.json() : null)
-        .then(data => setUser(data))
+        .then(data => {
+          if (data) setUser(data);
+        })
         .finally(() => setLoading(false));
     } else {
       setLoading(false);
     }
   }, [token, tipo]);
 
-  // Listener para atualização do usuário após edição do perfil
-  React.useEffect(() => {
-    function handleUserUpdated(e: any) {
-      if (e.detail) setUser(e.detail);
-    }
-    window.addEventListener('userUpdated', handleUserUpdated);
-    return () => window.removeEventListener('userUpdated', handleUserUpdated);
+  useEffect(() => {
+    const handleUserUpdated = (e: CustomEvent<any>) => {
+      if (e.detail?.user) {
+        setUser(e.detail.user);
+      }
+    };
+
+    window.addEventListener('userUpdated', handleUserUpdated as EventListener);
+    return () => window.removeEventListener('userUpdated', handleUserUpdated as EventListener);
   }, []);
 
   const login = async (email: string, senha: string) => {

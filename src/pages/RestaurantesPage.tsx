@@ -7,11 +7,13 @@ interface Restaurante {
   nome: string;
   cidade: string;
   imagem: string;
-  banner: string; // novo campo
+  banner: string;
   taxa_entrega: number;
   tempo_entrega: number;
   status: string;
-  cnpj?: string; // campo opcional para filtro
+  cnpj?: string;
+  telefone?: string;
+  endereco?: string;
 }
 
 export default function RestaurantesPage() {
@@ -90,9 +92,14 @@ export default function RestaurantesPage() {
                   )}
                 </div>
                 <div className="flex flex-wrap items-center gap-2 text-gray-500 text-xs mt-1">
-                  <span className="flex items-center gap-1"><FaMapMarkerAlt size={12} color="#fb923c" /> {rest.cidade}</span>
+                  {rest.endereco ? (
+                    <span className="flex items-center gap-1"><FaMapMarkerAlt size={12} color="#fb923c" /> {rest.endereco} - {rest.cidade}</span>
+                  ) : (
+                    <span className="flex items-center gap-1"><FaMapMarkerAlt size={12} color="#fb923c" /> {rest.cidade}</span>
+                  )}
                   <span className="flex items-center gap-1"><FaClock size={12} color="#fb923c" /> {rest.tempo_entrega} min</span>
                   <span className="flex items-center gap-1">• Entrega: R$ {rest.taxa_entrega.toFixed(2)}</span>
+                  {rest.telefone && <span className="flex items-center gap-1">• 📞 {rest.telefone}</span>}
                 </div>
               </div>
             </Card>

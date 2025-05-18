@@ -24,6 +24,8 @@ interface Restaurante {
   cidade: string;
   taxa_entrega: number;
   tempo_entrega: number;
+  telefone?: string;
+  endereco?: string;
 }
 
 export default function RestauranteMenuPage() {
@@ -54,10 +56,16 @@ export default function RestauranteMenuPage() {
       {restaurante && (
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-orange-500">{restaurante.nome}</h1>
-          <div className="text-gray-600 mt-2 flex items-center gap-4 text-sm">
-            <span>🚚 Entrega: R$ {restaurante.taxa_entrega.toFixed(2)}</span>
-            <span>⏱️ {restaurante.tempo_entrega} min</span>
-            <span>📍 {restaurante.cidade}</span>
+          <div className="text-gray-600 mt-2 flex flex-col gap-2 text-sm">
+            <div className="flex items-center gap-4">
+              <span>🚚 Entrega: R$ {restaurante.taxa_entrega.toFixed(2)}</span>
+              <span>⏱️ {restaurante.tempo_entrega} min</span>
+            </div>
+            <div className="flex flex-col gap-1">
+              {restaurante.endereco && <span>📍 {restaurante.endereco} - {restaurante.cidade}</span>}
+              {restaurante.telefone && <span>📞 {restaurante.telefone}</span>}
+              {!restaurante.endereco && <span>📍 {restaurante.cidade}</span>}
+            </div>
           </div>
         </div>
       )}

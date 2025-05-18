@@ -23,6 +23,36 @@ export default function ProfilePage() {
   else if (user.tipo === 'lojista') tipoLabel = 'Lojista';
   else if (user.tipo === 'admin') tipoLabel = 'Administrador';
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setMsg('');
+    setError('');
+    try {
+      let endpoint = '/api/cliente/profile';
+      if (user.tipo === 'lojista') endpoint = '/api/lojista/profile';
+      if (user.tipo === 'admin') endpoint = '/api/admin/profile';
+      const res = await fetch(endpoint, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
+        body: JSON.stringify({ nome, email, avatarUrl, telefone, cpf, endereco })
+      });      if (res.ok) {
+        const data = await res.json();
+        if (data.msg && data.user) {
+          setMsg(data.msg);
+          // Dispara evento para atualizar o usuário no contexto de autenticação
+          window.dispatchEvent(new CustomEvent('userUpdated', { detail: data }));
+          setEditMode(false);
+        } else {
+          setError('Resposta inválida do servidor');
+        }
+      } else {
+        setError('Erro ao atualizar perfil');
+      }
+    } catch {
+      setError('Erro ao atualizar perfil');
+    }
+  };
+
   return (
     <div className={theme.bg + ' flex flex-col items-center justify-center min-h-screen pb-24 sm:pb-32'}>
       <div className="w-full max-w-xl flex flex-col items-center gap-8 py-10">
@@ -39,37 +69,7 @@ export default function ProfilePage() {
             )}
           </div>
           {editMode ? (
-            <form className="w-full flex flex-col items-center gap-2" onSubmit={async e => {
-              e.preventDefault();
-              setMsg('');
-              setError('');
-              try {
-                let endpoint = '/api/cliente/profile';
-                if (user.tipo === 'lojista') endpoint = '/api/lojista/profile';
-                if (user.tipo === 'admin') endpoint = '/api/admin/profile';
-                const res = await fetch(endpoint, {
-                  method: 'PUT',
-                  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
-                  body: JSON.stringify({ nome, email, avatarUrl, telefone, cpf, endereco })
-                });
-                if (res.ok) {
-                  const data = await res.json();
-                  setMsg('Dados atualizados com sucesso!');
-                  setEditMode(false);
-                  if (data.user) {
-                    if (typeof window !== 'undefined') {
-                      const event = new CustomEvent('userUpdated', { detail: data.user });
-                      window.dispatchEvent(event);
-                    }
-                  }
-                } else {
-                  const err = await res.json();
-                  setError(err.error || 'Erro ao atualizar dados.');
-                }
-              } catch (err) {
-                setError('Erro ao atualizar dados.');
-              }
-            }}>
+            <form className="w-full flex flex-col items-center gap-2" onSubmit={handleSubmit}>
               <div className="w-full flex flex-col items-center mb-2">
                 <UploadImage onUpload={setAvatarUrl} label=" " buttonClassName="mt-0 mb-2 px-3 py-1 text-sm rounded-full bg-orange-400 hover:bg-orange-500 text-white shadow-sm transition" />
               </div>
