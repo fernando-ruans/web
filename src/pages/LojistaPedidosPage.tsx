@@ -41,6 +41,7 @@ interface Pedido {
 interface FiltrosPedido {
   status: string;
   busca: string;
+  periodo: 'todos' | 'hoje' | 'ontem' | 'semana' | 'mes';
 }
 
 interface PedidoStats {
@@ -390,9 +391,8 @@ export default function LojistaPedidosPage() {
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState('');
   const [atualizando, setAtualizando] = useState<number | null>(null);
-  
   // Estados para novas funcionalidades
-  const [filtros, setFiltros] = useState<FiltrosPedido>({ status: 'todos', busca: '' });
+  const [filtros, setFiltros] = useState<FiltrosPedido>({ status: 'todos', busca: '', periodo: 'hoje' });
   const [ordenacao, setOrdenacao] = useState<OrdenacaoPedidos>({ campo: 'data_criacao', ordem: 'desc' });
   const [pedidoSelecionado, setPedidoSelecionado] = useState<Pedido | null>(null);
   const [modalVisivel, setModalVisivel] = useState(false);
@@ -475,13 +475,23 @@ export default function LojistaPedidosPage() {
       setToast(prev => ({ ...prev, visivel: false }));
     }, 3000);
   };
-
   const aplicarFiltrosEOrdenacao = () => {
     let pedidosFiltrados = [...pedidos];
     
     // Aplicar filtro por status
     if (filtros.status !== 'todos') {
       pedidosFiltrados = pedidosFiltrados.filter(pedido => pedido.status === filtros.status);
+    }
+    
+    // Aplicar filtro por período
+    if (filtros.periodo !== 'todos') {
+      const dataLimiteInferior = getDataLimiteInferior(filtros.periodo);
+      const dataLimiteSuperior = getDataLimiteSuperior(filtros.periodo);
+      
+      pedidosFiltrados = pedidosFiltrados.filter(pedido => {
+        const dataPedido = new Date(pedido.data_criacao);
+        return dataPedido >= dataLimiteInferior && dataPedido <= dataLimiteSuperior;
+      });
     }
     
     // Aplicar busca por cliente ou ID do pedido
@@ -591,6 +601,60 @@ export default function LojistaPedidosPage() {
     }
   };
 
+  const getDataLimiteInferior = (periodo: string): Date => {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    
+    switch (periodo) {
+      case 'hoje':
+        return hoje;
+      case 'ontem':
+        const ontem = new Date(hoje);
+        ontem.setDate(ontem.getDate() - 1);
+        return ontem;
+      case 'semana':
+        const inicioSemana = new Date(hoje);
+        inicioSemana.setDate(inicioSemana.getDate() - inicioSemana.getDay());
+        return inicioSemana;
+      case 'mes':
+        const inicioMes = new Date(hoje);
+        inicioMes.setDate(1);
+        return inicioMes;
+      default:
+        return new Date(0); // Data mínima para 'todos'
+    }
+  };
+  
+  const getDataLimiteSuperior = (periodo: string): Date => {
+    const hoje = new Date();
+    hoje.setHours(23, 59, 59, 999);
+    
+    switch (periodo) {
+      case 'hoje':
+        return hoje;
+      case 'ontem':
+        const ontem = new Date(hoje);
+        ontem.setDate(ontem.getDate() - 1);
+        return ontem;
+      case 'semana':
+        const fimSemana = new Date(hoje);
+        const diasAteProximoDomingo = 7 - hoje.getDay();
+        fimSemana.setDate(fimSemana.getDate() + diasAteProximoDomingo);
+        return fimSemana;
+      case 'mes':
+        const fimMes = new Date(hoje);
+        fimMes.setMonth(fimMes.getMonth() + 1);
+        fimMes.setDate(0);
+        return fimMes;
+      default:
+        return new Date(8640000000000000); // Data máxima para 'todos'
+    }
+  };
+
+  const handleChangePeriodo = (periodo: 'todos' | 'hoje' | 'ontem' | 'semana' | 'mes') => {
+    setFiltros(prev => ({ ...prev, periodo }));
+  };
+
   if (loading) return <div className="text-center text-gray-700 mt-10">Carregando...</div>;
   if (erro) return <div className="text-center text-red-400 mt-10">{erro}</div>;
 
@@ -633,49 +697,57 @@ export default function LojistaPedidosPage() {
                   <FaSearch />
                 </div>
               </div>
-            </div>
-            
-            <div className="w-full md:w-auto flex items-center gap-2">
+            </div>            <div className="w-full md:w-auto flex flex-col md:flex-row gap-2">
               <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg">
                 <button
                   className={`px-3 py-1 rounded text-sm font-medium transition ${
-                    filtros.status === 'todos' 
+                    filtros.periodo === 'todos' 
                       ? 'bg-orange-500 text-white' 
                       : 'text-gray-600 hover:bg-gray-200'
                   }`}
-                  onClick={() => handleChangeFiltroStatus('todos')}
+                  onClick={() => handleChangePeriodo('todos')}
                 >
                   Todos
                 </button>
                 <button
                   className={`px-3 py-1 rounded text-sm font-medium transition ${
-                    filtros.status === 'Pendente' 
-                      ? 'bg-yellow-500 text-white' 
+                    filtros.periodo === 'hoje' 
+                      ? 'bg-green-500 text-white' 
                       : 'text-gray-600 hover:bg-gray-200'
                   }`}
-                  onClick={() => handleChangeFiltroStatus('Pendente')}
+                  onClick={() => handleChangePeriodo('hoje')}
                 >
-                  Pendentes
+                  Hoje
                 </button>
                 <button
                   className={`px-3 py-1 rounded text-sm font-medium transition ${
-                    filtros.status === 'Em Preparo' 
+                    filtros.periodo === 'ontem' 
                       ? 'bg-blue-500 text-white' 
                       : 'text-gray-600 hover:bg-gray-200'
                   }`}
-                  onClick={() => handleChangeFiltroStatus('Em Preparo')}
+                  onClick={() => handleChangePeriodo('ontem')}
                 >
-                  Preparo
+                  Ontem
                 </button>
                 <button
                   className={`px-3 py-1 rounded text-sm font-medium transition ${
-                    filtros.status === 'Saiu para Entrega' 
-                      ? 'bg-orange-500 text-white' 
+                    filtros.periodo === 'semana' 
+                      ? 'bg-purple-500 text-white' 
                       : 'text-gray-600 hover:bg-gray-200'
                   }`}
-                  onClick={() => handleChangeFiltroStatus('Saiu para Entrega')}
+                  onClick={() => handleChangePeriodo('semana')}
                 >
-                  Entrega
+                  Semana
+                </button>
+                <button
+                  className={`px-3 py-1 rounded text-sm font-medium transition ${
+                    filtros.periodo === 'mes' 
+                      ? 'bg-indigo-500 text-white' 
+                      : 'text-gray-600 hover:bg-gray-200'
+                  }`}
+                  onClick={() => handleChangePeriodo('mes')}
+                >
+                  Mês
                 </button>
               </div>
               
