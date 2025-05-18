@@ -186,23 +186,47 @@ export default function LojistaPerfilPage() {
                 {editMode ? (
                   <form onSubmit={handleSave} className="w-full max-w-3xl">
                     <div className="relative w-full h-48 mb-4 rounded-xl overflow-hidden bg-gray-100">
-                      <UploadImage label="Alterar banner" onUpload={setBanner} className="absolute inset-0" />
-                      {banner && (
+                      {/* Banner com botão igual ao modo de exibição */}
+                      <div className="relative w-full h-full">
                         <img
-                          src={banner}
+                          src={banner || '/banner-default.png'}
                           alt="Banner do restaurante"
                           className="w-full h-full object-cover"
                         />
-                      )}
-                      <div className="absolute left-1/2 transform -translate-x-1/2" style={{bottom: '20px', width: '160px', height: '160px'}}>
-                        <div className="w-full h-full bg-white shadow-lg p-2 rounded-xl border-4 border-white">
-                          <UploadImage label="Alterar logo" onUpload={setImagem} className="w-full h-full rounded-lg" />
-                          {imagem && (
-                            <img
-                              src={imagem}
-                              alt="Logo do restaurante"
-                              className="w-full h-full object-cover rounded-lg"
-                            />
+                        <div className="absolute top-2 right-2">
+                          <UploadImage 
+                            label="Alterar banner" 
+                            onUpload={setBanner} 
+                            buttonClassName="bg-white/90 backdrop-blur-sm text-orange-300 px-4 py-2 rounded-lg font-semibold shadow-lg"
+                          />
+                        </div>
+                      </div>
+                      {/* Container da logo centralizada */}
+                      <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                        <div className="w-[120px] h-[120px] bg-white shadow-lg rounded-xl border-4 border-white flex items-center justify-center">
+                          {imagem ? (
+                            <div className="relative w-full h-full group">
+                              <img
+                                src={imagem}
+                                alt="Logo do restaurante"
+                                className="w-full h-full object-cover rounded-lg"
+                              />
+                              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 rounded-lg">
+                                <UploadImage 
+                                  label="Alterar logo" 
+                                  onUpload={setImagem} 
+                                  buttonClassName="bg-white/90 backdrop-blur-sm text-orange-300 px-4 py-2 rounded-lg font-semibold shadow-lg"
+                                />
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <UploadImage 
+                                label="Alterar logo" 
+                                onUpload={setImagem} 
+                                buttonClassName="bg-white/90 backdrop-blur-sm text-orange-300 px-4 py-2 rounded-lg font-semibold shadow-lg"
+                              />
+                            </div>
                           )}
                         </div>
                       </div>
@@ -336,48 +360,24 @@ export default function LojistaPerfilPage() {
                   <div className="w-full max-w-3xl">
                     {/* Header com Banner e Logo */}
                     <div className="relative w-full h-48 mb-8 rounded-xl overflow-hidden bg-gray-100">
-                      {/* Banner com seu botão no topo */}
+                      {/* Banner apenas imagem, sem botão */}
                       <div className="relative w-full h-full">
                         <img
                           src={banner || '/banner-default.png'}
                           alt="Banner do restaurante"
                           className="w-full h-full object-cover"
                         />
-                        <div className="absolute top-2 right-2">
-                          <UploadImage 
-                            label="Alterar banner" 
-                            onUpload={setBanner} 
-                            buttonClassName="bg-white/90 backdrop-blur-sm text-orange-500 px-4 py-2 rounded-lg font-semibold shadow-lg hover:bg-white"
-                          />
-                        </div>
                       </div>
                       {/* Container da logo centralizada */}
                       <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                        <div className="w-[120px] h-[120px] bg-white shadow-lg rounded-xl border-4 border-white">
+                        <div className="w-[120px] h-[120px] bg-white shadow-lg rounded-xl border-4 border-white flex items-center justify-center">
                           {imagem ? (
-                            <div className="relative w-full h-full group">
-                              <img
-                                src={imagem}
-                                alt="Logo do restaurante"
-                                className="w-full h-full object-cover rounded-lg"
-                              />
-                              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 rounded-lg">
-                                <UploadImage 
-                                  label="Alterar logo" 
-                                  onUpload={setImagem} 
-                                  buttonClassName="bg-white/90 backdrop-blur-sm text-orange-500 px-4 py-2 rounded-lg font-semibold shadow-lg hover:bg-white"
-                                />
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <UploadImage 
-                                label="Alterar logo" 
-                                onUpload={setImagem} 
-                                buttonClassName="bg-white/90 backdrop-blur-sm text-orange-500 px-4 py-2 rounded-lg font-semibold shadow-lg hover:bg-white"
-                              />
-                            </div>
-                          )}
+                            <img
+                              src={imagem}
+                              alt="Logo do restaurante"
+                              className="w-full h-full object-cover rounded-lg"
+                            />
+                          ) : null}
                         </div>
                       </div>
                     </div>
