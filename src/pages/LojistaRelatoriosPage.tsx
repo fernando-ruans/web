@@ -1,10 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import theme from '../theme';
-import { FaChartBar, FaMoneyBillWave, FaUtensils, FaReceipt, FaSpinner, FaTimesCircle, FaStar, FaUsers, FaShoppingBag, FaTrophy } from 'react-icons/fa';
+import { FaChartBar, FaMoneyBillWave, FaUtensils, FaReceipt, FaSpinner, FaTimesCircle, FaStar, FaUsers, FaShoppingBag, FaTrophy, FaCalendarAlt, FaFilePdf, FaDownload } from 'react-icons/fa';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, PointElement, LineElement } from 'chart.js';
 import { Bar, Pie, Line } from 'react-chartjs-2';
+import { format, subDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, parse } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 // Registrando componentes do Chart.js
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, PointElement, LineElement);
@@ -29,6 +33,12 @@ interface RelatorioDados {
     dia: string;
     pedidos: number;
   }[];
+}
+
+interface FiltroData {
+  inicio: Date;
+  fim: Date;
+  label: string;
 }
 
 // Dados de exemplo para quando a API falhar
@@ -73,14 +83,24 @@ export default function LojistaRelatoriosPage() {
   const [dados, setDados] = useState<RelatorioDados | null>(null);
   const [carregandoDados, setCarregandoDados] = useState(true);
   const [erro, setErro] = useState('');
+  const relatorioRef = useRef<HTMLDivElement>(null);
+  const [exportandoPDF, setExportandoPDF] = useState(false);
+  
+  // Filtros de período para relatórios
+  const hoje = new Date();
+  const [periodoSelecionado, setPeriodoSelecionado] = useState<string>('7dias');
+  const [filtroCustomizado, setFiltroCustomizado] = useState<FiltroData>({
+    inicio: subDays(hoje, 7),
+    fim: hoje,
+    label: 'Últimos 7 dias'
+  });
 
   useEffect(() => {
     if (!user) return;
     if (user.tipo !== 'lojista') {
       navigate('/');
     }
-    
-    // Buscar restaurante do lojista
+      // Buscar restaurante do lojista
     async function fetchRestaurante() {
       setRestLoading(true);
       try {
@@ -89,9 +109,9 @@ export default function LojistaRelatoriosPage() {
           const data = await res.json();
           setRestaurante(data[0] || null);
           
-          // Se encontrou o restaurante, busca os dados de relatórios
+          // Se encontrou o restaurante, busca os dados de relatórios com o período já selecionado
           if (data[0] && data[0].id) {
-            fetchDadosRelatorio(data[0].id);
+            fetchDadosRelatorio(data[0].id, filtroCustomizado.inicio, filtroCustomizado.fim);
           } else {
             setCarregandoDados(false);
           }
@@ -102,57 +122,418 @@ export default function LojistaRelatoriosPage() {
         setRestLoading(false);
       }
     }
-      // Buscar dados do relatório
-    async function fetchDadosRelatorio(restauranteId: number) {
-      setCarregandoDados(true);
-      setErro('');
-      try {
-        // Primeiro tenta usar a API regular
-        const res = await fetch(`/api/lojista/relatorios/${restauranteId}`, { credentials: 'include' });
+    
+    fetchRestaurante();
+  }, [user, navigate]);
+  // Função para buscar dados do relatório com filtros de período
+  const fetchDadosRelatorio = async (restauranteId: number, inicio?: Date, fim?: Date) => {
+    setCarregandoDados(true);
+    setErro('');
+    
+    // Montando os parâmetros da URL para filtrar por data, se fornecidos
+    let url = `/api/lojista/relatorios/${restauranteId}`;
+    if (inicio && fim) {
+      url += `?inicio=${inicio.toISOString()}&fim=${fim.toISOString()}`;
+    }
+    
+    try {
+      // Primeiro tenta usar a API regular
+      const res = await fetch(url, { credentials: 'include' });
+      
+      if (res.ok) {
+        const data = await res.json();
+        setDados(data);
+      } else {
+        console.error("Erro na API regular:", res.status, res.statusText);
         
-        if (res.ok) {
-          const data = await res.json();
-          setDados(data);
-        } else {
-          console.error("Erro na API regular:", res.status, res.statusText);
-          
-          // Se falhar, tenta usar a API de demonstração 
-          try {
-            const demoRes = await fetch(`/api/lojista/relatorios-demo/${restauranteId}`, { credentials: 'include' });
-            if (demoRes.ok) {
-              const demoData = await demoRes.json();
-              setDados(demoData);
-            } else {
-              // Se ambas falharem, usa os dados de exemplo locais
-              setDados(dadosExemplo);
-            }
-          } catch (demoError) {
-            console.error("Erro na API de demonstração:", demoError);
-            setDados(dadosExemplo);
-          }
-        }
-      } catch (error) {
-        console.error('Erro ao buscar dados de relatório:', error);
-        // Em caso de erro, tenta usar a API de demonstração
+        // Se falhar, tenta usar a API de demonstração 
         try {
           const demoRes = await fetch(`/api/lojista/relatorios-demo/${restauranteId}`, { credentials: 'include' });
           if (demoRes.ok) {
             const demoData = await demoRes.json();
             setDados(demoData);
           } else {
+            // Se ambas falharem, usa os dados de exemplo locais
             setDados(dadosExemplo);
           }
         } catch (demoError) {
           console.error("Erro na API de demonstração:", demoError);
           setDados(dadosExemplo);
         }
-      } finally {
-        setCarregandoDados(false);
       }
+    } catch (error) {
+      console.error('Erro ao buscar dados de relatório:', error);
+      // Em caso de erro, tenta usar a API de demonstração
+      try {
+        const demoRes = await fetch(`/api/lojista/relatorios-demo/${restauranteId}`, { credentials: 'include' });
+        if (demoRes.ok) {
+          const demoData = await demoRes.json();
+          setDados(demoData);
+        } else {
+          setDados(dadosExemplo);
+        }
+      } catch (demoError) {
+        console.error("Erro na API de demonstração:", demoError);
+        setDados(dadosExemplo);
+      }
+    } finally {
+      setCarregandoDados(false);
+    }
+  };
+
+  // Função para mudar o período selecionado
+  const mudarPeriodo = (periodo: string) => {
+    setPeriodoSelecionado(periodo);
+    
+    let novoFiltro: FiltroData;
+    const hoje = new Date();
+    
+    switch (periodo) {
+      case '7dias':
+        novoFiltro = {
+          inicio: subDays(hoje, 7),
+          fim: hoje,
+          label: 'Últimos 7 dias'
+        };
+        break;
+      case '30dias':
+        novoFiltro = {
+          inicio: subDays(hoje, 30),
+          fim: hoje,
+          label: 'Últimos 30 dias'
+        };
+        break;
+      case 'mes':
+        novoFiltro = {
+          inicio: startOfMonth(hoje),
+          fim: endOfMonth(hoje),
+          label: `Mês atual (${format(hoje, 'MMMM yyyy', { locale: ptBR })})`
+        };
+        break;
+      case 'semana':
+        novoFiltro = {
+          inicio: startOfWeek(hoje, { weekStartsOn: 0 }),
+          fim: endOfWeek(hoje, { weekStartsOn: 0 }),
+          label: `Semana atual (${format(startOfWeek(hoje, { weekStartsOn: 0 }), 'dd/MM')} - ${format(endOfWeek(hoje, { weekStartsOn: 0 }), 'dd/MM')})`
+        };
+        break;
+      case 'personalizado':
+        // Mantém o filtro personalizado atual
+        novoFiltro = filtroCustomizado;
+        break;
+      default:
+        novoFiltro = {
+          inicio: subDays(hoje, 7),
+          fim: hoje,
+          label: 'Últimos 7 dias'
+        };
     }
     
-    fetchRestaurante();
-  }, [user, navigate]);
+    setFiltroCustomizado(novoFiltro);
+    
+    if (restaurante && restaurante.id) {
+      fetchDadosRelatorio(restaurante.id, novoFiltro.inicio, novoFiltro.fim);
+    }
+  };
+  // Função para exportar o relatório como PDF
+  const exportarPDF = async () => {
+    if (!dados || !restaurante) return;
+    
+    setExportandoPDF(true);
+    try {
+      // Criar um novo documento PDF no formato A4 em retrato
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 15;
+      const contentWidth = pageWidth - 2 * margin;
+      
+      // Cores
+      const corPrimaria = '#f97316'; // Laranja
+      const corSecundaria = '#1e40af'; // Azul escuro
+      const corTexto = '#333333';
+      const corDestaques = '#059669'; // Verde
+      
+      // Adicionar logo do restaurante
+      try {
+        // Tentar carregar o logo
+        const logoUrl = restaurante.imagem || '/logo-default.png';
+        const logoImg = new Image();
+        logoImg.src = logoUrl.startsWith('http') ? logoUrl : `${window.location.origin}${logoUrl}`;
+        
+        await new Promise((resolve, reject) => {
+          logoImg.onload = resolve;
+          logoImg.onerror = reject;
+        });
+        
+        // Calcular dimensões do logo para manter proporção e limitar altura
+        const logoMaxHeight = 25;
+        const logoAspectRatio = logoImg.width / logoImg.height;
+        const logoHeight = Math.min(logoMaxHeight, 30);
+        const logoWidth = logoHeight * logoAspectRatio;
+        
+        // Adicionar logo centralizado no topo
+        pdf.addImage(
+          logoImg,
+          'PNG',
+          (pageWidth - logoWidth) / 2,
+          margin,
+          logoWidth,
+          logoHeight
+        );
+      } catch (logoError) {
+        console.error('Erro ao carregar logo:', logoError);
+        // Prosseguir sem o logo
+      }
+      
+      // Adicionar cabeçalho
+      pdf.setFontSize(18);
+      pdf.setTextColor(corSecundaria);
+      pdf.setFont('helvetica', 'bold');
+      
+      const tituloRelatorio = 'Relatório de Vendas';
+      pdf.text(tituloRelatorio, pageWidth / 2, margin + 35, { align: 'center' });
+      
+      pdf.setFontSize(14);
+      pdf.text(restaurante.nome, pageWidth / 2, margin + 42, { align: 'center' });
+      
+      // Adicionar informações do período
+      pdf.setFontSize(11);
+      pdf.setTextColor(corTexto);
+      pdf.setFont('helvetica', 'normal');
+      
+      const dataPeriodo = `Período: ${filtroCustomizado.label}`;
+      pdf.text(dataPeriodo, pageWidth / 2, margin + 48, { align: 'center' });
+      
+      const dataEmissao = `Emitido em: ${format(new Date(), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}`;
+      pdf.text(dataEmissao, pageWidth / 2, margin + 53, { align: 'center' });
+      
+      // Linha divisória
+      pdf.setDrawColor(corPrimaria);
+      pdf.setLineWidth(0.5);
+      pdf.line(margin, margin + 58, pageWidth - margin, margin + 58);
+      
+      // Informações resumidas
+      pdf.setFontSize(13);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(corSecundaria);
+      pdf.text('Resumo de Desempenho', margin, margin + 68);
+      
+      // Quadro com informações principais
+      const infoY = margin + 73;
+      const infoHeight = 40;
+      
+      // Fundo do quadro de informações
+      pdf.setFillColor(245, 245, 245);
+      pdf.rect(margin, infoY, contentWidth, infoHeight, 'F');
+      pdf.setDrawColor(corPrimaria);
+      pdf.rect(margin, infoY, contentWidth, infoHeight, 'S');
+      
+      // Divisores internos
+      pdf.line(margin + contentWidth/2, infoY, margin + contentWidth/2, infoY + infoHeight); // Vertical
+      pdf.line(margin, infoY + infoHeight/2, margin + contentWidth, infoY + infoHeight/2); // Horizontal
+      
+      // Informações dentro do quadro
+      pdf.setFontSize(11);
+      pdf.setTextColor(corTexto);
+      
+      // Faturamento
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Faturamento Total:', margin + 5, infoY + 10);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(corDestaques);
+      pdf.text(`R$ ${dados.faturamentoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, margin + 5, infoY + 17);
+      
+      // Total de Vendas
+      pdf.setTextColor(corTexto);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Total de Pedidos:', margin + contentWidth/2 + 5, infoY + 10);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(corDestaques);
+      pdf.text(`${dados.totalVendas}`, margin + contentWidth/2 + 5, infoY + 17);
+      
+      // Ticket Médio
+      pdf.setTextColor(corTexto);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Ticket Médio:', margin + 5, infoY + infoHeight/2 + 10);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(corDestaques);
+      pdf.text(`R$ ${dados.ticketMedio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, margin + 5, infoY + infoHeight/2 + 17);
+      
+      // Avaliação
+      pdf.setTextColor(corTexto);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Média de Avaliação:', margin + contentWidth/2 + 5, infoY + infoHeight/2 + 10);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(corDestaques);
+      pdf.text(`${dados.mediaAvaliacao.toFixed(1)} de 5.0`, margin + contentWidth/2 + 5, infoY + infoHeight/2 + 17);
+      
+      // Produtos mais vendidos
+      pdf.setTextColor(corSecundaria);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Produtos Mais Vendidos', margin, infoY + infoHeight + 15);
+      
+      // Tabela de produtos
+      const startTableY = infoY + infoHeight + 20;
+      const cellPadding = 5;
+      const colWidths = [100, 30, 40];
+      
+      // Cabeçalho da tabela
+      pdf.setFillColor(corPrimaria);
+      pdf.setTextColor(255, 255, 255);
+      pdf.rect(margin, startTableY, colWidths[0] + colWidths[1] + colWidths[2], 10, 'F');
+      pdf.text('Produto', margin + cellPadding, startTableY + 6.5);
+      pdf.text('Qtde', margin + colWidths[0] + cellPadding, startTableY + 6.5);
+      pdf.text('% Vendas', margin + colWidths[0] + colWidths[1] + cellPadding, startTableY + 6.5);
+      
+      // Linhas da tabela - produtos
+      pdf.setTextColor(corTexto);
+      pdf.setFillColor(255, 255, 255);
+      
+      let currentY = startTableY + 10;
+      const totalProdutosVendidos = dados.produtosMaisVendidos.reduce((acc, p) => acc + p.quantidade, 0);
+      
+      dados.produtosMaisVendidos.forEach((produto, index) => {
+        const altRow = index % 2 === 0;
+        if (altRow) {
+          pdf.setFillColor(245, 245, 245);
+        } else {
+          pdf.setFillColor(255, 255, 255);
+        }
+        
+        pdf.rect(margin, currentY, colWidths[0] + colWidths[1] + colWidths[2], 8, 'F');
+        
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(produto.nome, margin + cellPadding, currentY + 5.5);
+        pdf.text(produto.quantidade.toString(), margin + colWidths[0] + cellPadding, currentY + 5.5);
+        
+        const percentual = ((produto.quantidade / totalProdutosVendidos) * 100).toFixed(1);
+        pdf.text(`${percentual}%`, margin + colWidths[0] + colWidths[1] + cellPadding, currentY + 5.5);
+        
+        currentY += 8;
+      });
+      
+      // Faturamento por categoria (gráfico de pizza)
+      pdf.setTextColor(corSecundaria);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Faturamento por Categoria', margin, currentY + 15);
+      
+      currentY += 20;
+      
+      // Tabela de categorias
+      pdf.setFillColor(corPrimaria);
+      pdf.setTextColor(255, 255, 255);
+      pdf.rect(margin, currentY, colWidths[0] + colWidths[1] + colWidths[2], 10, 'F');
+      pdf.text('Categoria', margin + cellPadding, currentY + 6.5);
+      pdf.text('Valor (R$)', margin + colWidths[0] + cellPadding, currentY + 6.5);
+      pdf.text('% Total', margin + colWidths[0] + colWidths[1] + cellPadding, currentY + 6.5);
+      
+      // Linhas da tabela - categorias
+      pdf.setTextColor(corTexto);
+      
+      currentY += 10;
+      
+      dados.faturamentoPorCategoria.forEach((categoria, index) => {
+        const altRow = index % 2 === 0;
+        if (altRow) {
+          pdf.setFillColor(245, 245, 245);
+        } else {
+          pdf.setFillColor(255, 255, 255);
+        }
+        
+        pdf.rect(margin, currentY, colWidths[0] + colWidths[1] + colWidths[2], 8, 'F');
+        
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(categoria.categoria, margin + cellPadding, currentY + 5.5);
+        pdf.text(categoria.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 }), margin + colWidths[0] + cellPadding, currentY + 5.5);
+        
+        const percentual = ((categoria.valor / dados.faturamentoTotal) * 100).toFixed(1);
+        pdf.text(`${percentual}%`, margin + colWidths[0] + colWidths[1] + cellPadding, currentY + 5.5);
+        
+        currentY += 8;
+      });
+      
+      // Adicionar nova página se necessário
+      if (currentY > pageHeight - 50) {
+        pdf.addPage();
+        currentY = margin + 20;
+        
+        // Cabeçalho da página 2
+        pdf.setFontSize(14);
+        pdf.setTextColor(corSecundaria);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(`${restaurante.nome} - Relatório de Vendas (continuação)`, pageWidth / 2, margin, { align: 'center' });
+        pdf.setDrawColor(corPrimaria);
+        pdf.line(margin, margin + 5, pageWidth - margin, margin + 5);
+      }
+      
+      // Informações sobre dias de vendas
+      pdf.setFontSize(13);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(corSecundaria);
+      pdf.text('Análise de Dias de Vendas', margin, currentY + 15);
+      
+      currentY += 20;
+      
+      // Tabela de dias mais movimentados
+      pdf.setFillColor(corPrimaria);
+      pdf.setTextColor(255, 255, 255);
+      pdf.rect(margin, currentY, colWidths[0] + colWidths[1], 10, 'F');
+      pdf.text('Dia', margin + cellPadding, currentY + 6.5);
+      pdf.text('Pedidos', margin + colWidths[0] + cellPadding, currentY + 6.5);
+      
+      // Linhas da tabela - dias
+      pdf.setTextColor(corTexto);
+      
+      currentY += 10;
+      
+      dados.diasMaisMovimentados.forEach((dia, index) => {
+        const altRow = index % 2 === 0;
+        if (altRow) {
+          pdf.setFillColor(245, 245, 245);
+        } else {
+          pdf.setFillColor(255, 255, 255);
+        }
+        
+        pdf.rect(margin, currentY, colWidths[0] + colWidths[1], 8, 'F');
+        
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(dia.dia, margin + cellPadding, currentY + 5.5);
+        pdf.text(dia.pedidos.toString(), margin + colWidths[0] + cellPadding, currentY + 5.5);
+        
+        currentY += 8;
+      });
+      
+      // Rodapé
+      const footerY = pageHeight - 15;
+      pdf.setFontSize(9);
+      pdf.setTextColor(150, 150, 150);
+      pdf.text(`Gerado pelo sistema DeliveryX em ${format(new Date(), 'dd/MM/yyyy')}`, pageWidth / 2, footerY, { align: 'center' });
+      
+      // Título do documento
+      const titulo = `relatório-${restaurante.nome}-${filtroCustomizado.label}-${format(new Date(), 'dd-MM-yyyy')}`;
+      
+      // Salvar arquivo
+      pdf.save(
+        titulo.toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '') // Remover acentos
+          .replace(/[^\w\s]/g, '')         // Remover símbolos
+          .replace(/\s+/g, '-')            // Substituir espaços por hifens
+          + '.pdf'
+      );
+    } catch (error) {
+      console.error('Erro ao gerar PDF:', error);
+      alert('Ocorreu um erro ao gerar o PDF. Por favor, tente novamente.');
+    } finally {
+      setExportandoPDF(false);
+    }
+  };
 
   // Configurações para os gráficos
   const produtosMaisVendidosChart = {
@@ -254,7 +635,69 @@ export default function LojistaRelatoriosPage() {
               </div>
             ) : dados ? (
               <>
-                {/* Cards de métricas principais */}
+                {/* Controles de período e exportação */}
+                <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-8 bg-gray-50 p-4 rounded-lg">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                      <FaCalendarAlt /> Período do relatório: 
+                      <span className="text-orange-600 ml-2">{filtroCustomizado.label}</span>
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      <button 
+                        className={`px-3 py-1 rounded-full text-sm ${periodoSelecionado === '7dias' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+                        onClick={() => mudarPeriodo('7dias')}
+                      >
+                        Últimos 7 dias
+                      </button>
+                      <button 
+                        className={`px-3 py-1 rounded-full text-sm ${periodoSelecionado === '30dias' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+                        onClick={() => mudarPeriodo('30dias')}
+                      >
+                        Últimos 30 dias
+                      </button>
+                      <button 
+                        className={`px-3 py-1 rounded-full text-sm ${periodoSelecionado === 'mes' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+                        onClick={() => mudarPeriodo('mes')}
+                      >
+                        Mês atual
+                      </button>
+                      <button 
+                        className={`px-3 py-1 rounded-full text-sm ${periodoSelecionado === 'semana' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+                        onClick={() => mudarPeriodo('semana')}
+                      >
+                        Semana atual
+                      </button>
+                    </div>
+                  </div>
+                  <button
+                    onClick={exportarPDF}
+                    disabled={exportandoPDF}
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors duration-200"
+                  >
+                    {exportandoPDF ? (
+                      <>
+                        <div className="animate-spin">
+                          <FaSpinner />
+                        </div>
+                        Gerando PDF...
+                      </>
+                    ) : (
+                      <>
+                        <FaFilePdf />
+                        Exportar Relatório (PDF)
+                      </>
+                    )}
+                  </button>
+                </div>
+                
+                {/* Conteúdo do relatório para exportação */}
+                <div ref={relatorioRef}>
+                  <div className="mb-6">
+                    <h2 className="text-2xl font-bold text-gray-800">{restaurante.nome} - Relatório</h2>
+                    <p className="text-gray-600">Período: {filtroCustomizado.label}</p>
+                  </div>
+                
+                  {/* Cards de métricas principais */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                   <div className="bg-blue-50 rounded-xl p-6 flex flex-col items-center gap-2 shadow-md">
                     <FaMoneyBillWave size={32} color="#3b82f6" />
@@ -369,10 +812,10 @@ export default function LojistaRelatoriosPage() {
                     <FaTrophy size={32} color="#6366f1" />
                     <div className="text-xl font-bold text-indigo-700 text-center">
                       {dados.produtosMaisVendidos[0]?.nome || 'Nenhum'}
-                    </div>
-                    <div className="text-gray-600 text-sm">Produto Mais Vendido</div>
+                    </div>                    <div className="text-gray-600 text-sm">Produto Mais Vendido</div>
                   </div>
                 </div>
+                </div> {/* Fechando a div ref={relatorioRef} */}
               </>
             ) : (
               <div className="text-center py-8 text-gray-500">
