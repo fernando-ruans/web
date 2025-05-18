@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import theme from '../theme';
-import { FaStore, FaBoxOpen, FaClipboardList, FaUserEdit } from 'react-icons/fa';
+import { FaStore, FaBoxOpen, FaClipboardList, FaUserEdit, FaChartBar } from 'react-icons/fa';
 
 export default function LojistaDashboardPage() {
   const { user } = useAuth();
@@ -44,9 +44,8 @@ export default function LojistaDashboardPage() {
             <div className="text-orange-600 font-bold text-lg text-center">Gerenciando: {restaurante.nome}</div>
           ) : (
             <div className="text-red-500 font-bold text-center">Nenhum restaurante cadastrado!</div>
-          )}
-          <div className="text-gray-600 mb-2 text-center text-lg">Gerencie seus produtos, pedidos e perfil de lojista.</div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 w-full">
+          )}          <div className="text-gray-600 mb-2 text-center text-lg">Gerencie seus produtos, pedidos, relatórios e perfil de lojista.</div>
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 w-full">
             <button
               className="flex flex-col items-center gap-2 bg-orange-50 hover:bg-orange-100 rounded-xl p-6 shadow text-orange-700 font-bold transition border border-orange-100"
               onClick={() => navigate('/lojista/produtos')}
@@ -60,6 +59,13 @@ export default function LojistaDashboardPage() {
             >
               <FaClipboardList size={32} />
               Pedidos
+            </button>
+            <button
+              className="flex flex-col items-center gap-2 bg-orange-50 hover:bg-orange-100 rounded-xl p-6 shadow text-orange-700 font-bold transition border border-orange-100"
+              onClick={() => navigate('/lojista/relatorios')}
+            >
+              <FaChartBar size={32} />
+              Relatórios
             </button>
             <button
               className="flex flex-col items-center gap-2 bg-orange-50 hover:bg-orange-100 rounded-xl p-6 shadow text-orange-700 font-bold transition border border-orange-100"
