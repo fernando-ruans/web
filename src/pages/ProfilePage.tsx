@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import theme from '../theme';
 import UploadImage from '../components/UploadImage';
 import { FaUser, FaEnvelope, FaPhone, FaIdCard, FaMapMarkerAlt, FaUserEdit } from 'react-icons/fa';
+import { buscarCEP, formatarEndereco } from '../utils/cepUtils';
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -14,7 +15,9 @@ export default function ProfilePage() {
   const [avatarUrl, setAvatarUrl] = useState(user.avatarUrl || '');
   const [telefone, setTelefone] = useState(user.telefone || '');
   const [cpf, setCpf] = useState(user.cpf || '');
+  const [cep, setCep] = useState(user.cep || '');
   const [endereco, setEndereco] = useState(user.endereco || '');
+  const [loadingCep, setLoadingCep] = useState(false);
 
   if (!user) return null;
 
@@ -22,6 +25,21 @@ export default function ProfilePage() {
   if (user.tipo === 'cliente') tipoLabel = 'Cliente';
   else if (user.tipo === 'lojista') tipoLabel = 'Lojista';
   else if (user.tipo === 'admin') tipoLabel = 'Administrador';
+
+  const handleCepBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
+    const cepValue = e.target.value;
+    if (cepValue.length === 8) {
+      setLoadingCep(true);
+      try {
+        const enderecoCep = await buscarCEP(cepValue);
+        if (enderecoCep) {
+          setEndereco(formatarEndereco(enderecoCep));
+        }
+      } finally {
+        setLoadingCep(false);
+      }
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,22 +49,25 @@ export default function ProfilePage() {
       let endpoint = '/api/cliente/profile';
       if (user.tipo === 'lojista') endpoint = '/api/lojista/profile';
       if (user.tipo === 'admin') endpoint = '/api/admin/profile';
+      
       const res = await fetch(endpoint, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
-        body: JSON.stringify({ nome, email, avatarUrl, telefone, cpf, endereco })
-      });      if (res.ok) {
+        body: JSON.stringify({ nome, email, avatarUrl, telefone, cpf, cep, endereco })
+      });
+      
+      if (res.ok) {
         const data = await res.json();
         if (data.msg && data.user) {
           setMsg(data.msg);
-          // Dispara evento para atualizar o usuário no contexto de autenticação
           window.dispatchEvent(new CustomEvent('userUpdated', { detail: data }));
           setEditMode(false);
         } else {
           setError('Resposta inválida do servidor');
         }
       } else {
-        setError('Erro ao atualizar perfil');
+        const err = await res.json();
+        setError(err.error || 'Erro ao atualizar perfil');
       }
     } catch {
       setError('Erro ao atualizar perfil');
@@ -56,11 +77,12 @@ export default function ProfilePage() {
   return (
     <div className={theme.bg + ' flex flex-col items-center justify-center min-h-screen pb-24 sm:pb-32'}>
       <div className="w-full max-w-xl flex flex-col items-center gap-8 py-10">
-        <div className="bg-white rounded-2xl shadow-xl p-10 flex flex-col items-center gap-4 border-t-4 border-orange-400 w-full max-w-lg">
+        <div className="bg-white rounded-2xl shadow-xl p-8 flex flex-col items-center gap-4 border-t-4 border-orange-400 w-full max-w-lg">
           <h2 className="text-3xl font-extrabold text-orange-500 mb-2 flex items-center gap-2">
             <FaUserEdit size={28} color="#fb923c" /> Meu Perfil
           </h2>
           <div className="text-gray-500 mb-2 text-center">Gerencie suas informações pessoais e segurança</div>
+
           <div className="w-24 h-24 rounded-full bg-orange-200 flex items-center justify-center font-bold text-orange-700 text-4xl mb-2 shadow overflow-hidden">
             {avatarUrl ? (
               <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover rounded-full" />
@@ -68,11 +90,13 @@ export default function ProfilePage() {
               user.nome?.[0]?.toUpperCase() || 'U'
             )}
           </div>
+
           {editMode ? (
             <form className="w-full flex flex-col items-center gap-2" onSubmit={handleSubmit}>
               <div className="w-full flex flex-col items-center mb-2">
                 <UploadImage onUpload={setAvatarUrl} label=" " buttonClassName="mt-0 mb-2 px-3 py-1 text-sm rounded-full bg-orange-400 hover:bg-orange-500 text-white shadow-sm transition" />
               </div>
+              
               <input
                 className={theme.input + ' w-full mb-2'}
                 value={nome}
@@ -80,6 +104,7 @@ export default function ProfilePage() {
                 placeholder="Nome"
                 required
               />
+              
               <input
                 className={theme.input + ' w-full mb-2'}
                 value={email}
@@ -89,30 +114,44 @@ export default function ProfilePage() {
                 required
                 disabled
               />
+              
               <input
                 className={theme.input + ' w-full mb-2'}
                 value={telefone}
                 onChange={e => setTelefone(e.target.value)}
                 placeholder="Telefone"
                 type="tel"
-                required
               />
+              
               <input
                 className={theme.input + ' w-full mb-2'}
                 value={cpf}
                 onChange={e => setCpf(e.target.value)}
                 placeholder="CPF"
-                required
               />
+
+              <div className="w-full flex flex-col gap-2">
+                <input
+                  className={theme.input + ' w-full'}
+                  value={cep}
+                  onChange={e => setCep(e.target.value.replace(/\D/g, ''))}
+                  onBlur={handleCepBlur}
+                  placeholder="CEP (apenas números)"
+                  maxLength={8}
+                />
+                {loadingCep && <div className="text-sm text-gray-500">Buscando CEP...</div>}
+              </div>
+              
               <input
                 className={theme.input + ' w-full mb-2'}
                 value={endereco}
                 onChange={e => setEndereco(e.target.value)}
-                placeholder="Endereço"
-                required
+                placeholder="Endereço completo"
               />
+              
               {msg && <div className="text-green-500 mb-2 text-center">{msg}</div>}
               {error && <div className="text-red-400 mb-2 text-center">{error}</div>}
+              
               <div className="flex gap-2 w-full mt-2">
                 <button type="submit" className={theme.primary + ' w-full py-2 rounded font-bold'}>Salvar</button>
                 <button type="button" className={theme.secondary + ' w-full py-2 rounded font-bold'} onClick={() => setEditMode(false)}>Cancelar</button>
@@ -120,17 +159,58 @@ export default function ProfilePage() {
             </form>
           ) : (
             <>
-              <div className="font-extrabold text-2xl text-orange-500 mb-1 flex items-center gap-2"><FaUser size={22} />{user.nome}</div>
-              <div className="text-gray-600 mb-2 flex items-center gap-2"><FaEnvelope size={16} />{user.email}</div>
-              <span className="px-3 py-1 rounded-full bg-orange-100 text-orange-600 text-xs font-bold mb-2">{tipoLabel}</span>
-              <div className="w-full flex flex-col gap-2 mb-2 mt-2">
-                {user.telefone && <div className="text-gray-500 text-sm flex items-center gap-2"><FaPhone /> <b>Telefone:</b> {user.telefone}</div>}
-                {user.cpf && <div className="text-gray-500 text-sm flex items-center gap-2"><FaIdCard /> <b>CPF:</b> {user.cpf}</div>}
-                {user.endereco && <div className="text-gray-500 text-sm flex items-center gap-2"><FaMapMarkerAlt /> <b>Endereço:</b> {user.endereco}</div>}
+              <div className="font-extrabold text-2xl text-orange-500 mb-1 text-center">{user.nome}</div>
+              <div className="text-gray-600 mb-2 flex items-center gap-2 text-center">
+                <FaEnvelope size={16} />{user.email}
               </div>
-              <div className="flex flex-col gap-2 w-full mt-2">
-                <button className={theme.secondary + ' w-full py-2 rounded font-bold transition'} onClick={() => setEditMode(true)}>Editar dados</button>
-                <a href="/reset-password/" className={theme.primary + ' w-full py-2 rounded font-bold text-center'}>Alterar senha</a>
+              <span className="px-3 py-1 rounded-full bg-orange-100 text-orange-600 text-xs font-bold mb-2">{tipoLabel}</span>
+              
+              <div className="w-full flex flex-col gap-3 mb-2 mt-2">
+                {user.telefone && (
+                  <div className="text-gray-500 text-sm flex items-start gap-2 px-4 py-2 bg-gray-50 rounded-lg">
+                    <FaPhone size={16} /> 
+                    <div>
+                      <div className="font-semibold text-gray-600 mb-0.5">Telefone</div>
+                      <div>{user.telefone}</div>
+                    </div>
+                  </div>
+                )}
+                {user.cpf && (
+                  <div className="text-gray-500 text-sm flex items-start gap-2 px-4 py-2 bg-gray-50 rounded-lg">
+                    <FaIdCard size={16} />
+                    <div>
+                      <div className="font-semibold text-gray-600 mb-0.5">CPF</div>
+                      <div>{user.cpf}</div>
+                    </div>
+                  </div>
+                )}
+                {user.cep && (
+                  <div className="text-gray-500 text-sm flex items-start gap-2 px-4 py-2 bg-gray-50 rounded-lg">
+                    <FaMapMarkerAlt size={16} />
+                    <div>
+                      <div className="font-semibold text-gray-600 mb-0.5">CEP</div>
+                      <div>{user.cep}</div>
+                    </div>
+                  </div>
+                )}
+                {user.endereco && (
+                  <div className="text-gray-500 text-sm flex items-start gap-2 px-4 py-2 bg-gray-50 rounded-lg">
+                    <FaMapMarkerAlt size={16} />
+                    <div>
+                      <div className="font-semibold text-gray-600 mb-0.5">Endereço</div>
+                      <div className="break-words">{user.endereco}</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex flex-col gap-2 w-full mt-4">
+                <button className={theme.secondary + ' w-full py-2.5 rounded-lg font-bold transition'} onClick={() => setEditMode(true)}>
+                  Editar dados
+                </button>
+                <a href="/reset-password/" className={theme.primary + ' w-full py-2.5 rounded-lg font-bold text-center'}>
+                  Alterar senha
+                </a>
               </div>
             </>
           )}
