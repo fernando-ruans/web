@@ -14,6 +14,7 @@ interface Restaurante {
   cnpj?: string;
   telefone?: string;
   endereco?: string;
+  aberto: boolean;
 }
 
 export default function RestaurantesPage() {
@@ -72,7 +73,9 @@ export default function RestaurantesPage() {
             restaurantesFiltrados.map(rest => (
               <Card 
                 key={rest.id} 
-                className="relative w-full min-h-[220px] h-auto rounded-2xl shadow-lg bg-white border border-orange-100 overflow-hidden hover:shadow-xl transition flex flex-col p-0 m-0 cursor-pointer" 
+                className={`relative w-full min-h-[220px] h-auto rounded-2xl shadow-lg ${
+                  rest.aberto ? 'bg-white' : 'bg-gray-100'
+                } border border-orange-100 overflow-hidden hover:shadow-xl transition flex flex-col p-0 m-0 cursor-pointer`} 
                 onClick={() => window.location.href = `/restaurantes/${rest.id}`}
               >
                 {/* Banner */}
@@ -80,7 +83,7 @@ export default function RestaurantesPage() {
                   <img
                     src={rest.banner || '/banner-default.png'}
                     alt={rest.nome + ' banner'}
-                    className="w-full h-full object-cover border-none shadow-none"
+                    className={`w-full h-full object-cover border-none shadow-none ${!rest.aberto && 'opacity-50 grayscale'}`}
                     onError={e => (e.currentTarget.src = '/banner-default.png')}
                     style={{ display: 'block' }}
                   />
@@ -92,6 +95,14 @@ export default function RestaurantesPage() {
                       className="w-14 h-14 sm:w-16 sm:h-16 object-cover rounded-lg"
                       onError={e => (e.currentTarget.src = '/logo192.png')}
                     />
+                  </div>
+                  {/* Status overlay */}
+                  <div className={`absolute top-2 right-2 px-3 py-1 rounded-full text-sm font-bold ${
+                    rest.aberto 
+                      ? 'bg-green-100 text-green-600'
+                      : 'bg-red-100 text-red-600'
+                  }`}>
+                    {rest.aberto ? '🟢 Aberto' : '🔴 Fechado'}
                   </div>
                 </div>
 

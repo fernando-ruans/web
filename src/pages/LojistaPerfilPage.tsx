@@ -16,6 +16,7 @@ interface Restaurant {
   tempo_entrega: number;
   imagem: string;
   banner: string;
+  aberto: boolean;
 }
 
 export default function LojistaPerfilPage() {
@@ -149,6 +150,26 @@ export default function LojistaPerfilPage() {
     }
   };
 
+  const handleToggleOpen = async () => {
+    try {
+      if (!restaurant) return;
+      const res = await fetch(`/api/lojista/restaurants/${restaurant.id}/toggle-open`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include'
+      });
+      if (res.ok) {
+        const updatedRestaurant = await res.json();
+        setRestaurant(updatedRestaurant);
+        setMsg(`Restaurante ${updatedRestaurant.aberto ? 'aberto' : 'fechado'} com sucesso!`);
+      } else {
+        setError('Erro ao alterar status do restaurante');
+      }
+    } catch (err) {
+      setError('Erro ao alterar status do restaurante');
+    }
+  };
+
   if (!user) return null;
 
   return (
@@ -279,6 +300,15 @@ export default function LojistaPerfilPage() {
                 <div className="text-center text-gray-500">
                   Você ainda não cadastrou seu restaurante
                 </div>
+              )}
+
+              {restaurant && (
+                <button 
+                  onClick={handleToggleOpen}
+                  className={`${restaurant.aberto ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'} text-white font-bold py-2 px-4 rounded-full flex items-center gap-2 w-full justify-center mb-4`}
+                >
+                  {restaurant.aberto ? '🔒 Fechar Restaurante' : '🔓 Abrir Restaurante'}
+                </button>
               )}
 
               <button 

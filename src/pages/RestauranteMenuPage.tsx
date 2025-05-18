@@ -21,11 +21,14 @@ interface Categoria {
 interface Restaurante {
   id: number;
   nome: string;
-  cidade: string;
+  imagem: string;
   taxa_entrega: number;
   tempo_entrega: number;
-  telefone?: string;
-  endereco?: string;
+  telefone: string;
+  cidade: string;
+  endereco: string;
+  cep: string;
+  aberto: boolean;
 }
 
 export default function RestauranteMenuPage() {
@@ -70,6 +73,23 @@ export default function RestauranteMenuPage() {
         </div>
       )}
 
+      {restaurante && (
+        <div className={`flex items-center gap-2 px-4 py-2 rounded-lg mb-4 ${
+          restaurante.aberto 
+            ? 'bg-green-100 text-green-700'
+            : 'bg-red-100 text-red-700'
+        }`}>
+          <span className="text-xl">
+            {restaurante.aberto ? '🟢' : '🔴'}
+          </span>
+          <span className="font-bold">
+            {restaurante.aberto 
+              ? 'Restaurante Aberto' 
+              : 'Restaurante Fechado - não está aceitando pedidos'}
+          </span>
+        </div>
+      )}
+
       {cardapio.map(categoria => (
         <div key={categoria.id} className="mb-8">
           <h2 className="text-xl font-bold text-orange-600 mb-4 pb-2 border-b border-orange-200">
@@ -77,7 +97,9 @@ export default function RestauranteMenuPage() {
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {categoria.produtos.map(produto => (
-              <div key={produto.id} className="bg-white rounded-xl shadow p-4 flex flex-col gap-2 border border-orange-100">
+              <div key={produto.id} className={`bg-white rounded-xl shadow p-4 flex flex-col gap-2 border border-orange-100 ${
+                !restaurante?.aberto && 'opacity-50'
+              }`}>
                 {produto.imagem && (
                   <img 
                     src={produto.imagem} 
@@ -89,10 +111,15 @@ export default function RestauranteMenuPage() {
                 <div className="text-gray-600 text-sm flex-1">{produto.descricao}</div>
                 <div className="font-bold text-green-600 text-lg">R$ {produto.preco.toFixed(2)}</div>
                 <button
-                  className={theme.primary + ' w-full font-bold py-2 rounded mt-2'}
+                  className={`w-full mt-2 py-2 rounded font-bold transition ${
+                    restaurante?.aberto
+                      ? 'bg-orange-500 text-white hover:bg-orange-600'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
                   onClick={() => addItem({ ...produto, quantidade: 1 })}
+                  disabled={!restaurante?.aberto}
                 >
-                  Adicionar ao carrinho
+                  {restaurante?.aberto ? 'Adicionar ao Carrinho' : 'Restaurante Fechado'}
                 </button>
               </div>
             ))}
