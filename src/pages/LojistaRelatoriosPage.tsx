@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import theme from '../theme';
-import { FaChartBar, FaMoneyBillWave, FaUtensils, FaReceipt, FaSpinner, FaTimesCircle, FaStar, FaUsers, FaShoppingBag, FaTrophy, FaCalendarAlt, FaFilePdf, FaDownload } from 'react-icons/fa';
+import { FaChartBar, FaMoneyBillWave, FaUtensils, FaReceipt, FaSpinner, FaTimesCircle, FaStar, FaUsers, FaShoppingBag, FaTrophy, FaCalendarAlt, FaFilePdf, FaDownload, FaCheckCircle } from 'react-icons/fa';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, PointElement, LineElement } from 'chart.js';
 import { Bar, Pie, Line } from 'react-chartjs-2';
 import { format, subDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, parse } from 'date-fns';
@@ -86,14 +86,53 @@ export default function LojistaRelatoriosPage() {
   const relatorioRef = useRef<HTMLDivElement>(null);
   const [exportandoPDF, setExportandoPDF] = useState(false);
   
+  // Estados para feedback ao usuário
+  const [mostrarToast, setMostrarToast] = useState(false);
+  const [mensagemToast, setMensagemToast] = useState('');
+  
   // Filtros de período para relatórios
-  const hoje = new Date();
+  const hoje = new Date();  
   const [periodoSelecionado, setPeriodoSelecionado] = useState<string>('7dias');
   const [filtroCustomizado, setFiltroCustomizado] = useState<FiltroData>({
     inicio: subDays(hoje, 7),
     fim: hoje,
     label: 'Últimos 7 dias'
   });
+  const [mostrarDatePicker, setMostrarDatePicker] = useState<boolean>(false);
+  const [dataInicio, setDataInicio] = useState<string>(format(subDays(hoje, 7), 'yyyy-MM-dd'));
+  const [dataFim, setDataFim] = useState<string>(format(hoje, 'yyyy-MM-dd'));
+  const [erroDataInicio, setErroDataInicio] = useState<string>('');
+  const [erroDataFim, setErroDataFim] = useState<string>('');
+  const [ultimoPeriodoSalvo, setUltimoPeriodoSalvo] = useState<string | null>(null);
+
+  // Carregar preferência de período salva ao iniciar
+  useEffect(() => {
+    const periodoSalvo = localStorage.getItem('relatorioLojistaPeriodo');
+    if (periodoSalvo) {
+      try {
+        const periodoConfig = JSON.parse(periodoSalvo);
+        setPeriodoSelecionado(periodoConfig.tipo);
+        if (periodoConfig.tipo === 'personalizado' && periodoConfig.dataInicio && periodoConfig.dataFim) {
+          setDataInicio(periodoConfig.dataInicio);
+          setDataFim(periodoConfig.dataFim);
+          
+          const inicio = parse(periodoConfig.dataInicio, 'yyyy-MM-dd', new Date());
+          const fim = parse(periodoConfig.dataFim, 'yyyy-MM-dd', new Date());
+          
+          if (!isNaN(inicio.getTime()) && !isNaN(fim.getTime())) {
+            setFiltroCustomizado({
+              inicio,
+              fim,
+              label: `${format(inicio, 'dd/MM/yyyy', { locale: ptBR })} até ${format(fim, 'dd/MM/yyyy', { locale: ptBR })}`
+            });
+          }
+        }
+        setUltimoPeriodoSalvo(periodoConfig.tipo);
+      } catch (e) {
+        console.error("Erro ao recuperar preferência de período:", e);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -125,6 +164,23 @@ export default function LojistaRelatoriosPage() {
     
     fetchRestaurante();
   }, [user, navigate]);
+  // Função para exibir toast de feedback
+  const exibirToast = (mensagem: string) => {
+    setMensagemToast(mensagem);
+    setMostrarToast(true);
+    
+    setTimeout(() => {
+      setMostrarToast(false);
+    }, 3000); // Oculta após 3 segundos
+  };
+
+  // Função para rolar para a visualização do relatório
+  const scrollToRelatorio = () => {
+    if (relatorioRef.current) {
+      relatorioRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   // Função para buscar dados do relatório com filtros de período
   const fetchDadosRelatorio = async (restauranteId: number, inicio?: Date, fim?: Date) => {
     setCarregandoDados(true);
@@ -143,6 +199,8 @@ export default function LojistaRelatoriosPage() {
       if (res.ok) {
         const data = await res.json();
         setDados(data);
+        // Rolar para a visualização do relatório após carregar os dados
+        setTimeout(scrollToRelatorio, 500);
       } else {
         console.error("Erro na API regular:", res.status, res.statusText);
         
@@ -180,13 +238,22 @@ export default function LojistaRelatoriosPage() {
       setCarregandoDados(false);
     }
   };
-
   // Função para mudar o período selecionado
   const mudarPeriodo = (periodo: string) => {
     setPeriodoSelecionado(periodo);
     
+    // Se selecionar personalizado, apenas mostra o seletor de data
+    if (periodo === 'personalizado') {
+      setMostrarDatePicker(true);
+      return;
+    }
+    
     let novoFiltro: FiltroData;
     const hoje = new Date();
+    
+    // Limpar mensagens de erro
+    setErroDataInicio('');
+    setErroDataFim('');
     
     switch (periodo) {
       case '7dias':
@@ -195,6 +262,9 @@ export default function LojistaRelatoriosPage() {
           fim: hoje,
           label: 'Últimos 7 dias'
         };
+        // Atualiza os inputs de data para refletir o período selecionado
+        setDataInicio(format(subDays(hoje, 7), 'yyyy-MM-dd'));
+        setDataFim(format(hoje, 'yyyy-MM-dd'));
         break;
       case '30dias':
         novoFiltro = {
@@ -202,6 +272,8 @@ export default function LojistaRelatoriosPage() {
           fim: hoje,
           label: 'Últimos 30 dias'
         };
+        setDataInicio(format(subDays(hoje, 30), 'yyyy-MM-dd'));
+        setDataFim(format(hoje, 'yyyy-MM-dd'));
         break;
       case 'mes':
         novoFiltro = {
@@ -209,13 +281,55 @@ export default function LojistaRelatoriosPage() {
           fim: endOfMonth(hoje),
           label: `Mês atual (${format(hoje, 'MMMM yyyy', { locale: ptBR })})`
         };
+        setDataInicio(format(startOfMonth(hoje), 'yyyy-MM-dd'));
+        setDataFim(format(endOfMonth(hoje), 'yyyy-MM-dd'));
+        break;
+      case 'trimestre':
+        const trimestreAtual = Math.floor(hoje.getMonth() / 3);
+        const inicioTrimestre = new Date(hoje.getFullYear(), trimestreAtual * 3, 1);
+        const fimTrimestre = new Date(hoje.getFullYear(), trimestreAtual * 3 + 3, 0);
+        
+        novoFiltro = {
+          inicio: inicioTrimestre,
+          fim: fimTrimestre,
+          label: `Trimestre atual (${format(inicioTrimestre, 'dd/MM/yyyy', { locale: ptBR })} - ${format(fimTrimestre, 'dd/MM/yyyy', { locale: ptBR })})`
+        };
+        setDataInicio(format(inicioTrimestre, 'yyyy-MM-dd'));
+        setDataFim(format(fimTrimestre, 'yyyy-MM-dd'));
+        break;
+      case 'semestre':
+        const semestreAtual = Math.floor(hoje.getMonth() / 6);
+        const inicioSemestre = new Date(hoje.getFullYear(), semestreAtual * 6, 1);
+        const fimSemestre = new Date(hoje.getFullYear(), semestreAtual * 6 + 6, 0);
+        
+        novoFiltro = {
+          inicio: inicioSemestre,
+          fim: fimSemestre,
+          label: `Semestre atual (${format(inicioSemestre, 'dd/MM/yyyy', { locale: ptBR })} - ${format(fimSemestre, 'dd/MM/yyyy', { locale: ptBR })})`
+        };
+        setDataInicio(format(inicioSemestre, 'yyyy-MM-dd'));
+        setDataFim(format(fimSemestre, 'yyyy-MM-dd'));
+        break;
+      case 'ano':
+        const inicioAno = new Date(hoje.getFullYear(), 0, 1);
+        const fimAno = new Date(hoje.getFullYear(), 11, 31);
+        
+        novoFiltro = {
+          inicio: inicioAno,
+          fim: fimAno,
+          label: `Ano atual (${format(inicioAno, 'dd/MM/yyyy', { locale: ptBR })} - ${format(fimAno, 'dd/MM/yyyy', { locale: ptBR })})`
+        };
+        setDataInicio(format(inicioAno, 'yyyy-MM-dd'));
+        setDataFim(format(fimAno, 'yyyy-MM-dd'));
         break;
       case 'semana':
         novoFiltro = {
           inicio: startOfWeek(hoje, { weekStartsOn: 0 }),
           fim: endOfWeek(hoje, { weekStartsOn: 0 }),
-          label: `Semana atual (${format(startOfWeek(hoje, { weekStartsOn: 0 }), 'dd/MM')} - ${format(endOfWeek(hoje, { weekStartsOn: 0 }), 'dd/MM')})`
+          label: `Semana atual (${format(startOfWeek(hoje, { weekStartsOn: 0 }), 'dd/MM', { locale: ptBR })} - ${format(endOfWeek(hoje, { weekStartsOn: 0 }), 'dd/MM', { locale: ptBR })})`
         };
+        setDataInicio(format(startOfWeek(hoje, { weekStartsOn: 0 }), 'yyyy-MM-dd'));
+        setDataFim(format(endOfWeek(hoje, { weekStartsOn: 0 }), 'yyyy-MM-dd'));
         break;
       case 'personalizado':
         // Mantém o filtro personalizado atual
@@ -227,12 +341,97 @@ export default function LojistaRelatoriosPage() {
           fim: hoje,
           label: 'Últimos 7 dias'
         };
+        setDataInicio(format(subDays(hoje, 7), 'yyyy-MM-dd'));
+        setDataFim(format(hoje, 'yyyy-MM-dd'));
     }
     
     setFiltroCustomizado(novoFiltro);
     
+    // Salvar preferência do usuário
+    if (periodo !== ultimoPeriodoSalvo) {
+      const periodoParaSalvar = {
+        tipo: periodo,
+        dataInicio: periodo === 'personalizado' ? dataInicio : undefined,
+        dataFim: periodo === 'personalizado' ? dataFim : undefined,
+      };
+      localStorage.setItem('relatorioLojistaPeriodo', JSON.stringify(periodoParaSalvar));
+      setUltimoPeriodoSalvo(periodo);
+      
+      // Exibir feedback
+      exibirToast(`Período alterado para: ${novoFiltro.label}`);
+    }
+    
     if (restaurante && restaurante.id) {
       fetchDadosRelatorio(restaurante.id, novoFiltro.inicio, novoFiltro.fim);
+    }
+  };
+  // Função para aplicar filtro de data personalizado
+  const aplicarFiltroDatasPersonalizado = () => {
+    try {
+      // Limpar mensagens de erro anteriores
+      setErroDataInicio('');
+      setErroDataFim('');
+      
+      const dataInicioObj = parse(dataInicio, 'yyyy-MM-dd', new Date());
+      const dataFimObj = parse(dataFim, 'yyyy-MM-dd', new Date());
+      
+      let temErro = false;
+      
+      if (isNaN(dataInicioObj.getTime())) {
+        setErroDataInicio('Data inicial inválida');
+        temErro = true;
+      }
+      
+      if (isNaN(dataFimObj.getTime())) {
+        setErroDataFim('Data final inválida');
+        temErro = true;
+      }
+      
+      if (temErro) return;
+      
+      if (dataInicioObj > dataFimObj) {
+        setErroDataInicio('Data inicial não pode ser maior que a data final');
+        temErro = true;
+      }
+      
+      if (temErro) return;
+      
+      // Limitar o período a 1 ano para evitar sobrecarga na API
+      const umAnoEmMilissegundos = 365 * 24 * 60 * 60 * 1000;
+      if (dataFimObj.getTime() - dataInicioObj.getTime() > umAnoEmMilissegundos) {
+        if (!window.confirm('O período selecionado é maior que 1 ano, o que pode tornar o relatório muito extenso. Deseja continuar?')) {
+          return;
+        }
+      }
+      
+      const novoFiltro: FiltroData = {
+        inicio: dataInicioObj,
+        fim: dataFimObj,
+        label: `${format(dataInicioObj, 'dd/MM/yyyy', { locale: ptBR })} até ${format(dataFimObj, 'dd/MM/yyyy', { locale: ptBR })}`
+      };
+      
+      setFiltroCustomizado(novoFiltro);
+      setPeriodoSelecionado('personalizado');
+      setMostrarDatePicker(false);
+      
+      // Salvar preferência do usuário
+      const periodoParaSalvar = {
+        tipo: 'personalizado',
+        dataInicio,
+        dataFim,
+      };
+      localStorage.setItem('relatorioLojistaPeriodo', JSON.stringify(periodoParaSalvar));
+      setUltimoPeriodoSalvo('personalizado');
+      
+      // Exibir feedback
+      exibirToast(`Período personalizado aplicado: ${novoFiltro.label}`);
+      
+      if (restaurante && restaurante.id) {
+        fetchDadosRelatorio(restaurante.id, novoFiltro.inicio, novoFiltro.fim);
+      }
+    } catch (error) {
+      console.error('Erro ao aplicar filtro personalizado:', error);
+      alert('Erro ao processar as datas selecionadas.');
     }
   };
   // Função para exportar o relatório como PDF
@@ -304,19 +503,22 @@ export default function LojistaRelatoriosPage() {
       
       // Adicionar informações do período
       pdf.setFontSize(11);
-      pdf.setTextColor(corTexto);
+      pdf.setTextColor(corSecundaria);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Período do relatório:', pageWidth / 2, margin + 48, { align: 'center' });
+      
       pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(corDestaques);
+      pdf.text(filtroCustomizado.label, pageWidth / 2, margin + 53, { align: 'center' });
       
-      const dataPeriodo = `Período: ${filtroCustomizado.label}`;
-      pdf.text(dataPeriodo, pageWidth / 2, margin + 48, { align: 'center' });
-      
+      pdf.setTextColor(corTexto);
       const dataEmissao = `Emitido em: ${format(new Date(), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}`;
-      pdf.text(dataEmissao, pageWidth / 2, margin + 53, { align: 'center' });
+      pdf.text(dataEmissao, pageWidth / 2, margin + 58, { align: 'center' });
       
       // Linha divisória
       pdf.setDrawColor(corPrimaria);
       pdf.setLineWidth(0.5);
-      pdf.line(margin, margin + 58, pageWidth - margin, margin + 58);
+      pdf.line(margin, margin + 63, pageWidth - margin, margin + 63);
       
       // Informações resumidas
       pdf.setFontSize(13);
@@ -602,7 +804,14 @@ export default function LojistaRelatoriosPage() {
   };
 
   return (
-    <div className={theme.bg + ' min-h-screen flex flex-col items-center pb-24 sm:pb-32'}>
+    <div className={theme.bg + ' min-h-screen flex flex-col items-center pb-24 sm:pb-32'}>      {/* Toast de feedback */}
+      {mostrarToast && (
+        <div className="fixed top-20 right-4 bg-green-500 text-white px-4 py-3 rounded-md shadow-lg z-50 flex items-center gap-2 animate-slide-in">
+          <FaCheckCircle />
+          {mensagemToast}
+        </div>
+      )}
+      
       <div className="w-full max-w-6xl mx-auto bg-white rounded-2xl shadow-xl p-8 flex flex-col gap-6 border-t-4 border-orange-400 mt-8">
         <h2 className="text-3xl font-extrabold text-orange-600 flex items-center gap-2 mb-2">
           <FaChartBar size={28} /> Relatórios do Restaurante
@@ -637,12 +846,13 @@ export default function LojistaRelatoriosPage() {
               <>
                 {/* Controles de período e exportação */}
                 <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-8 bg-gray-50 p-4 rounded-lg">
-                  <div>
+                  <div className="w-full">
                     <h3 className="text-lg font-semibold text-gray-700 mb-2 flex items-center gap-2">
                       <FaCalendarAlt /> Período do relatório: 
                       <span className="text-orange-600 ml-2">{filtroCustomizado.label}</span>
                     </h3>
-                    <div className="flex flex-wrap gap-2">
+                    
+                    <div className="flex flex-wrap gap-2 mb-2">
                       <button 
                         className={`px-3 py-1 rounded-full text-sm ${periodoSelecionado === '7dias' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700'}`}
                         onClick={() => mudarPeriodo('7dias')}
@@ -656,23 +866,105 @@ export default function LojistaRelatoriosPage() {
                         Últimos 30 dias
                       </button>
                       <button 
-                        className={`px-3 py-1 rounded-full text-sm ${periodoSelecionado === 'mes' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700'}`}
-                        onClick={() => mudarPeriodo('mes')}
-                      >
-                        Mês atual
-                      </button>
-                      <button 
                         className={`px-3 py-1 rounded-full text-sm ${periodoSelecionado === 'semana' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700'}`}
                         onClick={() => mudarPeriodo('semana')}
                       >
                         Semana atual
                       </button>
+                      <button 
+                        className={`px-3 py-1 rounded-full text-sm ${periodoSelecionado === 'mes' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+                        onClick={() => mudarPeriodo('mes')}
+                      >
+                        Mês atual
+                      </button>
                     </div>
+                    
+                    <div className="flex flex-wrap gap-2">
+                      <button 
+                        className={`px-3 py-1 rounded-full text-sm ${periodoSelecionado === 'trimestre' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+                        onClick={() => mudarPeriodo('trimestre')}
+                      >
+                        Trimestre atual
+                      </button>
+                      <button 
+                        className={`px-3 py-1 rounded-full text-sm ${periodoSelecionado === 'semestre' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+                        onClick={() => mudarPeriodo('semestre')}
+                      >
+                        Semestre atual
+                      </button>
+                      <button 
+                        className={`px-3 py-1 rounded-full text-sm ${periodoSelecionado === 'ano' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+                        onClick={() => mudarPeriodo('ano')}
+                      >
+                        Ano atual
+                      </button>
+                      <button 
+                        className={`px-3 py-1 rounded-full text-sm ${periodoSelecionado === 'personalizado' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+                        onClick={() => setMostrarDatePicker(!mostrarDatePicker)}
+                      >
+                        Personalizado
+                      </button>
+                    </div>
+                    
+                    {/* Seletor de datas personalizado */}
+                    {mostrarDatePicker && (
+                      <div className="mt-4 p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
+                        <h4 className="text-sm font-medium text-gray-700 mb-3">Selecione o período desejado:</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Data inicial</label>
+                            <input
+                              type="date"
+                              className={`w-full rounded-md border ${erroDataInicio ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-300'} p-2 focus:ring-2 focus:ring-orange-500 focus:border-orange-500`}
+                              value={dataInicio}
+                              onChange={(e) => {
+                                setDataInicio(e.target.value);
+                                setErroDataInicio('');
+                              }}
+                              max={dataFim}
+                            />
+                            {erroDataInicio && (
+                              <p className="mt-1 text-xs text-red-500">{erroDataInicio}</p>
+                            )}
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Data final</label>
+                            <input
+                              type="date"
+                              className={`w-full rounded-md border ${erroDataFim ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-300'} p-2 focus:ring-2 focus:ring-orange-500 focus:border-orange-500`}
+                              value={dataFim}
+                              onChange={(e) => {
+                                setDataFim(e.target.value);
+                                setErroDataFim('');
+                              }}
+                              min={dataInicio}
+                            />
+                            {erroDataFim && (
+                              <p className="mt-1 text-xs text-red-500">{erroDataFim}</p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="mt-4 flex justify-end gap-2">
+                          <button
+                            className="px-3 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+                            onClick={() => setMostrarDatePicker(false)}
+                          >
+                            Cancelar
+                          </button>
+                          <button
+                            className="px-3 py-1 bg-orange-500 text-white rounded-md hover:bg-orange-600"
+                            onClick={aplicarFiltroDatasPersonalizado}
+                          >
+                            Aplicar
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <button
                     onClick={exportarPDF}
                     disabled={exportandoPDF}
-                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors duration-200"
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors duration-200 w-full md:w-auto justify-center"
                   >
                     {exportandoPDF ? (
                       <>
