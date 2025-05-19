@@ -1,0 +1,64 @@
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { io, Socket } from 'socket.io-client';
+import { useAuth } from './AuthContext';
+
+export interface WebSocketContextType {
+  socket: Socket | null;
+  connected: boolean;
+}
+
+export const WebSocketContext = createContext<WebSocketContextType>({
+  socket: null,
+  connected: false
+});
+
+export const useWebSocket = () => useContext(WebSocketContext);
+
+export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [connected, setConnected] = useState(false);
+  const { user } = useAuth();
+
+  useEffect(() => {
+    // Criar conexão Socket.IO com o backend
+    const newSocket = io('http://localhost:3333', {
+      transports: ['websocket', 'polling']
+    });
+    
+    // Manipuladores de eventos de conexão
+    newSocket.on('connect', () => {
+      console.log('WebSocket conectado');
+      setConnected(true);
+      if (user?.id) {
+        console.log('Identificando usuário:', user.id);
+        newSocket.emit('identify', user.id);
+      }
+    });
+
+    newSocket.on('disconnect', () => {
+      console.log('WebSocket desconectado');
+      setConnected(false);
+    });
+
+    setSocket(newSocket);
+
+    // Limpar socket ao desmontar
+    return () => {
+      newSocket.close();
+    };
+  }, []);
+
+  // Efeito para identificar o usuário quando ele logar/deslogar
+  useEffect(() => {
+    if (socket && user?.id) {
+      console.log('Identificando usuário após mudança:', user.id);
+      socket.emit('identify', user.id);
+    }
+  }, [socket, user?.id]);
+
+  return (
+    <WebSocketContext.Provider value={{ socket, connected }}>
+      {children}
+    </WebSocketContext.Provider>
+  );
+};

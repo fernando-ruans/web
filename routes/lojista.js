@@ -33,6 +33,7 @@ router.put('/restaurants/:id/toggle-open', lojistaController.toggleRestaurantOpe
 router.get('/orders', lojistaController.listOrders);
 router.put('/orders/:id/status', lojistaController.updateOrderStatus);
 router.get('/reviews', lojistaController.listReviews);
+router.get('/orders/active', lojistaController.listActiveOrders);
 router.get('/relatorios/:id', lojistaController.getRelatorioRestaurante); // Nova rota para relatórios do restaurante
 
 // Rota para dados de demonstração de relatórios (fallback)

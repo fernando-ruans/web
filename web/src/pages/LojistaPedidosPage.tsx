@@ -1,117 +1,143 @@
 import React, { useEffect, useState } from 'react';
 import { useWebSocket } from '../context/WebSocketContext';
+import { useAuth } from '../context/AuthContext';
 import useSound from 'use-sound';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
+interface OrderUpdateData {
+  type: string;
+  orderId: number;
+  order: Pedido;
+}
+
 interface Pedido {
   id: number;
-  clienteNome: string;
   status: string;
+  total: number;
+  observacao?: string;
   createdAt: string;
+  clienteNome: string;
   items: Array<{
     id: number;
     quantidade: number;
     produto: {
+      id: number;
       nome: string;
       preco: number;
     };
   }>;
+  address: {
+    rua: string;
+    numero: string;
+    bairro: string;
+    cidade: string;
+    complemento?: string;
+  };
 }
 
 const LojistaPedidosPage: React.FC = () => {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const { socket, connected } = useWebSocket();
+  const { user } = useAuth();
   const [play] = useSound('/sounds/orderSound.mp3', { volume: 0.5 });
 
-  useEffect(() => {
-    if (socket) {
-      // Carregar pedidos existentes
-      socket.emit('getPedidos');
-
-      // Ouvir novos pedidos
-      socket.on('novoPedido', (pedido: Pedido) => {
-        setPedidos(pedidosAtuais => [...pedidosAtuais, pedido]);
-        play(); // Tocar som de notificação
-      });
-
-      // Ouvir atualizações de pedidos
-      socket.on('atualizacaoPedido', (pedidoAtualizado: Pedido) => {
-        setPedidos(pedidosAtuais =>
-          pedidosAtuais.map(pedido =>
-            pedido.id === pedidoAtualizado.id ? pedidoAtualizado : pedido
-          )
-        );
-      });
-
-      // Ouvir lista inicial de pedidos
-      socket.on('pedidos', (pedidosIniciais: Pedido[]) => {
-        setPedidos(pedidosIniciais);
-      });
-    }
-
-    return () => {
-      if (socket) {
-        socket.off('novoPedido');
-        socket.off('atualizacaoPedido');
-        socket.off('pedidos');
-      }
-    };
-  }, [socket, play]);
-
-  const formatarData = (data: string) => {
-    return format(new Date(data), "d 'de' MMMM 'às' HH:mm", { locale: ptBR });
+  const formatarData = (dataString: string) => {
+    return format(new Date(dataString), "d 'de' MMMM 'às' HH:mm", { locale: ptBR });
   };
 
+  useEffect(() => {
+    if (socket && user?.id) {
+      socket.emit('identify', { userId: user.id });
+
+      socket.on('order-update', (data: OrderUpdateData) => {
+        if (data.type === 'NEW_ORDER') {
+          setPedidos(prev => [data.order, ...prev]);
+          play(); // Tocar som ao receber novo pedido
+        } else if (data.type === 'UPDATE_STATUS') {
+          setPedidos(prev => prev.map(p => 
+            p.id === data.orderId ? { ...p, status: data.order.status } : p
+          ));
+        }
+      });
+
+      // Carregar pedidos ativos inicialmente
+      fetch('/api/orders/active')
+        .then(res => res.json())
+        .then(data => setPedidos(data))
+        .catch(err => console.error('Erro ao carregar pedidos:', err));
+
+      return () => {
+        socket.off('order-update');
+      };
+    }
+  }, [socket, user, play]);
+
   const calcularTotal = (items: Pedido['items']) => {
-    return items.reduce((total, item) => total + (item.produto.preco * item.quantidade), 0);
+    return items.reduce((acc: number, item) => acc + (item.produto.preco * item.quantidade), 0);
   };
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Pedidos</h1>
-        <div className={`flex items-center ${connected ? 'text-green-500' : 'text-red-500'}`}>
-          <span className="h-3 w-3 rounded-full mr-2 bg-current"></span>
-          {connected ? 'Conectado' : 'Desconectado'}
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold mb-6">Pedidos Ativos</h1>
+      {!connected && (
+        <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
+          Aguardando conexão com o servidor...
         </div>
-      </div>
-
-      <div className="grid gap-4">
+      )}
+      <div className="grid gap-6">
         {pedidos.map((pedido) => (
-          <div key={pedido.id} className="bg-white p-4 rounded-lg shadow">
+          <div key={pedido.id} className="bg-white shadow-lg rounded-lg p-6">
             <div className="flex justify-between items-start mb-4">
               <div>
-                <h3 className="font-semibold">Pedido #{pedido.id}</h3>
+                <h2 className="text-xl font-semibold">Pedido #{pedido.id}</h2>
                 <p className="text-gray-600">{pedido.clienteNome}</p>
                 <p className="text-sm text-gray-500">{formatarData(pedido.createdAt)}</p>
               </div>
-              <span className={`px-3 py-1 rounded-full text-sm ${
-                pedido.status === 'PENDENTE' ? 'bg-yellow-100 text-yellow-800' :
-                pedido.status === 'CONFIRMADO' ? 'bg-blue-100 text-blue-800' :
-                pedido.status === 'EM_PREPARO' ? 'bg-purple-100 text-purple-800' :
-                pedido.status === 'PRONTO' ? 'bg-green-100 text-green-800' :
+              <span className={`px-4 py-2 rounded-full text-sm font-semibold ${
+                pedido.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                pedido.status === 'PREPARING' ? 'bg-blue-100 text-blue-800' :
+                pedido.status === 'READY' ? 'bg-green-100 text-green-800' :
                 'bg-gray-100 text-gray-800'
               }`}>
-                {pedido.status}
+                {pedido.status === 'PENDING' ? 'Pendente' :
+                 pedido.status === 'PREPARING' ? 'Preparando' :
+                 pedido.status === 'READY' ? 'Pronto' :
+                 pedido.status}
               </span>
             </div>
-
+            
             <div className="space-y-2">
               {pedido.items.map((item) => (
                 <div key={item.id} className="flex justify-between items-center">
-                  <span>{item.quantidade}x {item.produto.nome}</span>
-                  <span className="text-gray-600">
-                    R$ {(item.produto.preco * item.quantidade).toFixed(2)}
+                  <span className="flex-1">
+                    {item.quantidade}x {item.produto.nome}
                   </span>
+                  <span>R$ {(item.produto.preco * item.quantidade).toFixed(2)}</span>
                 </div>
               ))}
             </div>
-
+            
             <div className="mt-4 pt-4 border-t">
               <div className="flex justify-between items-center font-semibold">
                 <span>Total</span>
                 <span>R$ {calcularTotal(pedido.items).toFixed(2)}</span>
+              </div>
+              
+              {pedido.observacao && (
+                <p className="mt-2 text-sm text-gray-600">
+                  <strong>Observação:</strong> {pedido.observacao}
+                </p>
+              )}
+              
+              <div className="mt-4">
+                <strong>Endereço de entrega:</strong>
+                <p className="text-sm text-gray-600">
+                  {pedido.address.rua}, {pedido.address.numero} - {pedido.address.bairro}
+                  {pedido.address.complemento && `, ${pedido.address.complemento}`}
+                  <br />
+                  {pedido.address.cidade}
+                </p>
               </div>
             </div>
           </div>

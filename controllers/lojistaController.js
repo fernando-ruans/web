@@ -206,39 +206,77 @@ module.exports = {
   },
   updateOrderStatus: async (req, res) => {
     try {
-      const { id } = req.params;
+      const { orderId } = req.params;
       const { status } = req.body;
-      
-      // Atualizar o status do pedido
-      const pedido = await prisma.order.update({ 
-        where: { id: Number(id) }, 
-        data: { status },
+
+      if (!['Pendente', 'Confirmado', 'Em Preparo', 'Pronto', 'Entregue', 'Cancelado'].includes(status)) {
+        return res.status(400).json({ error: 'Status inválido' });
+      }
+
+      const restaurant = await prisma.restaurant.findFirst({
+        where: { userId: req.user.id }
+      });
+
+      if (!restaurant) {
+        return res.status(404).json({ error: 'Restaurante não encontrado' });
+      }
+
+      const order = await prisma.order.findFirst({
+        where: {
+          id: Number(orderId),
+          restaurantId: restaurant.id
+        },
         include: {
           user: true,
-          restaurant: true
+          orderItems: {
+            include: {
+              product: true,
+              adicionais: {
+                include: {
+                  adicional: true
+                }
+              }
+            }
+          }
         }
       });
 
-      // Obter referência do io do app
+      if (!order) {
+        return res.status(404).json({ error: 'Pedido não encontrado' });
+      }
+
+      const updatedOrder = await prisma.order.update({
+        where: { id: Number(orderId) },
+        data: { status },
+        include: {
+          user: true,
+          orderItems: {
+            include: {
+              product: true,
+              adicionais: {
+                include: {
+                  adicional: true
+                }
+              }
+            }
+          }
+        }
+      });
+
+      // Emitir atualizações via WebSocket
       const io = req.app.get('io');
+      
+      // Notificar o cliente
+      io.to(`user:${order.userId}`).emit('order-update', {
+        type: 'status-update',
+        orderId: order.id,
+        order: updatedOrder
+      });
 
-      // Emitir notificação para o cliente
-      if (pedido.user) {
-        emitOrderUpdate(io, pedido.id, pedido.user.id, 'status-update', {
-          status,
-          restaurant: pedido.restaurant?.nome || 'Restaurante'
-        });
-      }
+      // Notificar o lojista
+      io.to(`user:${req.user.id}`).emit('atualizacaoPedido', updatedOrder);
 
-      // Emitir notificação para o lojista
-      if (pedido.restaurant?.userId) {
-        emitOrderUpdate(io, pedido.id, pedido.restaurant.userId, 'status-update', {
-          status,
-          customer: pedido.user?.nome || 'Cliente'
-        });
-      }
-
-      res.json(pedido);
+      res.json(updatedOrder);
     } catch (err) {
       console.error('Erro ao atualizar status do pedido:', err);
       res.status(500).json({ error: 'Erro ao atualizar status do pedido' });
@@ -719,6 +757,46 @@ module.exports = {
       res.json({ msg: 'Adicional excluído!' });
     } catch (err) {
       res.status(500).json({ error: 'Erro ao excluir adicional' });
+    }
+  },
+
+  listActiveOrders: async (req, res) => {
+    try {
+      const restaurants = await prisma.restaurant.findMany({
+        where: { ownerId: req.user.id }
+      });
+
+      const restaurantIds = restaurants.map(r => r.id);
+
+      const activeOrders = await prisma.order.findMany({
+        where: {
+          restaurantId: { in: restaurantIds },
+          status: { in: ['PENDING', 'PREPARING', 'READY'] }
+        },
+        include: {
+          items: {
+            include: {
+              product: true
+            }
+          },
+          user: {
+            select: {
+              id: true,
+              nome: true,
+              telefone: true
+            }
+          },
+          restaurant: true
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      });
+
+      res.json(activeOrders);
+    } catch (err) {
+      console.error('Erro ao listar pedidos ativos:', err);
+      res.status(500).json({ error: 'Erro ao listar pedidos ativos' });
     }
   },
 };

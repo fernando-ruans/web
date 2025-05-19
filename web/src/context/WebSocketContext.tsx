@@ -1,12 +1,21 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import io from 'socket.io-client';
+import { Manager } from 'socket.io-client';
+import { useAuth } from './AuthContext';
 
-export interface WebSocketContextType {
-  socket: ReturnType<typeof io> | null;
+// Definindo uma interface básica para o Socket
+interface SocketInterface {
+  on: (event: string, callback: Function) => void;
+  off: (event: string, callback?: Function) => void;
+  emit: (event: string, ...args: any[]) => void;
+  disconnect: () => void;
+}
+
+interface WebSocketContextType {
+  socket: SocketInterface | null;
   connected: boolean;
 }
 
-export const WebSocketContext = createContext<WebSocketContextType>({
+const WebSocketContext = createContext<WebSocketContextType>({
   socket: null,
   connected: false
 });
@@ -14,17 +23,22 @@ export const WebSocketContext = createContext<WebSocketContextType>({
 export const useWebSocket = () => useContext(WebSocketContext);
 
 export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [socket, setSocket] = useState<ReturnType<typeof io> | null>(null);
+  const [socket, setSocket] = useState<SocketInterface | null>(null);
   const [connected, setConnected] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
-    // Criar conexão Socket.IO com o backend
-    const newSocket = io('/', {
-      path: '/socket.io',
-      transports: ['websocket', 'polling']
-    });
+    if (!user) return;
 
-    // Manipuladores de eventos de conexão
+    const manager = new Manager(process.env.REACT_APP_API_URL || 'http://localhost:3001', {
+      autoConnect: true,
+      auth: {
+        token: localStorage.getItem('token')
+      }
+    });
+    
+    const newSocket = manager.socket('/');
+
     newSocket.on('connect', () => {
       console.log('WebSocket conectado');
       setConnected(true);
@@ -37,11 +51,10 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     setSocket(newSocket);
 
-    // Limpar socket ao desmontar
     return () => {
-      newSocket.close();
+      newSocket.disconnect();
     };
-  }, []);
+  }, [user]);
 
   return (
     <WebSocketContext.Provider value={{ socket, connected }}>
@@ -49,3 +62,5 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     </WebSocketContext.Provider>
   );
 };
+
+export default WebSocketContext;
