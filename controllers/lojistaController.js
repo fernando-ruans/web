@@ -566,4 +566,55 @@ module.exports = {
       res.status(500).json({ error: 'Erro ao gerar relatório: ' + err.message });
     }
   },
+
+  // CRUD de Adicionais para produtos
+  createAdicional: async (req, res) => {
+    try {
+      const { productId, nome, preco, quantidadeMax } = req.body;
+      if (!productId || !nome || preco === undefined || quantidadeMax === undefined) {
+        return res.status(400).json({ error: 'Campos obrigatórios faltando' });
+      }
+      const adicional = await prisma.adicional.create({
+        data: { productId: Number(productId), nome, preco: Number(preco), quantidadeMax: Number(quantidadeMax) }
+      });
+      res.status(201).json(adicional);
+    } catch (err) {
+      res.status(500).json({ error: 'Erro ao criar adicional' });
+    }
+  },
+
+  listAdicionais: async (req, res) => {
+    try {
+      const { productId } = req.query;
+      if (!productId) return res.status(400).json({ error: 'productId é obrigatório' });
+      const adicionais = await prisma.adicional.findMany({ where: { productId: Number(productId) } });
+      res.json(adicionais);
+    } catch (err) {
+      res.status(500).json({ error: 'Erro ao listar adicionais' });
+    }
+  },
+
+  updateAdicional: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { nome, preco, quantidadeMax } = req.body;
+      const adicional = await prisma.adicional.update({
+        where: { id: Number(id) },
+        data: { nome, preco: Number(preco), quantidadeMax: Number(quantidadeMax) }
+      });
+      res.json(adicional);
+    } catch (err) {
+      res.status(500).json({ error: 'Erro ao atualizar adicional' });
+    }
+  },
+
+  deleteAdicional: async (req, res) => {
+    try {
+      const { id } = req.params;
+      await prisma.adicional.delete({ where: { id: Number(id) } });
+      res.json({ msg: 'Adicional excluído!' });
+    } catch (err) {
+      res.status(500).json({ error: 'Erro ao excluir adicional' });
+    }
+  },
 };

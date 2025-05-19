@@ -105,6 +105,12 @@ router.post('/products', lojistaController.createProduct);
 router.put('/products/:id', lojistaController.updateProduct);
 router.delete('/products/:id', lojistaController.deleteProduct);
 
+// Rotas de CRUD de adicionais de produto
+router.post('/adicionais', lojistaController.createAdicional);
+router.get('/adicionais', lojistaController.listAdicionais);
+router.put('/adicionais/:id', lojistaController.updateAdicional);
+router.delete('/adicionais/:id', lojistaController.deleteAdicional);
+
 // Lista todas as categorias dos restaurantes do lojista autenticado
 router.get('/categories', async (req, res) => {
   try {

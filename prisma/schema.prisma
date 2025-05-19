@@ -77,6 +77,7 @@ model Product {
   imagem      String
   ativo       Boolean
   orderItems  OrderItem[]
+  adicionais  Adicional[]
 }
 
 model Order {
@@ -95,11 +96,22 @@ model Order {
 }
 
 model OrderItem {
-  id            Int     @id @default(autoincrement())
-  order         Order   @relation(fields: [orderId], references: [id])
+  id            Int      @id @default(autoincrement())
+  order         Order    @relation(fields: [orderId], references: [id])
   orderId       Int
-  product       Product @relation(fields: [productId], references: [id])
+  product       Product  @relation(fields: [productId], references: [id])
   productId     Int
+  quantidade    Int
+  preco_unitario Float
+  adicionais    OrderItemAdicional[]
+}
+
+model OrderItemAdicional {
+  id            Int      @id @default(autoincrement())
+  orderItem     OrderItem @relation(fields: [orderItemId], references: [id])
+  orderItemId   Int
+  adicional     Adicional @relation(fields: [adicionalId], references: [id])
+  adicionalId   Int
   quantidade    Int
   preco_unitario Float
 }
@@ -112,4 +124,14 @@ model Review {
   comentario String
   restaurant Restaurant? @relation(fields: [restaurantId], references: [id])
   restaurantId Int?
+}
+
+model Adicional {
+  id             Int      @id @default(autoincrement())
+  product        Product  @relation(fields: [productId], references: [id])
+  productId      Int
+  nome           String
+  preco          Float
+  quantidadeMax  Int      // Limite máximo de unidades desse adicional por pedido
+  orderItems     OrderItemAdicional[]
 }

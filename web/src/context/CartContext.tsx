@@ -1,5 +1,12 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
+interface ItemAdicional {
+  adicionalId: number;
+  nome: string;
+  preco: number;
+  quantidade: number;
+}
+
 export interface CartItem {
   id: number;
   nome: string;
@@ -7,6 +14,7 @@ export interface CartItem {
   quantidade: number;
   imagem?: string;
   restauranteId?: number;
+  adicionais?: ItemAdicional[];
 }
 
 interface CartContextType {
@@ -43,7 +51,11 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const removeItem = (id: number) => setItems(prev => prev.filter(i => i.id !== id));
   const clearCart = () => setItems([]);
   const updateQuantity = (id: number, quantidade: number) => setItems(prev => prev.map(i => i.id === id ? { ...i, quantidade } : i));
-  const getTotal = () => items.reduce((sum, i) => sum + i.preco * i.quantidade, 0);
+  const getTotal = () => items.reduce((sum, i) => {
+    const precoBase = i.preco * i.quantidade;
+    const precoAdicionais = i.adicionais?.reduce((total, a) => total + (a.preco * a.quantidade), 0) || 0;
+    return sum + precoBase + precoAdicionais;
+  }, 0);
 
   return (
     <CartContext.Provider value={{ items, addItem, removeItem, clearCart, updateQuantity, getTotal }}>

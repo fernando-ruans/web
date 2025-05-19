@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import theme from '../theme';
 import UploadImage from '../components/UploadImage';
 import { FaStore, FaPhone, FaMapMarkerAlt, FaClock, FaMoneyBill, FaIdCard, FaEdit } from 'react-icons/fa';
@@ -20,7 +21,31 @@ interface Restaurant {
 }
 
 export default function LojistaPerfilPage() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+  useEffect(() => {
+    // Não redirecionar enquanto estiver carregando
+    if (loading) return;
+
+    // Se não houver usuário, redirecionar para login
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+
+    // Verificar o tipo de usuário após ter certeza que ele está carregado
+    if (user.tipo === 'admin') {
+      // Adiciona um pequeno delay para garantir que o token está disponível
+      setTimeout(() => navigate('/admin/restaurantes'), 100);
+      return;
+    }
+    
+    if (user.tipo !== 'lojista') {
+      navigate('/');
+      return;
+    }
+  }, [user, navigate, loading]);
+
   const [editMode, setEditMode] = useState(false);
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [nome, setNome] = useState('');
@@ -38,11 +63,18 @@ export default function LojistaPerfilPage() {
 
   useEffect(() => {
     fetchRestaurantData();
-  }, []);
-
-  const fetchRestaurantData = async () => {
+  }, []);  const fetchRestaurantData = async () => {
     try {
-      const res = await fetch('/api/lojista/restaurants', {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Token de autenticação não encontrado');
+        return;
+      }
+        const res = await fetch('/api/lojista/restaurants', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
         credentials: 'include'
       });
       if (res.ok) {
@@ -96,15 +128,20 @@ export default function LojistaPerfilPage() {
         tempo_entrega: Number(tempoEntrega),
         imagem,
         banner
-      };
-
-      const endpoint = restaurant 
+      };      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Token de autenticação não encontrado');
+        return;
+      }      const endpoint = restaurant 
         ? `/api/lojista/restaurants/${restaurant.id}`
         : '/api/lojista/restaurants';
-
+      
       const res = await fetch(endpoint, {
         method: restaurant ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         credentials: 'include',
         body: JSON.stringify(payload)
       });
@@ -126,8 +163,7 @@ export default function LojistaPerfilPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    try {
-      const res = await fetch(`/api/lojista/profile`, {
+    try {      const res = await fetch(`/api/lojista/profile`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
         body: JSON.stringify({ nome, telefone, endereco })
@@ -149,13 +185,20 @@ export default function LojistaPerfilPage() {
       setError('Erro ao atualizar perfil');
     }
   };
-
   const handleToggleOpen = async () => {
     try {
       if (!restaurant) return;
-      const res = await fetch(`/api/lojista/restaurants/${restaurant.id}/toggle-open`, {
+      
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Token de autenticação não encontrado');
+        return;
+      }      const res = await fetch(`/api/lojista/restaurants/${restaurant.id}/toggle-open`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         credentials: 'include'
       });
       if (res.ok) {

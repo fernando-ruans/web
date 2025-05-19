@@ -24,6 +24,13 @@ interface Pedido {
       descricao?: string;
       imagem?: string;
     };
+    adicionais?: Array<{
+      quantidade: number;
+      preco_unitario: number;
+      adicional: {
+        nome: string;
+      };
+    }>;
   }>;
   address: {
     rua: string;
@@ -205,8 +212,23 @@ const ModalPedido: React.FC<ModalPedidoProps> = ({ pedido, visivel, onFechar, on
                     <div className="text-gray-500 text-sm">
                       {item.product.descricao && `${item.product.descricao.substring(0, 40)}${item.product.descricao.length > 40 ? '...' : ''}`}
                     </div>
+                    {item.adicionais && item.adicionais.length > 0 && (
+                      <div className="text-gray-500 text-sm pl-4">
+                        <span className="font-medium">Adicionais:</span>
+                        <ul className="list-disc pl-4">
+                          {item.adicionais.map((adicional, idx) => (
+                            <li key={idx}>
+                              {adicional.quantidade}x {adicional.adicional.nome} 
+                              (R$ {(adicional.preco_unitario * adicional.quantidade).toFixed(2)})
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                     <div className="text-green-600">
-                      R$ {(item.quantidade * item.preco_unitario).toFixed(2)}
+                      R$ {((item.quantidade * item.preco_unitario) + 
+                          (item.adicionais?.reduce((acc, a) => acc + (a.preco_unitario * a.quantidade), 0) || 0)
+                         ).toFixed(2)}
                     </div>
                   </li>
                 ))}

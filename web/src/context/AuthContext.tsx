@@ -15,7 +15,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [tipo, setTipo] = useState<string | null>(localStorage.getItem('tipo'));
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     if (token && tipo) {
       let endpoint = '/api/cliente/profile';
@@ -24,9 +23,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       fetch(endpoint, {
         headers: { Authorization: `Bearer ${token}` }
       })
-        .then(res => res.ok ? res.json() : null)
+        .then(async res => {
+          if (!res.ok) {
+            // Se houver erro de autenticação, fazer logout
+            if (res.status === 401 || res.status === 403) {
+              setUser(null);
+              setToken(null);
+              setTipo(null);
+              localStorage.removeItem('token');
+              localStorage.removeItem('tipo');
+              return null;
+            }
+          }
+          return res.ok ? res.json() : null;
+        })
         .then(data => {
-          if (data) setUser(data);
+          if (data) {
+            setUser(data);
+            // Garante que o tipo no localStorage corresponde ao tipo do usuário
+            if (data.tipo !== tipo) {
+              setTipo(data.tipo);
+              localStorage.setItem('tipo', data.tipo);
+            }
+          }
         })
         .finally(() => setLoading(false));
     } else {

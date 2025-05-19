@@ -24,12 +24,20 @@ import LojistaPedidosPage from './pages/LojistaPedidosPage';
 import LojistaPerfilPage from './pages/LojistaPerfilPage';
 import LojistaRelatoriosPage from './pages/LojistaRelatoriosPage';
 
-function PrivateRoute({ children }: { children: ReactNode }) {
+function PrivateRoute({ children, admin = false }: { children: ReactNode, admin?: boolean }) {
   const auth = useAuth();
   if (!auth || typeof auth !== 'object') return null;
   const { user, loading } = auth as any;
+  
   if (loading) return <div className="text-center mt-10 text-white">Carregando...</div>;
-  return user ? <>{children}</> : <Navigate to="/login" />;
+  
+  if (!user) return <Navigate to="/login" />;
+  
+  if (admin && user.tipo !== 'admin') {
+    return <Navigate to="/" />;
+  }
+  
+  return <>{children}</>;
 }
 
 export default function RouterApp() {
@@ -48,11 +56,10 @@ export default function RouterApp() {
           <Route path="/carrinho" element={<CarrinhoPage />} />
           <Route path="/pedidos" element={<PrivateRoute><PedidosPage /></PrivateRoute>} />
           <Route path="/avaliacoes" element={<PrivateRoute><AvaliacoesPage /></PrivateRoute>} />
-          <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
-          <Route path="/admin" element={<PrivateRoute><AdminPage /></PrivateRoute>} />
-          <Route path="/admin/restaurantes" element={<PrivateRoute><AdminRestaurantesPage /></PrivateRoute>} />
-          <Route path="/admin/usuarios" element={<PrivateRoute><AdminUsuariosPage /></PrivateRoute>} />
-          <Route path="/admin/relatorios" element={<PrivateRoute><AdminRelatoriosPage /></PrivateRoute>} />          <Route path="/lojista" element={<LojistaDashboardPage />} />
+          <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />          <Route path="/admin" element={<PrivateRoute admin><AdminPage /></PrivateRoute>} />
+          <Route path="/admin/restaurantes" element={<PrivateRoute admin><AdminRestaurantesPage /></PrivateRoute>} />
+          <Route path="/admin/usuarios" element={<PrivateRoute admin><AdminUsuariosPage /></PrivateRoute>} />
+          <Route path="/admin/relatorios" element={<PrivateRoute admin><AdminRelatoriosPage /></PrivateRoute>} /><Route path="/lojista" element={<LojistaDashboardPage />} />
           <Route path="/lojista/produtos" element={<LojistaProdutosPage />} />
           <Route path="/lojista/pedidos" element={<LojistaPedidosPage />} />
           <Route path="/lojista/perfil" element={<LojistaPerfilPage />} />

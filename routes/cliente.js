@@ -17,6 +17,7 @@ const updateProfileSchema = Joi.object({
   avatarUrl: Joi.string().optional(),
   telefone: Joi.string().optional(),
   cpf: Joi.string().optional(),
+  cep: Joi.string().optional(),
   endereco: Joi.string().optional(),
   senha: Joi.string().min(6).optional(),
 });
@@ -34,7 +35,14 @@ const orderSchema = Joi.object({
     Joi.object({
       productId: Joi.number().required(),
       quantidade: Joi.number().min(1).required(),
-      preco_unitario: Joi.number().optional()
+      preco_unitario: Joi.number().optional(),
+      adicionais: Joi.array().items(
+        Joi.object({
+          adicionalId: Joi.number().required(),
+          quantidade: Joi.number().min(1).required(),
+          preco: Joi.number().required()
+        })
+      ).optional()
     })
   ).min(1).required()
 });

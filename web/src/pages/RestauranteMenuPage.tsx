@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import theme from '../theme';
 import { FaMapMarkerAlt, FaPhone, FaClock, FaMoneyBill } from 'react-icons/fa';
+import ProductDetailsModal from '../components/ProductDetailsModal';
 
 interface Produto {
   id: number;
@@ -40,6 +41,7 @@ export default function RestauranteMenuPage() {
   const [erro, setErro] = useState('');
   const [cardapio, setCardapio] = useState<Categoria[]>([]);
   const [restaurante, setRestaurante] = useState<Restaurante | null>(null);
+  const [modalProduto, setModalProduto] = useState<Produto | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -136,9 +138,13 @@ export default function RestauranteMenuPage() {
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {categoria.produtos.map(produto => (
-              <div key={produto.id} className={`bg-white rounded-xl shadow p-4 flex flex-col gap-2 border border-orange-100 ${
-                !restaurante?.aberto && 'opacity-50'
-              }`}>
+              <div 
+                key={produto.id} 
+                className={`bg-white rounded-xl shadow p-4 flex flex-col gap-2 border border-orange-100 ${
+                  !restaurante?.aberto && 'opacity-50'
+                } ${restaurante?.aberto && 'cursor-pointer hover:shadow-lg transition'}`}
+                onClick={() => restaurante?.aberto && setModalProduto(produto)}
+              >
                 {produto.imagem && (
                   <img 
                     src={produto.imagem} 
@@ -155,10 +161,13 @@ export default function RestauranteMenuPage() {
                       ? 'bg-orange-500 text-white hover:bg-orange-600'
                       : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   }`}
-                  onClick={() => addItem({ ...produto, quantidade: 1 })}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    restaurante?.aberto && setModalProduto(produto);
+                  }}
                   disabled={!restaurante?.aberto}
                 >
-                  {restaurante?.aberto ? 'Adicionar ao Carrinho' : 'Restaurante Fechado'}
+                  {restaurante?.aberto ? 'Ver Detalhes' : 'Restaurante Fechado'}
                 </button>
               </div>
             ))}
@@ -172,6 +181,21 @@ export default function RestauranteMenuPage() {
       >
         ← Voltar para restaurantes
       </button>
+
+      {modalProduto && (
+        <ProductDetailsModal
+          product={modalProduto}
+          isOpen={modalProduto !== null}
+          onClose={() => setModalProduto(null)}
+          onAddToCart={(quantidade, adicionaisSelecionados) => {
+            addItem({
+              ...modalProduto,
+              quantidade,
+              adicionais: adicionaisSelecionados
+            });
+          }}
+        />
+      )}
     </div>
   );
 }

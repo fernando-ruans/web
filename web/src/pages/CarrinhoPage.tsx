@@ -29,14 +29,49 @@ export default function CarrinhoPage() {
         <>
           <ul className="divide-y divide-orange-100 mb-4">
             {items.map(item => (
-              <li key={item.id} className="flex items-center justify-between py-3">
-                <div>
-                  <div className="font-bold text-orange-600">{item.nome}</div>
-                  <div className="text-gray-500 text-sm">Qtd: {item.quantidade}</div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="font-bold text-green-600">R$ {(item.preco * item.quantidade).toFixed(2)}</div>
-                  <button onClick={() => removeItem(item.id)} className="text-red-400 hover:underline text-xs">Remover</button>
+              <li key={item.id} className="py-4">
+                <div className="flex justify-between items-start">
+                  <div className="flex gap-4">
+                    {item.imagem && (
+                      <img
+                        src={item.imagem}
+                        alt={item.nome}
+                        className="w-20 h-20 object-cover rounded"
+                      />
+                    )}
+                    <div>
+                      <h3 className="font-bold text-lg">{item.nome}</h3>
+                      <div className="text-orange-600">
+                        Quantidade: {item.quantidade} × R$ {item.preco.toFixed(2)}
+                      </div>
+                      {item.adicionais && item.adicionais.length > 0 && (
+                        <div className="mt-2">
+                          <div className="text-sm font-semibold text-gray-600">Adicionais:</div>
+                          <ul className="text-sm text-gray-500">
+                            {item.adicionais.map((adicional, index) => (
+                              <li key={index}>
+                                {adicional.nome} ({adicional.quantidade}x) - R$ {(adicional.preco * adicional.quantidade).toFixed(2)}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold text-green-600 mb-2">
+                      R$ {(
+                        item.preco * item.quantidade + 
+                        (item.adicionais?.reduce((total, a) => total + (a.preco * a.quantidade), 0) || 0)
+                      ).toFixed(2)}
+                    </div>
+                    <button
+                      onClick={() => removeItem(item.id)}
+                      className="text-red-500 hover:text-red-600"
+                    >
+                      Remover
+                    </button>
+                  </div>
                 </div>
               </li>
             ))}

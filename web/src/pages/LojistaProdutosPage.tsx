@@ -26,6 +26,14 @@ export default function LojistaProdutosPage() {
   const [restaurante, setRestaurante] = useState<any>(null);
   const [restLoading, setRestLoading] = useState(true);
 
+  // Estados para adicionais
+  const [adicionais, setAdicionais] = useState<any[]>([]);
+  const [adicionalNome, setAdicionalNome] = useState('');
+  const [adicionalPreco, setAdicionalPreco] = useState('');
+  const [adicionalQuantidadeMax, setAdicionalQuantidadeMax] = useState('');
+  const [adicionalEditId, setAdicionalEditId] = useState<number|null>(null);
+  const [adicionalError, setAdicionalError] = useState<string|null>(null);
+
   // Busca real dos produtos do lojista
   useEffect(() => {
     async function fetchProdutos() {
@@ -75,6 +83,18 @@ export default function LojistaProdutosPage() {
     }
     fetchRestaurante();
   }, []);
+
+  // Carregar adicionais ao abrir o formulário de edição
+  useEffect(() => {
+    if (editId) {
+      fetch(`/api/lojista/adicionais?productId=${editId}`, { credentials: 'include' })
+        .then(res => res.json())
+        .then(data => setAdicionais(Array.isArray(data) ? data : []))
+        .catch(() => setAdicionais([]));
+    } else {
+      setAdicionais([]);
+    }
+  }, [editId, showForm]);
 
   // Adiciona/cria produto no backend
   async function handleAddOrEdit(e: React.FormEvent) {
@@ -161,6 +181,20 @@ export default function LojistaProdutosPage() {
     setCategoriaId(produto.category?.id || '');
     setImagem(produto.imagem || '');
     setShowForm(true);
+    // Limpa os adicionais para evitar resíduos de outro produto
+    setAdicionais([]);
+  }
+
+  // Ao fechar/cancelar o formulário, limpa os adicionais
+  function handleCloseForm() {
+    setShowForm(false);
+    setEditId(null);
+    setNome('');
+    setPreco('');
+    setDescricao('');
+    setCategoriaId('');
+    setImagem('');
+    setAdicionais([]);
   }
 
   async function handleAddCategoria(e: React.FormEvent) {
@@ -231,6 +265,71 @@ export default function LojistaProdutosPage() {
     }
   }
 
+  // Funções CRUD adicionais
+  async function handleAddAdicional(e: React.FormEvent) {
+    e.preventDefault();
+    setAdicionalError(null);
+    if (!adicionalNome || adicionalPreco === '' || adicionalQuantidadeMax === '') {
+      setAdicionalError('Preencha todos os campos do adicional');
+      return;
+    }
+    try {
+      const res = await fetch('/api/lojista/adicionais', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          productId: editId,
+          nome: adicionalNome,
+          preco: Number(adicionalPreco),
+          quantidadeMax: Number(adicionalQuantidadeMax)
+        })
+      });
+      if (!res.ok) throw new Error('Erro ao adicionar adicional');
+      const novo = await res.json();
+      setAdicionais([...adicionais, novo]);
+      setAdicionalNome('');
+      setAdicionalPreco('');
+      setAdicionalQuantidadeMax('');
+    } catch (err: any) {
+      setAdicionalError(err.message || 'Erro desconhecido');
+    }
+  }
+
+  async function handleDeleteAdicional(id: number) {
+    if (!window.confirm('Remover este adicional?')) return;
+    try {
+      await fetch(`/api/lojista/adicionais/${id}`, { method: 'DELETE', credentials: 'include' });
+      setAdicionais(adicionais.filter(a => a.id !== id));
+    } catch {}
+  }
+
+  async function handleEditAdicional(e: React.FormEvent) {
+    e.preventDefault();
+    setAdicionalError(null);
+    try {
+      const res = await fetch(`/api/lojista/adicionais/${adicionalEditId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          nome: adicionalNome,
+          preco: Number(adicionalPreco),
+          quantidadeMax: Number(adicionalQuantidadeMax)
+        })
+      });
+      if (!res.ok) throw new Error('Erro ao editar adicional');
+      const atualizado = await res.json();
+      setAdicionais(adicionais.map(a => a.id === adicionalEditId ? atualizado : a));
+      setAdicionalEditId(null);
+      setAdicionalNome('');
+      setAdicionalPreco('');
+      setAdicionalQuantidadeMax('');
+    } catch (err: any) {
+      setAdicionalError(err.message || 'Erro desconhecido');
+    }
+  }
+
   return (
     <div className={theme.bg + ' min-h-screen flex flex-col items-center justify-center pb-24 sm:pb-32'}>
       <div className="w-full max-w-3xl mx-auto flex flex-col items-center gap-6 py-10">
@@ -261,8 +360,99 @@ export default function LojistaProdutosPage() {
               {imagem && <div className="text-xs text-gray-500 break-all">URL: {imagem}</div>}
               <div className="flex gap-2">
                 <button type="submit" className={theme.primary + ' w-full font-bold py-2 rounded'} disabled={!restaurante}>{editId ? 'Salvar' : 'Cadastrar'}</button>
-                <button type="button" className={theme.secondary + ' w-full font-bold py-2 rounded'} onClick={() => { setShowForm(false); setEditId(null); setNome(''); setPreco(''); setDescricao(''); setCategoriaId(''); setImagem(''); }} disabled={!restaurante}>Cancelar</button>
+                <button type="button" className={theme.secondary + ' w-full font-bold py-2 rounded'} onClick={handleCloseForm} disabled={!restaurante}>Cancelar</button>
               </div>
+              {/* Adicionais do produto */}
+              {editId && (
+                <div className="bg-white rounded-xl border border-orange-200 p-4 mt-2">
+                  <h4 className="font-bold text-orange-500 mb-2">Adicionais</h4>
+                  <form onSubmit={adicionalEditId ? handleEditAdicional : handleAddAdicional} className="flex flex-wrap gap-2 items-end mb-2">
+                    <input
+                      className="border rounded px-2 py-1 text-sm"
+                      placeholder="Nome do adicional"
+                      value={adicionalNome}
+                      onChange={e => setAdicionalNome(e.target.value)}
+                      required
+                    />
+                    <input
+                      className="border rounded px-2 py-1 text-sm"
+                      placeholder="Preço"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={adicionalPreco}
+                      onChange={e => setAdicionalPreco(e.target.value)}
+                      required
+                    />
+                    <input
+                      className="border rounded px-2 py-1 text-sm"
+                      placeholder="Qtd. máxima"
+                      type="number"
+                      min="1"
+                      value={adicionalQuantidadeMax}
+                      onChange={e => setAdicionalQuantidadeMax(e.target.value)}
+                      required
+                    />
+                    <button 
+                      type="submit" 
+                      className="bg-orange-500 hover:bg-orange-600 text-white text-sm px-3 py-1 rounded"
+                    >
+                      {adicionalEditId ? 'Salvar' : 'Adicionar'}
+                    </button>
+                    {adicionalEditId && (
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          setAdicionalEditId(null);
+                          setAdicionalNome('');
+                          setAdicionalPreco('');
+                          setAdicionalQuantidadeMax('');
+                        }}
+                        className="bg-gray-500 hover:bg-gray-600 text-white text-sm px-3 py-1 rounded"
+                      >
+                        Cancelar
+                      </button>
+                    )}
+                  </form>
+                  {adicionalError && (
+                    <div className="text-red-500 text-sm mt-2">{adicionalError}</div>
+                  )}
+                  
+                  {/* Lista de adicionais */}
+                  <div className="mt-4">
+                    {adicionais.map((adicional: any) => (
+                      <div key={adicional.id} className="flex justify-between items-center p-2 bg-orange-50 rounded mb-2">
+                        <div>
+                          <span className="font-bold">{adicional.nome}</span>
+                          <span className="mx-2">-</span>
+                          <span>R$ {adicional.preco.toFixed(2)}</span>
+                          <span className="mx-2">-</span>
+                          <span>Máx: {adicional.quantidadeMax}</span>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => {
+                              setAdicionalEditId(adicional.id);
+                              setAdicionalNome(adicional.nome);
+                              setAdicionalPreco(adicional.preco.toString());
+                              setAdicionalQuantidadeMax(adicional.quantidadeMax.toString());
+                            }}
+                            className="text-blue-500 hover:text-blue-600"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            onClick={() => handleDeleteAdicional(adicional.id)}
+                            className="text-red-500 hover:text-red-600"
+                          >
+                            Excluir
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </form>
           )}
           <div className="w-full flex flex-col gap-2 mb-4">

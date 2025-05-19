@@ -1,15 +1,23 @@
 import React from 'react';
 import theme from '../theme';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { FaStore, FaUserCog, FaPlus, FaUserTie } from 'react-icons/fa';
 
 export default function AdminPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  if (!user || user.tipo !== 'admin') {
-    return <div className="text-center mt-10 text-red-500 font-bold">Acesso negado</div>;
+  console.log('AdminPage - User:', user); // Para depuração
+
+  if (!user) {
+    console.log('AdminPage - No user found');
+    return <Navigate to="/login" />;
+  }
+
+  if (user.tipo !== 'admin') {
+    console.log('AdminPage - User is not admin:', user.tipo);
+    return <div className="text-center mt-10 text-red-500 font-bold">Acesso negado - você não tem permissão de administrador</div>;
   }
 
   return (

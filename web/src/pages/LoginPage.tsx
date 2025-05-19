@@ -21,13 +21,22 @@ export default function LoginPage() {
     const params = new URLSearchParams(window.location.search);
     if (params.get('tab') === 'register') setTab('register');
   }, []);
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     const ok = await login(email, senha);
-    if (!ok) setError('E-mail ou senha inválidos');
-    else window.location.href = '/';
+    if (!ok) {
+      setError('E-mail ou senha inválidos');
+    } else {
+      const tipo = localStorage.getItem('tipo');
+      if (tipo === 'admin') {
+        window.location.href = '/admin';
+      } else if (tipo === 'lojista') {
+        window.location.href = '/lojista';
+      } else {
+        window.location.href = '/';
+      }
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {

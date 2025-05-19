@@ -193,9 +193,26 @@ module.exports = {
       // Calcular total
       let total = restaurante.taxa_entrega; // Inicializa com a taxa de entrega
       for (const item of items) {
+        // Verificar produto
         const product = await prisma.product.findUnique({ where: { id: item.productId } });
         if (!product || !product.ativo) return res.status(400).json({ error: 'Produto inválido' });
         total += product.preco * item.quantidade;
+
+        // Verificar adicionais
+        if (item.adicionais && Array.isArray(item.adicionais)) {
+          for (const adicional of item.adicionais) {
+            const adicionalDb = await prisma.adicional.findUnique({ 
+              where: { id: adicional.adicionalId } 
+            });
+            if (!adicionalDb || adicionalDb.productId !== item.productId) {
+              return res.status(400).json({ error: 'Adicional inválido' });
+            }
+            if (adicional.quantidade > adicionalDb.quantidadeMax) {
+              return res.status(400).json({ error: `Quantidade máxima excedida para o adicional ${adicionalDb.nome}` });
+            }
+            total += adicionalDb.preco * adicional.quantidade;
+          }
+        }
       }
 
       // Criar pedido
@@ -210,7 +227,14 @@ module.exports = {
             create: items.map(item => ({
               productId: item.productId,
               quantidade: item.quantidade,
-              preco_unitario: item.preco_unitario || undefined
+              preco_unitario: item.preco_unitario,
+              adicionais: item.adicionais ? {
+                create: item.adicionais.map(adicional => ({
+                  adicionalId: adicional.adicionalId,
+                  quantidade: adicional.quantidade,
+                  preco_unitario: adicional.preco
+                }))
+              } : undefined
             }))
           }
         },
@@ -218,6 +242,7 @@ module.exports = {
       });
       res.status(201).json(order);
     } catch (err) {
+      console.error('Erro ao criar pedido:', err);
       res.status(500).json({ error: 'Erro ao criar pedido' });
     }
   },
