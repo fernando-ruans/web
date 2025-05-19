@@ -14,94 +14,123 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<any>(null);
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [tipo, setTipo] = useState<string | null>(localStorage.getItem('tipo'));
-  const [loading, setLoading] = useState(true);  useEffect(() => {
-    if (token && tipo) {
-      // Define o endpoint baseado no tipo de usuário salvo no localStorage
-      const endpoint = tipo === 'lojista' 
-        ? '/api/lojista/profile'
-        : tipo === 'admin'
-          ? '/api/admin/profile'
-          : '/api/cliente/profile';
-
-      fetch(endpoint, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-        .then(async res => {
-          if (!res.ok) {
-            // Se houver erro de autenticação, fazer logout
-            if (res.status === 401 || res.status === 403) {
-              setUser(null);
-              setToken(null);
-              setTipo(null);
-              localStorage.removeItem('token');
-              localStorage.removeItem('tipo');
-              return null;
-            }
-          }
-          return res.ok ? res.json() : null;
-        })
-        .then(data => {
-          if (data) {
-            setUser(data);
-            // Garante que o tipo no localStorage corresponde ao tipo do usuário
-            if (data.tipo !== tipo) {
-              setTipo(data.tipo);
-              localStorage.setItem('tipo', data.tipo);
-            }
-          }
-        })
-        .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
-    }
-  }, [token, tipo]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;  // Flag para evitar atualizações após desmontagem
+
+    const fetchProfile = async () => {
+      if (!token || !tipo) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const endpoint = tipo === 'lojista' 
+          ? '/api/lojista/profile'
+          : tipo === 'admin'
+            ? '/api/admin/profile'
+            : '/api/cliente/profile';
+
+        const res = await fetch(endpoint, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (!isMounted) return;  // Previne atualização se o componente foi desmontado
+
+        if (!res.ok) {
+          if (res.status === 401 || res.status === 403) {
+            setUser(null);
+            setToken(null);
+            setTipo(null);
+            localStorage.removeItem('token');
+            localStorage.removeItem('tipo');
+          }
+          throw new Error('Erro na requisição');
+        }
+
+        const data = await res.json();
+        if (isMounted && data) {
+          setUser(data);
+          if (data.tipo !== tipo) {
+            setTipo(data.tipo);
+            localStorage.setItem('tipo', data.tipo);
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao buscar perfil:', error);
+        if (isMounted) {
+          setUser(null);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchProfile();    return () => {
+      isMounted = false;  // Cleanup quando o componente é desmontado
+    };
+  }, [token, tipo]);  useEffect(() => {
     const handleUserUpdated = (e: CustomEvent<any>) => {
       if (e.detail?.user) {
-        setUser(e.detail.user);
+        // Verificar se os dados realmente mudaram para evitar atualizações desnecessárias
+        if (JSON.stringify(e.detail.user) !== JSON.stringify(user)) {
+          setUser(e.detail.user);
+          // Atualizar tipo se necessário
+          if (e.detail.user.tipo !== tipo) {
+            setTipo(e.detail.user.tipo);
+            localStorage.setItem('tipo', e.detail.user.tipo);
+          }
+        }
       }
     };
 
     window.addEventListener('userUpdated', handleUserUpdated as EventListener);
     return () => window.removeEventListener('userUpdated', handleUserUpdated as EventListener);
-  }, []);
-  const login = async (email: string, senha: string) => {
+  }, [user, tipo]);  const login = async (email: string, senha: string): Promise<boolean> => {
     try {
+      // Limpar qualquer estado anterior
+      setUser(null);
+      setToken(null);
+      setTipo(null);
+      localStorage.removeItem('token');
+      localStorage.removeItem('tipo');
+
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, senha })
       });
       
-      if (res.ok) {
-        const data = await res.json();
-        
-        // Validar se recebemos todos os dados necessários
-        if (!data.token || !data.user || !data.user.tipo) {
-          console.error('Dados de login incompletos');
-          return false;
-        }
-        
-        // Limpar dados antigos
-        localStorage.removeItem('token');
-        localStorage.removeItem('tipo');
-        
-        // Definir novos dados
-        setToken(data.token);
-        setTipo(data.user.tipo);
-        setUser(data.user);
-        
-        // Salvar no localStorage após validação
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('tipo', data.user.tipo);
-        
-        return true;
+      if (!res.ok) {
+        throw new Error('Falha na autenticação');
+      }
+
+      const data = await res.json();
+      
+      // Validar resposta
+      if (!data.token || !data.user || !data.user.tipo) {
+        throw new Error('Resposta inválida do servidor');
       }
       
-      return false;
+      // Atualizar estado e localStorage de forma atômica      // Atualizar localStorage e estado
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('tipo', data.user.tipo);
+      setToken(data.token);
+      setTipo(data.user.tipo);
+      setUser(data.user);
+      return true;
+      
     } catch (error) {
       console.error('Erro durante login:', error);
+      // Garantir que o estado está limpo em caso de erro
+      setUser(null);
+      setToken(null);
+      setTipo(null);
+      localStorage.removeItem('token');
+      localStorage.removeItem('tipo');
       return false;
     }
   };
