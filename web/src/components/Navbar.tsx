@@ -39,23 +39,27 @@ export default function Navbar() {
                 (location.pathname.startsWith('/restaurantes') ? 'bg-orange-100 text-orange-600 shadow' : 'text-gray-700 hover:bg-orange-50 hover:text-orange-500')
               }>Restaurantes</Link>
             </li>
-            <li>
-              <Link to="/pedidos" className={
-                'px-4 py-2 rounded-lg font-semibold transition-all duration-150 ' +
-                (location.pathname.startsWith('/pedidos') ? 'bg-orange-100 text-orange-600 shadow' : 'text-gray-700 hover:bg-orange-50 hover:text-orange-500')
-              }>Pedidos</Link>
-            </li>
-            <li>
-              <Link to="/carrinho" className={
-                'px-4 py-2 rounded-lg font-semibold flex items-center gap-2 transition-all duration-150 ' +
-                (location.pathname.startsWith('/carrinho') ? 'bg-orange-100 text-orange-600 shadow' : 'text-gray-700 hover:bg-orange-50 hover:text-orange-500')
-              }>
-                🛒 Carrinho
-                {cartItems.length > 0 && (
-                  <span className="ml-1 bg-orange-500 text-white rounded-full px-2 py-0.5 text-xs font-bold">{cartItems.length}</span>
-                )}
-              </Link>
-            </li>
+            {(user?.tipo !== 'lojista' && user?.tipo !== 'admin') && (
+              <>
+                <li>
+                  <Link to="/pedidos" className={
+                    'px-4 py-2 rounded-lg font-semibold transition-all duration-150 ' +
+                    (location.pathname.startsWith('/pedidos') ? 'bg-orange-100 text-orange-600 shadow' : 'text-gray-700 hover:bg-orange-50 hover:text-orange-500')
+                  }>Pedidos</Link>
+                </li>
+                <li>
+                  <Link to="/carrinho" className={
+                    'px-4 py-2 rounded-lg font-semibold transition-all duration-150 flex items-center gap-2 ' +
+                    (location.pathname.startsWith('/carrinho') ? 'bg-orange-100 text-orange-600 shadow' : 'text-gray-700 hover:bg-orange-50 hover:text-orange-500')
+                  }>
+                    🛒 Carrinho
+                    {cartItems.length > 0 && (
+                      <span className="ml-1 bg-orange-500 text-white rounded-full px-2 py-0.5 text-xs font-bold">{cartItems.length}</span>
+                    )}
+                  </Link>
+                </li>
+              </>
+            )}
             {user && user.tipo === 'admin' && (
               <li>
                 <Link to="/admin" className={
@@ -125,13 +129,11 @@ export default function Navbar() {
               </div>
               <ul className="flex flex-col gap-1 py-4 px-2">
                 <li><Link to="/restaurantes" className="flex items-center gap-2 px-4 py-3 rounded-lg font-semibold text-orange-600 hover:bg-orange-50 transition text-base" onClick={() => setMenuOpen(false)}>🍔 Restaurantes</Link></li>
-                <li><Link to="/pedidos" className="flex items-center gap-2 px-4 py-3 rounded-lg font-semibold text-orange-600 hover:bg-orange-50 transition text-base" onClick={() => setMenuOpen(false)}>🧾 Pedidos</Link></li>
-                <li><Link to="/carrinho" className="flex items-center gap-2 px-4 py-3 rounded-lg font-semibold text-orange-600 hover:bg-orange-50 transition text-base" onClick={() => setMenuOpen(false)}>🛒 Carrinho {cartItems.length > 0 && (<span className="ml-1 bg-orange-500 text-white rounded-full px-2 py-0.5 text-xs font-bold">{cartItems.length}</span>)}</Link></li>
-                {user && user.tipo === 'admin' && (
-                  <li><Link to="/admin" className="flex items-center gap-2 px-4 py-3 rounded-lg font-semibold text-orange-600 hover:bg-orange-50 transition text-base" onClick={() => setMenuOpen(false)}><FaUserShield size={18} /> Admin</Link></li>
-                )}
-                {user && user.tipo === 'lojista' && (
-                  <li><Link to="/lojista" className="flex items-center gap-2 px-4 py-3 rounded-lg font-semibold text-blue-700 hover:bg-blue-50 transition text-base" onClick={() => setMenuOpen(false)}>🏪 Painel Lojista</Link></li>
+                {(user?.tipo !== 'lojista' && user?.tipo !== 'admin') && (
+                  <>
+                    <li><Link to="/pedidos" className="flex items-center gap-2 px-4 py-3 rounded-lg font-semibold text-orange-600 hover:bg-orange-50 transition text-base" onClick={() => setMenuOpen(false)}>🧾 Pedidos</Link></li>
+                    <li><Link to="/carrinho" className="flex items-center gap-2 px-4 py-3 rounded-lg font-semibold text-orange-600 hover:bg-orange-50 transition text-base" onClick={() => setMenuOpen(false)}>🛒 Carrinho {cartItems.length > 0 && (<span className="ml-1 bg-orange-500 text-white rounded-full px-2 py-0.5 text-xs font-bold">{cartItems.length}</span>)}</Link></li>
+                  </>
                 )}
               </ul>
               <div className="flex flex-col gap-1 py-4 px-2 border-t border-orange-100">

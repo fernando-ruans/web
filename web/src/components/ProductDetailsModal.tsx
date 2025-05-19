@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
 
 interface Adicional {
   id: number;
@@ -30,6 +31,7 @@ interface ProductDetailsModalProps {
 }
 
 export default function ProductDetailsModal({ product, isOpen, onClose, onAddToCart }: ProductDetailsModalProps) {
+  const { user } = useAuth();
   const [quantidade, setQuantidade] = useState(1);
   const [adicionais, setAdicionais] = useState<Adicional[]>([]);
   const [adicionaisSelecionados, setAdicionaisSelecionados] = useState<AdicionaisSelecionados[]>([]);
@@ -202,15 +204,24 @@ export default function ProductDetailsModal({ product, isOpen, onClose, onAddToC
             </span>
           </div>
 
-          <button
-            onClick={() => {
-              onAddToCart(quantidade, adicionaisSelecionados);
-              onClose();
-            }}
-            className="w-full bg-orange-500 text-white py-3 rounded-lg hover:bg-orange-600 transition-colors"
-          >
-            Adicionar ao Carrinho
-          </button>
+          {/* Só mostra o botão para quem não é lojista nem admin */}
+          {(user?.tipo !== 'lojista' && user?.tipo !== 'admin') && (
+            <button
+              onClick={() => {
+                onAddToCart(quantidade, adicionaisSelecionados);
+                onClose();
+              }}
+              className="w-full bg-orange-500 text-white py-3 rounded-lg hover:bg-orange-600 transition-colors"
+            >
+              Adicionar ao Carrinho
+            </button>
+          )}
+          {/* Se for lojista ou admin, mostra aviso opcional */}
+          {(user?.tipo === 'lojista' || user?.tipo === 'admin') && (
+            <div className="w-full text-center text-orange-400 font-semibold py-2">
+              Apenas clientes podem fazer pedidos.
+            </div>
+          )}
         </div>
       </div>
     </div>
