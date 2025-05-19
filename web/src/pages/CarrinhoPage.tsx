@@ -91,17 +91,16 @@ export default function CarrinhoPage() {
       const pedido = {
         restaurantId: items[0].restauranteId,
         addressId: selectedAddressId,
-        observacao: observacao || undefined,
-        items: items.map(item => ({
-          productId: item.id,
-          quantidade: item.quantidade,
-          preco_unitario: item.preco,
-          adicionais: item.adicionais?.map(a => ({
-            adicionalId: a.adicionalId,
-            quantidade: a.quantidade,
-            preco: a.preco
+        observacao: observacao || undefined,          items: items.map(item => ({
+            productId: item.id,
+            quantidade: item.quantidade,
+            preco_unitario: item.preco,
+            adicionais: item.adicionais?.map(a => ({
+              adicionalId: a.adicionalId,
+              quantidade: a.quantidade,
+              preco_unitario: a.preco
+            }))
           }))
-        }))
       };
 
       const res = await fetch('/api/cliente/orders', {

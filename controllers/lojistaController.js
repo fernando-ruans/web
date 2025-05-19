@@ -1,6 +1,16 @@
 // Exemplo de controller do lojista
 const prisma = require('../prisma/prismaClient');
 
+// Função utilitária para emitir atualizações via WebSocket
+const emitOrderUpdate = (io, orderId, userId, type, data) => {
+  // Emite para o canal do usuário específico
+  io.to(`user:${userId}`).emit('order-update', {
+    type,
+    orderId,
+    ...data
+  });
+};
+
 module.exports = {
   getProfile: async (req, res) => {
     try {
@@ -165,7 +175,6 @@ module.exports = {
       res.status(500).json({ error: 'Erro ao alterar status do restaurante' });
     }
   },
-
   listOrders: async (req, res) => {
     try {
       const pedidos = await prisma.order.findMany({
@@ -178,19 +187,60 @@ module.exports = {
         },
         orderBy: { data_criacao: 'desc' }
       });
-      res.json(pedidos);
+
+      // Cadastrar o usuário no seu canal WebSocket
+      const io = req.app.get('io');
+      const socketId = req.headers['x-socket-id'];
+      if (socketId) {
+        const socket = io.sockets.sockets.get(socketId);
+        if (socket) {
+          socket.join(`user:${req.user.id}`);
+        }
+      }
+
+      res.json({ data: pedidos });
     } catch (err) {
+      console.error('Erro ao listar pedidos:', err);
       res.status(500).json({ error: 'Erro ao listar pedidos' });
     }
   },
-
   updateOrderStatus: async (req, res) => {
     try {
       const { id } = req.params;
       const { status } = req.body;
-      const pedido = await prisma.order.update({ where: { id: Number(id) }, data: { status } });
+      
+      // Atualizar o status do pedido
+      const pedido = await prisma.order.update({ 
+        where: { id: Number(id) }, 
+        data: { status },
+        include: {
+          user: true,
+          restaurant: true
+        }
+      });
+
+      // Obter referência do io do app
+      const io = req.app.get('io');
+
+      // Emitir notificação para o cliente
+      if (pedido.user) {
+        emitOrderUpdate(io, pedido.id, pedido.user.id, 'status-update', {
+          status,
+          restaurant: pedido.restaurant?.nome || 'Restaurante'
+        });
+      }
+
+      // Emitir notificação para o lojista
+      if (pedido.restaurant?.userId) {
+        emitOrderUpdate(io, pedido.id, pedido.restaurant.userId, 'status-update', {
+          status,
+          customer: pedido.user?.nome || 'Cliente'
+        });
+      }
+
       res.json(pedido);
     } catch (err) {
+      console.error('Erro ao atualizar status do pedido:', err);
       res.status(500).json({ error: 'Erro ao atualizar status do pedido' });
     }
   },

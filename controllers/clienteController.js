@@ -230,9 +230,7 @@ module.exports = {
             subtotal += adicionalDb.preco * adicional.quantidade;
           }
         }
-      }
-
-      // Criar pedido
+      }      // Criar pedido
       const order = await prisma.order.create({
         data: {
           userId: req.user.id,
@@ -257,8 +255,32 @@ module.exports = {
             }))
           }
         },
-        include: { orderItems: true }
+        include: { 
+          orderItems: { include: { product: true } },
+          user: true,
+          restaurant: true,
+          address: true
+        }
       });
+
+      // Obter referência do io do app
+      const io = req.app.get('io');
+
+      // Emitir notificação para o lojista
+      if (order.restaurant?.userId) {
+        io.to(`user:${order.restaurant.userId}`).emit('order-update', {
+          type: 'new-order',
+          orderId: order.id,
+          order: {
+            ...order,
+            user: {
+              nome: order.user.nome,
+              email: order.user.email,
+              telefone: order.user.telefone
+            }
+          }
+        });
+      }
 
       res.status(201).json(order);
     } catch (err) {

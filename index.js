@@ -6,6 +6,27 @@ app.set('trust proxy', 1); // Corrige warning do express-rate-limit para proxy
 const http = require('http').createServer(app);
 const { Server } = require('socket.io');
 const io = new Server(http, { cors: { origin: '*' } });
+
+// Configurar middleware para disponibilizar io para os controllers
+app.set('io', io);
+
+// Gerenciar conexões Socket.IO
+io.on('connection', (socket) => {
+  console.log('Cliente conectado:', socket.id);
+  
+  // Identificar o usuário quando ele se conecta
+  socket.on('identify', (userId) => {
+    if (userId) {
+      socket.join(`user:${userId}`);
+      console.log(`Usuário ${userId} identificado no WebSocket`);
+    }
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Cliente desconectado:', socket.id);
+  });
+});
+
 const PORT = process.env.PORT || 3333;
 
 const { morgan, errorHandler } = require('./middlewares/logger');

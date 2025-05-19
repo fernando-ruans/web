@@ -1,0 +1,340 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { FaClipboardList, FaSearch, FaFilter, FaSortAmountDown, FaSortAmountUp, FaEye, FaPrint, FaClock, FaExclamation, FaTimes, FaBell } from 'react-icons/fa';
+import { useAuth } from '../context/AuthContext';
+import theme from '../theme';
+import { formatDistanceToNow } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { useWebSocket } from '../context/WebSocketContext';
+import useSound from 'use-sound';
+
+// Tipos
+interface OrderUpdateEvent {
+  type: 'new-order' | 'status-update';
+  orderId: number;
+  order?: Pedido;
+  status?: string;
+}
+
+interface Pedido {
+  id: number;
+  status: string;
+  total: number;
+  data_criacao: string;
+  user: {
+    nome: string;
+    email: string;
+    telefone?: string;
+  };
+  orderItems: Array<{
+    id: number;
+    quantidade: number;
+    preco_unitario: number;
+    product: {
+      nome: string;
+      descricao?: string;
+      imagem?: string;
+    };
+    adicionais?: Array<{
+      quantidade: number;
+      preco_unitario: number;
+      adicional: {
+        nome: string;
+      };
+    }>;
+  }>;
+  address: {
+    rua: string;
+    numero: string;
+    complemento?: string;
+    bairro: string;
+    cidade: string;
+    cep?: string;
+  };
+  forma_pagamento?: string;
+  observacao?: string;
+  taxa_entrega?: number;
+}
+
+interface FiltrosPedido {
+  status: string;
+  busca: string;
+  periodo: 'todos' | 'hoje' | 'ontem' | 'semana' | 'mes';
+}
+
+interface PedidoStats {
+  hoje: number;
+  pendentes: number;
+  emPreparo: number;
+  emEntrega: number;
+  concluidos: number;
+  cancelados: number;
+  valorTotalHoje: number;
+}
+
+type OrdenacaoPedidos = {
+  campo: 'data_criacao' | 'total' | 'id';
+  ordem: 'asc' | 'desc';
+}
+
+interface ToastProps {
+  mensagem: string;
+  tipo: 'sucesso' | 'erro' | 'aviso';
+  visivel: boolean;
+}
+
+// Componentes
+const Toast: React.FC<ToastProps> = ({ mensagem, tipo, visivel }) => {
+  if (!visivel) return null;
+  
+  const cores = {
+    sucesso: 'bg-green-100 text-green-700 border-green-200',
+    erro: 'bg-red-100 text-red-700 border-red-200',
+    aviso: 'bg-yellow-100 text-yellow-700 border-yellow-200'
+  };
+
+  const icones = {
+    sucesso: <FaClipboardList color="#10b981" size={18} />,
+    erro: <FaExclamation color="#ef4444" size={18} />,
+    aviso: <FaBell color="#f59e0b" size={18} />
+  };
+  
+  return (
+    <div className="fixed top-5 right-5 z-50">
+      <div className={`flex items-center gap-3 ${cores[tipo]} px-4 py-3 rounded-lg border shadow-lg animate-slideIn`}>
+        {icones[tipo]}
+        <span className="font-medium">{mensagem}</span>
+      </div>
+    </div>
+  );
+};
+
+interface ModalPedidoProps {
+  pedido: Pedido | null;
+  visivel: boolean;
+  onFechar: () => void;
+  onAtualizarStatus: (id: number, status: string) => Promise<void>;
+}
+
+const ModalPedido: React.FC<ModalPedidoProps> = ({ pedido, visivel, onFechar, onAtualizarStatus }) => {
+  if (!visivel || !pedido) return null;
+  
+  const dataPedido = new Date(pedido.data_criacao);
+  const tempoDecorrido = formatDistanceToNow(dataPedido, { locale: ptBR, addSuffix: true });
+  
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white border-b border-gray-100 p-4 flex justify-between items-center z-10">
+          <h3 className="text-xl font-bold text-orange-500">Detalhes do Pedido #{pedido.id}</h3>
+          <button onClick={onFechar} className="text-gray-400 hover:text-gray-600">
+            <FaTimes />
+          </button>
+        </div>
+        
+        <div className="p-6">
+          {/* ... outros detalhes do modal ... */}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const PedidosStats: React.FC<{ stats: PedidoStats }> = ({ stats }) => {
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6 w-full">
+      {/* ... estatísticas ... */}
+    </div>
+  );
+};
+
+export default function LojistaPedidosPage(): JSX.Element {
+  // Estado
+  const { socket, connected } = useWebSocket();
+  const [pedidos, setPedidos] = useState<Pedido[]>([]);
+  const [pedidosFiltrados, setPedidosFiltrados] = useState<Pedido[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState('');
+  const [atualizando, setAtualizando] = useState<number | null>(null);
+  const [playSound] = useSound('/sounds/orderSound.mp3', { volume: 0.5 });
+  
+  const [filtros, setFiltros] = useState<FiltrosPedido>({ 
+    status: 'todos', 
+    busca: '', 
+    periodo: 'hoje' 
+  });
+  
+  const [ordenacao, setOrdenacao] = useState<OrdenacaoPedidos>({
+    campo: 'data_criacao',
+    ordem: 'desc'
+  });
+  
+  const [pedidoSelecionado, setPedidoSelecionado] = useState<Pedido | null>(null);
+  const [modalVisivel, setModalVisivel] = useState(false);
+  const [toast, setToast] = useState<ToastProps>({
+    mensagem: '',
+    tipo: 'sucesso',
+    visivel: false
+  });
+
+  const [stats, setStats] = useState<PedidoStats>({
+    hoje: 0,
+    pendentes: 0,
+    emPreparo: 0,
+    emEntrega: 0,
+    concluidos: 0,
+    cancelados: 0,
+    valorTotalHoje: 0
+  });
+
+  // Funções
+  const fetchPedidos = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/lojista/orders', {
+        credentials: 'include'
+      });
+      if (!res.ok) throw new Error('Erro ao carregar pedidos');
+      const { data } = await res.json();
+      setPedidos(data);
+    } catch (err) {
+      setErro('Erro ao carregar pedidos');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const atualizarStatus = async (pedidoId: number, novoStatus: string) => {
+    setAtualizando(pedidoId);
+    try {
+      const res = await fetch(`/api/lojista/orders/${pedidoId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ status: novoStatus })
+      });
+      
+      if (!res.ok) throw new Error('Erro ao atualizar status');
+      
+      setPedidos(prevPedidos => 
+        prevPedidos.map(pedido => 
+          pedido.id === pedidoId 
+            ? { ...pedido, status: novoStatus }
+            : pedido
+        )
+      );
+      
+      exibirToast('Status atualizado com sucesso!', 'sucesso');
+    } catch (err) {
+      exibirToast('Erro ao atualizar status', 'erro');
+    } finally {
+      setAtualizando(null);
+    }
+  };
+
+  const exibirToast = (mensagem: string, tipo: 'sucesso' | 'erro' | 'aviso') => {
+    setToast({ mensagem, tipo, visivel: true });
+    setTimeout(() => setToast(prev => ({ ...prev, visivel: false })), 3000);
+  };
+
+  // Effects
+  useEffect(() => {
+    if (socket && connected) {
+      const handleOrderUpdate = (data: OrderUpdateEvent) => {
+        if (data.type === 'new-order' && data.order) {
+          setPedidos(prev => [data.order as Pedido, ...prev]);
+          playSound();
+          exibirToast('Novo pedido recebido!', 'aviso');
+          
+          if (Notification.permission === 'granted') {
+            new Notification('Novo Pedido!', {
+              body: `Pedido #${data.order.id} recebido de ${data.order.user.nome}`,
+              icon: '/logo192.png'
+            });
+          }
+        } else if (data.type === 'status-update' && data.orderId && data.status) {
+          setPedidos(prev => 
+            prev.map(pedido => 
+              pedido.id === data.orderId 
+                ? { ...pedido, status: data.status! }
+                : pedido
+            )
+          );
+          
+          exibirToast(`Pedido #${data.orderId} atualizado para ${data.status}`, 'sucesso');
+        }
+      };
+
+      const handleError = () => {
+        exibirToast('Erro de conexão com o servidor', 'erro');
+      };
+
+      socket.emit('register-restaurant');
+      socket.on('order-update', handleOrderUpdate);
+      socket.on('connect_error', handleError);
+
+      return () => {
+        socket.off('order-update', handleOrderUpdate);
+        socket.off('connect_error', handleError);
+      };
+    }
+  }, [socket, connected, playSound]);
+
+  useEffect(() => {
+    if (Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPedidos();
+  }, [fetchPedidos]);
+
+  useEffect(() => {
+    aplicarFiltrosEOrdenacao();
+  }, [pedidos, filtros, ordenacao]);
+
+  useEffect(() => {
+    calcularEstatisticas();
+  }, [pedidos]);
+
+  // Handlers
+  const handleChangeFiltroStatus = (status: string) => {
+    setFiltros(prev => ({ ...prev, status }));
+  };
+
+  const handleChangeBusca = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFiltros(prev => ({ ...prev, busca: e.target.value }));
+  };
+
+  const handleChangeOrdenacao = (campo: 'data_criacao' | 'total' | 'id') => {
+    setOrdenacao(prev => ({
+      campo,
+      ordem: prev.campo === campo && prev.ordem === 'desc' ? 'asc' : 'desc'
+    }));
+  };
+
+  const handleChangePeriodo = (periodo: 'todos' | 'hoje' | 'ontem' | 'semana' | 'mes') => {
+    setFiltros(prev => ({ ...prev, periodo }));
+  };
+
+  // Render
+  if (loading) return <div className="text-center text-gray-700 mt-10">Carregando...</div>;
+  if (erro) return <div className="text-center text-red-400 mt-10">{erro}</div>;
+
+  return (
+    <div className={theme.bg + ' min-h-screen'}>
+      <Toast {...toast} />
+      
+      <ModalPedido 
+        pedido={pedidoSelecionado}
+        visivel={modalVisivel}
+        onFechar={() => setModalVisivel(false)}
+        onAtualizarStatus={atualizarStatus}
+      />
+      
+      <div className="container mx-auto px-4 py-8">
+        {/* ... resto do JSX ... */}
+      </div>
+    </div>
+  );
+}
