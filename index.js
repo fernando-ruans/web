@@ -1,53 +1,78 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
+const WebSocket = require('ws');
+const jwt = require('jsonwebtoken');
+const http = require('http');
+const path = require('path');
+
+// Rotas
+const authRoutes = require('./routes/auth');
+const clienteRoutes = require('./routes/cliente');
+const lojistaRoutes = require('./routes/lojista');
+const adminRoutes = require('./routes/admin');
+
 const app = express();
-app.set('trust proxy', 1); // Corrige warning do express-rate-limit para proxy
-const http = require('http').createServer(app);
-const { Server } = require('socket.io');
-const io = new Server(http, { 
-  cors: { 
-    origin: process.env.NODE_ENV === 'production' 
-      ? 'https://seu-dominio.com'
-      : 'http://localhost:3000',
-    credentials: true 
-  } 
-});
+const server = http.createServer(app);
 
-// Configurar middleware para disponibilizar io para os controllers
-app.set('io', io);
+// Configuração do CORS
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  credentials: true
+}));
 
-// Gerenciar conexões Socket.IO
-io.on('connection', (socket) => {
-  console.log('Cliente conectado:', socket.id);
-  let userType = null;
-  let userId = null;
+app.use(express.json());
+app.use(cookieParser());
+app.use('/uploads', express.static('uploads'));
+
+// Configuração do WebSocket
+const wss = new WebSocket.Server({ server });
+
+// Mapear clientes conectados
+const clients = new Map();
+
+wss.on('connection', (ws, req) => {
+  console.log('Nova conexão WebSocket');
   
-  // Identificar o usuário quando ele se conecta
-  socket.on('identify', async (data) => {
-    if (data.userId) {
-      userId = data.userId;
-      socket.join(`user:${userId}`);
-      console.log(`Usuário ${userId} identificado no WebSocket`);
+  // Extrair token da URL
+  const url = new URL(req.url, 'ws://localhost');
+  const token = url.searchParams.get('token');
+  
+  if (!token) {
+    console.log('Token não fornecido');
+    ws.close();
+    return;
+  }
 
-      // Verificar tipo do usuário
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'segredo123');
+    const userId = decoded.id;
+    
+    // Armazenar a conexão
+    clients.set(userId, ws);
+    
+    ws.on('message', async (message) => {
       try {
-        const prisma = require('./prisma/prismaClient');
-        const user = await prisma.user.findUnique({
-          where: { id: userId },
-          select: { tipo: true }
-        });
+        const { type, data } = JSON.parse(message);
+        console.log('Mensagem recebida:', type, data);
         
-        if (user) {
-          userType = user.tipo;
-          if (userType === 'lojista') {
+        if (type === 'identify') {
+          // Verificar tipo do usuário
+          const prisma = require('./prisma/prismaClient');
+          const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { tipo: true }
+          });
+          
+          if (user && user.tipo === 'lojista') {
             // Buscar restaurante do lojista
             const restaurant = await prisma.restaurant.findFirst({
               where: { userId: userId }
             });
             
             if (restaurant) {
-              // Buscar pedidos do restaurante
+              // Buscar pedidos ativos
               const pedidos = await prisma.order.findMany({
                 where: { 
                   restaurantId: restaurant.id,
@@ -56,7 +81,6 @@ io.on('connection', (socket) => {
                   }
                 },
                 include: {
-                  user: true,
                   orderItems: {
                     include: {
                       product: true,
@@ -66,80 +90,70 @@ io.on('connection', (socket) => {
                         }
                       }
                     }
-                  }
-                },
-                orderBy: {
-                  data_criacao: 'desc'
+                  },
+                  user: {
+                    select: {
+                      nome: true,
+                      telefone: true
+                    }
+                  },
+                  address: true
                 }
               });
               
-              // Enviar pedidos para o lojista
-              socket.emit('pedidos', pedidos);
+              ws.send(JSON.stringify({
+                type: 'pedidos',
+                data: pedidos
+              }));
             }
           }
         }
       } catch (err) {
-        console.error('Erro ao identificar usuário:', err);
+        console.error('Erro ao processar mensagem:', err);
       }
-    }
-  });
-
-  socket.on('disconnect', () => {
-    console.log('Cliente desconectado:', socket.id);
-  });
+    });
+    
+    ws.on('close', () => {
+      clients.delete(userId);
+      console.log('Cliente desconectado:', userId);
+    });
+    
+  } catch (err) {
+    console.error('Erro na autenticação do WebSocket:', err);
+    ws.close();
+  }
 });
 
-const PORT = process.env.PORT || 3333;
+// Função para enviar atualizações via WebSocket
+const sendWebSocketUpdate = (userId, type, data) => {
+  const client = clients.get(userId);
+  if (client && client.readyState === WebSocket.OPEN) {
+    client.send(JSON.stringify({ type, data }));
+  }
+};
 
-const { morgan, errorHandler } = require('./middlewares/logger');
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
-const cookieParser = require('cookie-parser');
+// Disponibilizar a função sendWebSocketUpdate para outros módulos
+app.set('sendWebSocketUpdate', sendWebSocketUpdate);
 
-// Garante que a pasta uploads existe para o Multer
-require('./scripts/ensureUploadsDir');
-
-const authRoutes = require('./routes/auth');
-const clienteRoutes = require('./routes/cliente');
-const lojistaRoutes = require('./routes/lojista');
-const adminRoutes = require('./routes/admin');
-
-// Segurança extra
-app.use(helmet());
-app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }));
-
-// Logger de requisições
-app.use(morgan('dev'));
-
-// CORS restritivo para produção
-const corsOptions = process.env.NODE_ENV === 'production'
-  ? { origin: 'https://seu-dominio.com', credentials: true }
-  : { origin: 'http://localhost:3000', credentials: true };
-app.use(cors(corsOptions));
-
-app.use(express.json());
-app.use(cookieParser());
-
-// Servir arquivos estáticos da pasta uploads
-app.use('/uploads', express.static('uploads'));
-
+// Rotas
 app.use('/api/auth', authRoutes);
 app.use('/api/cliente', clienteRoutes);
 app.use('/api/lojista', lojistaRoutes);
 app.use('/api/admin', adminRoutes);
 
-// Rotas de exemplo (substituir pelas reais depois)
-app.get('/', (req, res) => res.send('API Deliveryx rodando!'));
-
-// Socket.IO exemplo
-io.on('connection', (socket) => {
-  console.log('Novo cliente conectado:', socket.id);
-  socket.on('disconnect', () => console.log('Cliente desconectado:', socket.id));
+// Erro 404 para rotas não encontradas
+app.use((req, res) => {
+  res.status(404).json({ error: 'Rota não encontrada' });
 });
 
-// Tratamento de erros global
-app.use(errorHandler);
+// Handler global de erros
+app.use((err, req, res, next) => {
+  console.error('Erro não tratado:', err);
+  res.status(500).json({ error: 'Erro interno do servidor' });
+});
 
-http.listen(PORT, () => {
+const PORT = process.env.PORT || 3333;
+
+server.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });

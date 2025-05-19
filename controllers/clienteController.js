@@ -60,48 +60,124 @@ module.exports = {
       const prisma = require('../prisma/prismaClient');
       const { endereco, categoria, nome, precoMin, precoMax, page = 1, limit = 10, orderBy = 'nome', order = 'asc' } = req.query;
 
+      // Construir where clause dinamicamente
       const where = {
-        status: 'aprovado',
-        ...(endereco && { endereco: { contains: endereco, mode: 'insensitive' } }),
-        ...(nome && { nome: { contains: nome, mode: 'insensitive' } }),
-        ...(categoria && { categories: { some: { nome: { contains: categoria, mode: 'insensitive' } } } }),
-        ...(precoMin || precoMax ? {
+        status: 'aprovado', // Apenas restaurantes aprovados
+        AND: []
+      };
+
+      // Adicionar filtros condicionalmente
+      if (nome) {
+        where.AND.push({ nome: { contains: nome, mode: 'insensitive' } });
+      }
+
+      if (endereco) {
+        where.AND.push({ endereco: { contains: endereco, mode: 'insensitive' } });
+      }
+
+      if (categoria) {
+        where.AND.push({
           categories: {
             some: {
-              products: {
-                some: {
-                  preco: {
-                    gte: precoMin ? Number(precoMin) : undefined,
-                    lte: precoMax ? Number(precoMax) : undefined
+              nome: { contains: categoria, mode: 'insensitive' }
+            }
+          }
+        });
+      }
+
+      // Remove AND vazio
+      if (where.AND.length === 0) {
+        delete where.AND;
+      }
+
+      // Buscar restaurantes com paginação
+      const skip = (Number(page) - 1) * Number(limit);
+      const take = Number(limit);      const [total, restaurants] = await prisma.$transaction([
+        prisma.restaurant.count({ 
+          where: {
+            ...where,
+            status: "aprovado"
+          }
+        }),
+        prisma.restaurant.findMany({
+          where: {
+            ...where,
+            status: "aprovado"
+          },
+          skip,
+          take,
+          orderBy: { [orderBy]: order },
+          include: {
+            categories: {
+              include: {
+                products: {
+                  select: {
+                    preco: true,
+                    id: true,
+                    nome: true,
+                    imagem: true
                   }
                 }
               }
+            },
+            reviews: {
+              select: {
+                nota: true
+              }
             }
           }
-        } : {})
-      };
-      
-      const total = await prisma.restaurant.count({ where });
-      const restaurantes = await prisma.restaurant.findMany({
-        where,
-        include: { categories: true },
-        skip: (Number(page) - 1) * Number(limit),
-        take: Number(limit),
-        orderBy: { [orderBy]: order }
+        })
+      ]);      // Calcular médias e informações adicionais
+      const restaurantsWithStats = restaurants.map(restaurant => {
+        // Obter todos os produtos de todas as categorias
+        const allProducts = restaurant.categories.flatMap(cat => cat.products || []);
+        
+        const mediaPreco = allProducts.length > 0
+          ? allProducts.reduce((acc, prod) => acc + prod.preco, 0) / allProducts.length
+          : 0;
+
+        const mediaAvaliacao = restaurant.reviews?.length > 0
+          ? restaurant.reviews.reduce((acc, rev) => acc + rev.nota, 0) / restaurant.reviews.length
+          : 0;
+
+        const { products, reviews, ...restRestaurant } = restaurant;
+
+        return {
+          ...restRestaurant,
+          mediaPreco: Number(mediaPreco.toFixed(2)),
+          mediaAvaliacao: Number(mediaAvaliacao.toFixed(1)),
+          totalAvaliacoes: reviews.length
+        };
       });
 
-      res.json({ 
-        total, 
-        page: Number(page), 
-        limit: Number(limit), 
-        data: restaurantes.map(r => ({
-          ...r,
-          cidade: r.endereco?.split(',').slice(-2)[0]?.trim() || ''
-        }))
+      // Filtrar por preço após calcular a média
+      let filteredRestaurants = restaurantsWithStats;
+      if (precoMin || precoMax) {
+        filteredRestaurants = restaurantsWithStats.filter(rest => {
+          const price = rest.mediaPreco;
+          if (precoMin && precoMax) {
+            return price >= Number(precoMin) && price <= Number(precoMax);
+          }
+          if (precoMin) {
+            return price >= Number(precoMin);
+          }
+          if (precoMax) {
+            return price <= Number(precoMax);
+          }
+          return true;
+        });
+      }
+
+      res.json({
+        total,
+        page: Number(page),
+        limit: Number(limit),
+        data: filteredRestaurants
       });
+
     } catch (err) {
-      console.error('Erro detalhado ao listar restaurantes:', err);
-      res.status(500).json({ error: 'Erro ao listar restaurantes' });
+      console.error('Erro ao listar restaurantes:', err);
+      res.status(500).json({ error: 'Erro ao listar restaurantes: ' + err.message });
     }
   },
   getRestaurant: async (req, res) => {

@@ -11,9 +11,15 @@ const emitOrderUpdate = (io, orderId, userId, type, data) => {
   });
 };
 
-module.exports = {
-  getProfile: async (req, res) => {
+module.exports = {  getProfile: async (req, res) => {
     try {
+      console.log('Buscando perfil para usuário:', req.user);
+      
+      if (!req.user || !req.user.id) {
+        console.error('Usuário não identificado na requisição');
+        return res.status(401).json({ error: 'Usuário não identificado' });
+      }
+
       const lojista = await prisma.user.findUnique({
         where: { id: req.user.id },
         select: {
@@ -25,12 +31,35 @@ module.exports = {
           cpf: true,
           endereco: true,
           avatarUrl: true,
-          restaurants: true
+          restaurants: {
+            select: {
+              id: true,
+              nome: true,
+              cnpj: true,
+              cep: true,
+              telefone: true,
+              endereco: true,
+              taxa_entrega: true,
+              tempo_entrega: true,
+              imagem: true,
+              banner: true,
+              aberto: true,
+              status: true
+            }
+          }
         }
       });
+
+      if (!lojista) {
+        console.error('Lojista não encontrado:', req.user.id);
+        return res.status(404).json({ error: 'Usuário não encontrado' });
+      }
+
+      console.log('Perfil encontrado:', { ...lojista, secret: undefined });
       res.json(lojista);
     } catch (err) {
-      res.status(500).json({ error: 'Erro ao buscar perfil' });
+      console.error('Erro ao buscar perfil:', err);
+      res.status(500).json({ error: 'Erro ao buscar perfil: ' + err.message });
     }
   },
   updateProfile: async (req, res) => {
@@ -227,7 +256,13 @@ module.exports = {
           restaurantId: restaurant.id
         },
         include: {
-          user: true,
+          user: {
+            select: {
+              id: true,
+              nome: true,
+              telefone: true
+            }
+          },
           orderItems: {
             include: {
               product: true,
@@ -237,7 +272,8 @@ module.exports = {
                 }
               }
             }
-          }
+          },
+          address: true
         }
       });
 
@@ -249,7 +285,13 @@ module.exports = {
         where: { id: Number(orderId) },
         data: { status },
         include: {
-          user: true,
+          user: {
+            select: {
+              id: true,
+              nome: true,
+              telefone: true
+            }
+          },
           orderItems: {
             include: {
               product: true,
@@ -259,22 +301,27 @@ module.exports = {
                 }
               }
             }
-          }
+          },
+          address: true
         }
       });
 
-      // Emitir atualizações via WebSocket
-      const io = req.app.get('io');
+      // Enviar atualização via WebSocket
+      const sendWebSocketUpdate = req.app.get('sendWebSocketUpdate');
       
       // Notificar o cliente
-      io.to(`user:${order.userId}`).emit('order-update', {
+      sendWebSocketUpdate(order.userId, 'order-update', {
         type: 'status-update',
         orderId: order.id,
         order: updatedOrder
       });
 
       // Notificar o lojista
-      io.to(`user:${req.user.id}`).emit('atualizacaoPedido', updatedOrder);
+      sendWebSocketUpdate(req.user.id, 'order-update', {
+        type: 'status-update',
+        orderId: order.id,
+        order: updatedOrder
+      });
 
       res.json(updatedOrder);
     } catch (err) {
@@ -761,9 +808,8 @@ module.exports = {
   },
 
   listActiveOrders: async (req, res) => {
-    try {
-      const restaurants = await prisma.restaurant.findMany({
-        where: { ownerId: req.user.id }
+    try {      const restaurants = await prisma.restaurant.findMany({
+        where: { userId: req.user.id }
       });
 
       const restaurantIds = restaurants.map(r => r.id);
@@ -771,12 +817,17 @@ module.exports = {
       const activeOrders = await prisma.order.findMany({
         where: {
           restaurantId: { in: restaurantIds },
-          status: { in: ['PENDING', 'PREPARING', 'READY'] }
+          status: { in: ['PENDING', 'PREPARING', 'READY', 'Pendente', 'Em Preparo', 'Pronto'] }
         },
         include: {
-          items: {
+          orderItems: {
             include: {
-              product: true
+              product: true,
+              adicionais: {
+                include: {
+                  adicional: true
+                }
+              }
             }
           },
           user: {
@@ -786,14 +837,35 @@ module.exports = {
               telefone: true
             }
           },
-          restaurant: true
+          restaurant: true,
+          address: true
         },
         orderBy: {
-          createdAt: 'desc'
+          data_criacao: 'desc'
         }
       });
 
-      res.json(activeOrders);
+      // Formatar os pedidos para corresponder à interface do frontend
+      const formattedOrders = activeOrders.map(order => ({
+        id: order.id,
+        status: order.status,
+        total: order.total,
+        observacao: order.observacao,
+        createdAt: order.data_criacao,
+        clienteNome: order.user.nome,
+        items: order.orderItems.map(item => ({
+          id: item.id,
+          quantidade: item.quantidade,
+          produto: {
+            id: item.product.id,
+            nome: item.product.nome,
+            preco: item.preco_unitario
+          }
+        })),
+        address: order.address
+      }));
+      
+      res.json(formattedOrders);
     } catch (err) {
       console.error('Erro ao listar pedidos ativos:', err);
       res.status(500).json({ error: 'Erro ao listar pedidos ativos' });

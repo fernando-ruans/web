@@ -1,66 +1,141 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Manager } from 'socket.io-client';
-import { useAuth } from './AuthContext';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 
-// Definindo uma interface básica para o Socket
-interface SocketInterface {
-  on: (event: string, callback: Function) => void;
-  off: (event: string, callback?: Function) => void;
-  emit: (event: string, ...args: any[]) => void;
-  disconnect: () => void;
+interface Pedido {
+  id: number;
+  status: string;
+  total: number;
+  observacao?: string;
+  data_criacao: string;
+  clienteNome: string;
+  items: Array<{
+    id: number;
+    quantidade: number;
+    produto: {
+      id: number;
+      nome: string;
+      preco: number;
+    };
+  }>;
+  address?: {
+    rua: string;
+    numero: string;
+    bairro: string;
+    cidade: string;
+    complemento?: string;
+    cep: string;
+  };
+}
+
+interface WebSocketMessage {
+  type: 'pedidos' | 'order-update';
+  data: any;
 }
 
 interface WebSocketContextType {
-  socket: SocketInterface | null;
+  pedidos: Pedido[];
   connected: boolean;
+  socket: WebSocket | null;
+  sendMessage: (type: string, data: any) => void;
 }
 
 const WebSocketContext = createContext<WebSocketContextType>({
+  pedidos: [],
+  connected: false,
   socket: null,
-  connected: false
+  sendMessage: () => {} // Função vazia como valor padrão
 });
 
-export const useWebSocket = () => useContext(WebSocketContext);
-
 export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [socket, setSocket] = useState<SocketInterface | null>(null);
+  const [socket, setSocket] = useState<WebSocket | null>(null);
+  const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [connected, setConnected] = useState(false);
-  const { user } = useAuth();
+  const token = localStorage.getItem('token');
+  const apiUrl = (process.env.REACT_APP_API_URL || 'http://localhost:3333').replace(/^http/, 'ws');
+
+  const connect = useCallback(() => {
+    if (!token) return;
+
+    try {
+      const websocket = new WebSocket(`${apiUrl}?token=${token}`);
+
+      websocket.onopen = () => {
+        console.log('WebSocket conectado');
+        setConnected(true);
+        websocket.send(JSON.stringify({ type: 'identify', data: { token } }));
+      };
+
+      websocket.onclose = () => {
+        console.log('WebSocket desconectado');
+        setConnected(false);
+        // Tentar reconectar após 5 segundos
+        setTimeout(connect, 5000);
+      };
+
+      websocket.onerror = (error) => {
+        console.error('Erro no WebSocket:', error);
+      };
+
+      websocket.onmessage = (event) => {
+        try {
+          const message: WebSocketMessage = JSON.parse(event.data);
+          console.log('Mensagem recebida:', message);
+
+          switch (message.type) {
+            case 'pedidos':
+              setPedidos(message.data);
+              break;
+            case 'order-update':
+              if (message.data.type === 'status-update') {
+                setPedidos(prevPedidos => 
+                  prevPedidos.map(pedido => 
+                    pedido.id === message.data.orderId 
+                      ? { ...pedido, ...message.data.order }
+                      : pedido
+                  )
+                );
+              }
+              break;
+            default:
+              console.log('Tipo de mensagem não tratado:', message.type);
+          }
+        } catch (err) {
+          console.error('Erro ao processar mensagem:', err);
+        }
+      };
+
+      setSocket(websocket);
+
+      return () => {
+        websocket.close();
+      };
+    } catch (err) {
+      console.error('Erro ao configurar WebSocket:', err);
+    }
+  }, [token, apiUrl]);
 
   useEffect(() => {
-    if (!user) return;
+    connect();
+  }, [connect]);
 
-    const manager = new Manager(process.env.REACT_APP_API_URL || 'http://localhost:3001', {
-      autoConnect: true,
-      auth: {
-        token: localStorage.getItem('token')
-      }
-    });
-    
-    const newSocket = manager.socket('/');
-
-    newSocket.on('connect', () => {
-      console.log('WebSocket conectado');
-      setConnected(true);
-    });
-
-    newSocket.on('disconnect', () => {
-      console.log('WebSocket desconectado');
-      setConnected(false);
-    });
-
-    setSocket(newSocket);
-
-    return () => {
-      newSocket.disconnect();
-    };
-  }, [user]);
+  const sendMessage = useCallback((type: string, data: any) => {
+    if (socket?.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ type, data }));
+    } else {
+      console.error('WebSocket não está conectado');
+    }
+  }, [socket]);
 
   return (
-    <WebSocketContext.Provider value={{ socket, connected }}>
+    <WebSocketContext.Provider value={{ socket, pedidos, connected, sendMessage }}>
       {children}
     </WebSocketContext.Provider>
   );
 };
 
-export default WebSocketContext;
+export const useWebSocket = () => {
+  const context = useContext(WebSocketContext);
+  if (!context) {
+    throw new Error('useWebSocket deve ser usado dentro de um WebSocketProvider');
+  }
+  return context;
+};
