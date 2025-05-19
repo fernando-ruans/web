@@ -251,7 +251,7 @@ module.exports = {
   createProduct: async (req, res) => {
     try {
       console.log('Body recebido em createProduct:', req.body); // DEBUG
-      let { categoryId, nome, descricao, preco, imagem, ativo } = req.body;
+      let { categoryId, nome, descricao, preco, imagem, ativo, adicionais } = req.body;
       // Validação básica
       if (
         categoryId === undefined || categoryId === null || categoryId === '' ||
@@ -264,6 +264,7 @@ module.exports = {
       }
       const categoryIdNum = Number(categoryId);
       const precoNum = Number(preco);
+
       console.log('categoryId convertido:', categoryIdNum, 'preco convertido:', precoNum); // DEBUG
       if (isNaN(categoryIdNum) || isNaN(precoNum)) {
         return res.status(400).json({ error: 'categoryId e preco devem ser numéricos', bodyRecebido: req.body });
@@ -274,6 +275,8 @@ module.exports = {
       if (precoNum < 0) {
         return res.status(400).json({ error: 'preco não pode ser negativo', bodyRecebido: req.body });
       }
+
+      // Criar produto com adicionais
       const produto = await prisma.product.create({
         data: {
           categoryId: categoryIdNum,
@@ -281,9 +284,22 @@ module.exports = {
           descricao,
           preco: precoNum,
           imagem: imagem || '',
-          ativo: ativo ?? true
+          ativo: ativo ?? true,
+          // Criar os adicionais junto com o produto
+          adicionais: adicionais ? {
+            create: adicionais.map(a => ({
+              nome: a.nome,
+              preco: Number(a.preco),
+              quantidadeMax: Number(a.quantidadeMax)
+            }))
+          } : undefined
+        },
+        include: {
+          category: true,
+          adicionais: true
         }
       });
+
       res.status(201).json(produto);
     } catch (err) {
       console.error('Erro ao criar produto:', err);
@@ -294,10 +310,34 @@ module.exports = {
   updateProduct: async (req, res) => {
     try {
       const { id } = req.params;
-      const data = req.body;
-      const produto = await prisma.product.update({ where: { id: Number(id) }, data });
+      const { adicionais, ...data } = req.body;
+
+      // Primeiro atualiza o produto
+      const produto = await prisma.product.update({
+        where: { id: Number(id) },
+        data: {
+          ...data,
+          categoryId: Number(data.categoryId),
+          preco: Number(data.preco),
+          // Se tiver adicionais, atualiza todos
+          adicionais: adicionais ? {
+            deleteMany: {}, // Remove todos os adicionais existentes
+            create: adicionais.map(a => ({
+              nome: a.nome,
+              preco: Number(a.preco),
+              quantidadeMax: Number(a.quantidadeMax)
+            }))
+          } : undefined
+        },
+        include: {
+          category: true,
+          adicionais: true
+        }
+      });
+
       res.json(produto);
     } catch (err) {
+      console.error('Erro ao atualizar produto:', err);
       res.status(500).json({ error: 'Erro ao atualizar produto' });
     }
   },

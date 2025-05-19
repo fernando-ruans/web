@@ -84,14 +84,18 @@ export default function LojistaProdutosPage() {
     fetchRestaurante();
   }, []);
 
-  // Carregar adicionais ao abrir o formulário de edição
+  // Efeito para carregar adicionais quando abre o formulário em modo de edição
   useEffect(() => {
-    if (editId) {
+    if (editId && showForm) {
       fetch(`/api/lojista/adicionais?productId=${editId}`, { credentials: 'include' })
         .then(res => res.json())
         .then(data => setAdicionais(Array.isArray(data) ? data : []))
-        .catch(() => setAdicionais([]));
-    } else {
+        .catch(() => {
+          setAdicionais([]);
+          setAdicionalError('Erro ao carregar adicionais');
+        });
+    } else if (!editId && showForm) {
+      // Em modo de criação, limpa os adicionais
       setAdicionais([]);
     }
   }, [editId, showForm]);
@@ -112,7 +116,12 @@ export default function LojistaProdutosPage() {
         nome,
         descricao,
         preco: Number(preco),
-        imagem
+        imagem,
+        adicionais: adicionais.map(a => ({
+          nome: a.nome,
+          preco: Number(a.preco),
+          quantidadeMax: Number(a.quantidadeMax)
+        }))
       };
 
       if (editId) {
@@ -144,6 +153,7 @@ export default function LojistaProdutosPage() {
         const novo = await res.json();
         setProdutos([...produtos, novo]);
       }
+
       // Limpa o formulário e fecha
       setShowForm(false);
       setEditId(null);
@@ -152,6 +162,10 @@ export default function LojistaProdutosPage() {
       setDescricao(''); 
       setCategoriaId(''); 
       setImagem('');
+      setAdicionais([]);
+      setAdicionalNome('');
+      setAdicionalPreco('');
+      setAdicionalQuantidadeMax('');
     } catch (err: any) {
       setError(err.message || 'Erro desconhecido');
     }
@@ -181,8 +195,7 @@ export default function LojistaProdutosPage() {
     setCategoriaId(produto.category?.id || '');
     setImagem(produto.imagem || '');
     setShowForm(true);
-    // Limpa os adicionais para evitar resíduos de outro produto
-    setAdicionais([]);
+    // Os adicionais serão carregados pelo useEffect que monitora editId e showForm
   }
 
   // Ao fechar/cancelar o formulário, limpa os adicionais
@@ -195,6 +208,11 @@ export default function LojistaProdutosPage() {
     setCategoriaId('');
     setImagem('');
     setAdicionais([]);
+    setAdicionalNome('');
+    setAdicionalPreco('');
+    setAdicionalQuantidadeMax('');
+    setAdicionalEditId(null);
+    setAdicionalError(null);
   }
 
   async function handleAddCategoria(e: React.FormEvent) {
@@ -266,28 +284,47 @@ export default function LojistaProdutosPage() {
   }
 
   // Funções CRUD adicionais
-  async function handleAddAdicional(e: React.FormEvent) {
+  async function handleAddAdicional(e: React.MouseEvent) {
     e.preventDefault();
     setAdicionalError(null);
+    
     if (!adicionalNome || adicionalPreco === '' || adicionalQuantidadeMax === '') {
       setAdicionalError('Preencha todos os campos do adicional');
       return;
     }
+
     try {
-      const res = await fetch('/api/lojista/adicionais', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          productId: editId,
-          nome: adicionalNome,
-          preco: Number(adicionalPreco),
-          quantidadeMax: Number(adicionalQuantidadeMax)
-        })
-      });
-      if (!res.ok) throw new Error('Erro ao adicionar adicional');
-      const novo = await res.json();
-      setAdicionais([...adicionais, novo]);
+      const novoAdicional = {
+        nome: adicionalNome,
+        preco: Number(adicionalPreco),
+        quantidadeMax: Number(adicionalQuantidadeMax)
+      };
+
+      if (editId) {
+        // Se já tem ID do produto, salva no backend
+        const res = await fetch('/api/lojista/adicionais', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            ...novoAdicional,
+            productId: editId
+          })
+        });
+        if (!res.ok) throw new Error('Erro ao adicionar adicional');
+        const novo = await res.json();
+        setAdicionais([...adicionais, novo]);
+      } else {
+        // Se não tem ID (produto novo), adiciona apenas no estado local
+        setAdicionais([
+          ...adicionais,
+          {
+            ...novoAdicional,
+            id: `temp_${Date.now()}` // ID temporário
+          }
+        ]);
+      }
+
       setAdicionalNome('');
       setAdicionalPreco('');
       setAdicionalQuantidadeMax('');
@@ -358,101 +395,103 @@ export default function LojistaProdutosPage() {
               <textarea className={theme.input + ' w-full'} placeholder="Descrição" value={descricao} onChange={e => setDescricao(e.target.value)} disabled={!restaurante} />
               <UploadImage onUpload={url => setImagem(url)} label="Imagem do produto" />
               {imagem && <div className="text-xs text-gray-500 break-all">URL: {imagem}</div>}
+              
               <div className="flex gap-2">
                 <button type="submit" className={theme.primary + ' w-full font-bold py-2 rounded'} disabled={!restaurante}>{editId ? 'Salvar' : 'Cadastrar'}</button>
                 <button type="button" className={theme.secondary + ' w-full font-bold py-2 rounded'} onClick={handleCloseForm} disabled={!restaurante}>Cancelar</button>
               </div>
-              {/* Adicionais do produto */}
-              {editId && (
-                <div className="bg-white rounded-xl border border-orange-200 p-4 mt-2">
-                  <h4 className="font-bold text-orange-500 mb-2">Adicionais</h4>
-                  <form onSubmit={adicionalEditId ? handleEditAdicional : handleAddAdicional} className="flex flex-wrap gap-2 items-end mb-2">
-                    <input
-                      className="border rounded px-2 py-1 text-sm"
-                      placeholder="Nome do adicional"
-                      value={adicionalNome}
-                      onChange={e => setAdicionalNome(e.target.value)}
-                      required
-                    />
-                    <input
-                      className="border rounded px-2 py-1 text-sm"
-                      placeholder="Preço"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={adicionalPreco}
-                      onChange={e => setAdicionalPreco(e.target.value)}
-                      required
-                    />
-                    <input
-                      className="border rounded px-2 py-1 text-sm"
-                      placeholder="Qtd. máxima"
-                      type="number"
-                      min="1"
-                      value={adicionalQuantidadeMax}
-                      onChange={e => setAdicionalQuantidadeMax(e.target.value)}
-                      required
-                    />
+
+              <div className="bg-white rounded-xl border border-orange-200 p-4 mt-2">
+                <h4 className="font-bold text-orange-500 mb-2">Adicionais</h4>
+                <div className="flex flex-wrap gap-2 items-end mb-2">
+                  <input
+                    className="border rounded px-2 py-1 text-sm"
+                    placeholder="Nome do adicional"
+                    value={adicionalNome}
+                    onChange={e => setAdicionalNome(e.target.value)}
+                  />
+                  <input
+                    className="border rounded px-2 py-1 text-sm"
+                    placeholder="Preço"
+                    type="number"
+                    min="0"
+                    step="0.01" 
+                    value={adicionalPreco}
+                    onChange={e => setAdicionalPreco(e.target.value)}
+                  />
+                  <input
+                    className="border rounded px-2 py-1 text-sm"
+                    placeholder="Qtd. máxima"
+                    type="number"
+                    min="1"
+                    value={adicionalQuantidadeMax}
+                    onChange={e => setAdicionalQuantidadeMax(e.target.value)}
+                  />
+                  <button 
+                    type="button"
+                    onClick={e => {
+                      e.preventDefault();
+                      handleAddAdicional(e);
+                    }}
+                    className="bg-orange-500 hover:bg-orange-600 text-white text-sm px-3 py-1 rounded"
+                    disabled={!showForm}
+                  >
+                    {adicionalEditId ? 'Salvar' : 'Adicionar'}
+                  </button>
+                  {adicionalEditId && (
                     <button 
-                      type="submit" 
-                      className="bg-orange-500 hover:bg-orange-600 text-white text-sm px-3 py-1 rounded"
+                      type="button"
+                      onClick={() => {
+                        setAdicionalEditId(null);
+                        setAdicionalNome('');
+                        setAdicionalPreco('');
+                        setAdicionalQuantidadeMax('');
+                      }}
+                      className="bg-gray-500 hover:bg-gray-600 text-white text-sm px-3 py-1 rounded"
                     >
-                      {adicionalEditId ? 'Salvar' : 'Adicionar'}
+                      Cancelar
                     </button>
-                    {adicionalEditId && (
-                      <button 
-                        type="button"
-                        onClick={() => {
-                          setAdicionalEditId(null);
-                          setAdicionalNome('');
-                          setAdicionalPreco('');
-                          setAdicionalQuantidadeMax('');
-                        }}
-                        className="bg-gray-500 hover:bg-gray-600 text-white text-sm px-3 py-1 rounded"
-                      >
-                        Cancelar
-                      </button>
-                    )}
-                  </form>
-                  {adicionalError && (
-                    <div className="text-red-500 text-sm mt-2">{adicionalError}</div>
                   )}
-                  
-                  {/* Lista de adicionais */}
-                  <div className="mt-4">
-                    {adicionais.map((adicional: any) => (
-                      <div key={adicional.id} className="flex justify-between items-center p-2 bg-orange-50 rounded mb-2">
-                        <div>
-                          <span className="font-bold">{adicional.nome}</span>
-                          <span className="mx-2">-</span>
-                          <span>R$ {adicional.preco.toFixed(2)}</span>
-                          <span className="mx-2">-</span>
-                          <span>Máx: {adicional.quantidadeMax}</span>
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => {
-                              setAdicionalEditId(adicional.id);
-                              setAdicionalNome(adicional.nome);
-                              setAdicionalPreco(adicional.preco.toString());
-                              setAdicionalQuantidadeMax(adicional.quantidadeMax.toString());
-                            }}
-                            className="text-blue-500 hover:text-blue-600"
-                          >
-                            Editar
-                          </button>
-                          <button
-                            onClick={() => handleDeleteAdicional(adicional.id)}
-                            className="text-red-500 hover:text-red-600"
-                          >
-                            Excluir
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
                 </div>
-              )}
+                {adicionalError && (
+                  <div className="text-red-500 text-sm mt-2">{adicionalError}</div>
+                )}
+                
+                <div className="mt-4">
+                  {adicionais.map((adicional: any) => (
+                    <div key={adicional.id} className="flex justify-between items-center p-2 bg-orange-50 rounded mb-2">
+                      <div>
+                        <span className="font-bold">{adicional.nome}</span>
+                        <span className="mx-2">-</span>
+                        <span>R$ {adicional.preco.toFixed(2)}</span>
+                        <span className="mx-2">-</span>
+                        <span>Máx: {adicional.quantidadeMax}</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAdicionalEditId(adicional.id);
+                            setAdicionalNome(adicional.nome);
+                            setAdicionalPreco(adicional.preco.toString());
+                            setAdicionalQuantidadeMax(adicional.quantidadeMax.toString());
+                          }}
+                          className="text-blue-500 hover:text-blue-600"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteAdicional(adicional.id)}
+                          className="text-red-500 hover:text-red-600"
+                        >
+                          Excluir
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </form>
           )}
           <div className="w-full flex flex-col gap-2 mb-4">
