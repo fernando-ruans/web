@@ -104,24 +104,37 @@ module.exports = {
       res.status(500).json({ error: 'Erro ao listar restaurantes' });
     }
   },
-
   getRestaurant: async (req, res) => {
     try {
       const prisma = require('../prisma/prismaClient');
       const { id } = req.params;
+      
       const restaurante = await prisma.restaurant.findUnique({
-        where: { id: Number(id) },
-        include: {
-          categories: {
-            include: {
-              products: true
-            }
-          }
-        }
+        where: { id: Number(id) }
       });
-      if (!restaurante) return res.status(404).json({ error: 'Restaurante não encontrado' });
-      res.json(restaurante);
+
+      if (!restaurante) {
+        return res.status(404).json({ error: 'Restaurante não encontrado' });
+      }
+
+      // Extrair cidade do endereço se não estiver preenchida
+      const cidade = restaurante.endereco?.split(',').slice(-2)[0]?.trim() || '';
+      
+      // Enviar apenas os campos necessários
+      res.json({
+        id: restaurante.id,
+        nome: restaurante.nome,
+        endereco: restaurante.endereco,
+        cidade: cidade,
+        telefone: restaurante.telefone,
+        banner: restaurante.banner,
+        imagem: restaurante.imagem,
+        taxa_entrega: restaurante.taxa_entrega || 0,
+        tempo_entrega: restaurante.tempo_entrega,
+        aberto: restaurante.aberto
+      });
     } catch (err) {
+      console.error('Erro ao buscar restaurante:', err);
       res.status(500).json({ error: 'Erro ao buscar restaurante' });
     }
   },
@@ -181,7 +194,7 @@ module.exports = {
   createOrder: async (req, res) => {
     try {
       const prisma = require('../prisma/prismaClient');
-      const { restaurantId, addressId, items } = req.body;
+      const { restaurantId, addressId, items, observacao } = req.body;
       if (!restaurantId || !addressId || !Array.isArray(items) || items.length === 0) {
         return res.status(400).json({ error: 'Dados do pedido inválidos' });
       }
@@ -192,12 +205,15 @@ module.exports = {
       if (!restaurante.aberto) return res.status(400).json({ error: 'O restaurante está fechado no momento' });
 
       // Calcular total
-      let total = restaurante.taxa_entrega; // Inicializa com a taxa de entrega
+      let subtotal = 0;
+      const taxa_entrega = restaurante.taxa_entrega || 0;
+
+      // Primeiro valida todos os produtos e adicionais
       for (const item of items) {
         // Verificar produto
         const product = await prisma.product.findUnique({ where: { id: item.productId } });
         if (!product || !product.ativo) return res.status(400).json({ error: 'Produto inválido' });
-        total += product.preco * item.quantidade;
+        subtotal += product.preco * item.quantidade;
 
         // Verificar adicionais
         if (item.adicionais && Array.isArray(item.adicionais)) {
@@ -211,7 +227,7 @@ module.exports = {
             if (adicional.quantidade > adicionalDb.quantidadeMax) {
               return res.status(400).json({ error: `Quantidade máxima excedida para o adicional ${adicionalDb.nome}` });
             }
-            total += adicionalDb.preco * adicional.quantidade;
+            subtotal += adicionalDb.preco * adicional.quantidade;
           }
         }
       }
@@ -223,7 +239,9 @@ module.exports = {
           restaurantId,
           addressId,
           status: 'Pendente',
-          total,
+          total: subtotal + taxa_entrega,
+          taxa_entrega,
+          observacao,
           orderItems: {
             create: items.map(item => ({
               productId: item.productId,
@@ -241,6 +259,7 @@ module.exports = {
         },
         include: { orderItems: true }
       });
+
       res.status(201).json(order);
     } catch (err) {
       console.error('Erro ao criar pedido:', err);

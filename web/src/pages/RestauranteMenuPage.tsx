@@ -194,12 +194,12 @@ export default function RestauranteMenuPage() {
         <ProductDetailsModal
           product={modalProduto}
           isOpen={modalProduto !== null}
-          onClose={() => setModalProduto(null)}
-          onAddToCart={(quantidade, adicionaisSelecionados) => {
+          onClose={() => setModalProduto(null)}          onAddToCart={(quantidade, adicionaisSelecionados) => {
             addItem({
               ...modalProduto,
               quantidade,
-              adicionais: adicionaisSelecionados
+              adicionais: adicionaisSelecionados,
+              restauranteId: restaurante?.id
             });
           }}
         />
