@@ -1,0 +1,115 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          Int      @id @default(autoincrement())
+  nome        String
+  email       String   @unique
+  senha_hash  String
+  tipo        String   // cliente | lojista | admin
+  avatarUrl   String?  // <- novo campo
+  telefone    String?  // <- novo campo
+  cpf         String?  // <- novo campo
+  endereco    String?  // <- novo campo
+  addresses   Address[]
+  restaurants Restaurant[]
+  orders      Order[]
+  createdAt   DateTime @default(now())
+}
+
+model Address {
+  id         Int    @id @default(autoincrement())
+  user       User   @relation(fields: [userId], references: [id])
+  userId     Int
+  rua        String
+  numero     String
+  bairro     String
+  cidade     String
+  complemento String?
+  cep        String   // Campo para CEP
+  orders     Order[]
+}
+
+model Restaurant {
+  id            Int         @id @default(autoincrement())
+  user          User        @relation(fields: [userId], references: [id])
+  userId        Int
+  nome          String
+  cnpj          String
+  cep           String?     // Campo opcional para CEP
+  telefone      String?     // Campo opcional para telefone
+  endereco      String?     // Campo opcional para endereço
+  taxa_entrega  Float
+  tempo_entrega Int
+  status        String
+  imagem        String
+  banner        String      @default("/banner-default.png")
+  aberto        Boolean     @default(false)  // Novo campo para controlar se o restaurante está aberto
+  categories    Category[]
+  orders        Order[]
+  reviews       Review[]
+}
+
+model Category {
+  id           Int         @id @default(autoincrement())
+  restaurant   Restaurant  @relation(fields: [restaurantId], references: [id])
+  restaurantId Int
+  nome         String
+  products     Product[]
+}
+
+model Product {
+  id          Int       @id @default(autoincrement())
+  category    Category  @relation(fields: [categoryId], references: [id])
+  categoryId  Int
+  nome        String
+  descricao   String
+  preco       Float
+  imagem      String
+  ativo       Boolean
+  orderItems  OrderItem[]
+}
+
+model Order {
+  id            Int         @id @default(autoincrement())
+  user          User        @relation(fields: [userId], references: [id])
+  userId        Int
+  restaurant    Restaurant  @relation(fields: [restaurantId], references: [id])
+  restaurantId  Int
+  address       Address     @relation(fields: [addressId], references: [id])
+  addressId     Int
+  status        String
+  total         Float
+  data_criacao  DateTime    @default(now())
+  orderItems    OrderItem[]
+  review        Review?
+}
+
+model OrderItem {
+  id            Int     @id @default(autoincrement())
+  order         Order   @relation(fields: [orderId], references: [id])
+  orderId       Int
+  product       Product @relation(fields: [productId], references: [id])
+  productId     Int
+  quantidade    Int
+  preco_unitario Float
+}
+
+model Review {
+  id        Int    @id @default(autoincrement())
+  order     Order  @relation(fields: [orderId], references: [id])
+  orderId   Int    @unique
+  nota      Int
+  comentario String
+  restaurant Restaurant? @relation(fields: [restaurantId], references: [id])
+  restaurantId Int?
+}
