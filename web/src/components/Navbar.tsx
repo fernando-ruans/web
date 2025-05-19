@@ -35,22 +35,30 @@ export default function Navbar() {
           <ul className="flex gap-2 md:gap-6 items-center">
             <li>
               <Link to="/restaurantes" className={
-                'px-4 py-2 rounded-lg font-semibold transition-all duration-150 ' +
-                (location.pathname.startsWith('/restaurantes') ? 'bg-orange-100 text-orange-600 shadow' : 'text-gray-700 hover:bg-orange-50 hover:text-orange-500')
-              }>Restaurantes</Link>
+                'px-4 py-2 rounded-lg font-semibold transition-all duration-150 flex items-center gap-2 ' +
+                (location.pathname.startsWith('/restaurantes')
+                  ? 'bg-orange-50 text-orange-600 shadow'
+                  : 'text-orange-600 hover:bg-orange-50')
+              }>
+                🍔 Restaurantes
+              </Link>
             </li>
             {(user?.tipo !== 'lojista' && user?.tipo !== 'admin') && (
               <>
                 <li>
                   <Link to="/pedidos" className={
-                    'px-4 py-2 rounded-lg font-semibold transition-all duration-150 ' +
-                    (location.pathname.startsWith('/pedidos') ? 'bg-orange-100 text-orange-600 shadow' : 'text-gray-700 hover:bg-orange-50 hover:text-orange-500')
-                  }>Pedidos</Link>
+                    'px-4 py-2 rounded-lg font-semibold transition-all duration-150 flex items-center gap-2 ' +
+                    (location.pathname.startsWith('/pedidos')
+                      ? 'bg-orange-50 text-orange-600 shadow'
+                      : 'text-orange-600 hover:bg-orange-50')
+                  }>
+                    🧾 Meus Pedidos
+                  </Link>
                 </li>
                 <li>
                   <Link to="/carrinho" className={
                     'px-4 py-2 rounded-lg font-semibold transition-all duration-150 flex items-center gap-2 ' +
-                    (location.pathname.startsWith('/carrinho') ? 'bg-orange-100 text-orange-600 shadow' : 'text-gray-700 hover:bg-orange-50 hover:text-orange-500')
+                    (location.pathname.startsWith('/carrinho') ? 'bg-orange-50 text-orange-600 shadow' : 'text-gray-700 hover:bg-orange-50 hover:text-orange-500')
                   }>
                     🛒 Carrinho
                     {cartItems.length > 0 && (
@@ -64,7 +72,7 @@ export default function Navbar() {
               <li>
                 <Link to="/admin" className={
                   'px-4 py-2 rounded-lg font-semibold transition-all duration-150 flex items-center gap-2 ' +
-                  (location.pathname.startsWith('/admin') ? 'bg-orange-100 text-orange-600 shadow' : 'text-gray-700 hover:bg-orange-50 hover:text-orange-500')
+                  (location.pathname.startsWith('/admin') ? 'bg-orange-50 text-orange-600 shadow' : 'text-orange-600 hover:bg-orange-50')
                 }>
                   <FaUserShield size={16} /> Admin
                 </Link>
@@ -74,7 +82,7 @@ export default function Navbar() {
               <li>
                 <Link to="/lojista" className={
                   'px-4 py-2 rounded-lg font-semibold transition-all duration-150 flex items-center gap-2 ' +
-                  (location.pathname.startsWith('/lojista') ? 'bg-blue-100 text-blue-700 shadow' : 'text-gray-700 hover:bg-blue-50 hover:text-blue-600')
+                  (location.pathname.startsWith('/lojista') ? 'bg-orange-50 text-orange-600 shadow' : 'text-orange-600 hover:bg-orange-50')
                 }>
                   <span role="img" aria-label="Lojista">🏪</span> Painel Lojista
                 </Link>
@@ -110,8 +118,10 @@ export default function Navbar() {
               </button>
               {/* Dropdown - agora permanece aberto ao focar ou passar o mouse */}
               <div className="absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-lg border border-orange-100 py-2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-events-none group-hover:pointer-events-auto group-focus-within:pointer-events-auto transition-all z-50">
-                <button onClick={() => navigate('/profile')} className="w-full text-left px-4 py-2 hover:bg-orange-50 text-gray-700">Meu Perfil</button>
-                <button onClick={() => navigate('/pedidos')} className="w-full text-left px-4 py-2 hover:bg-orange-50 text-gray-700">Meus Pedidos</button>
+                <button onClick={() => navigate('/profile')} className="w-full text-left px-4 py-2 hover:bg-orange-50 text-orange-600 font-semibold">Meu Perfil</button>
+                {user?.tipo === 'cliente' && (
+                  <button onClick={() => navigate('/pedidos')} className="w-full text-left px-4 py-2 hover:bg-orange-50 text-orange-600 font-semibold">Meus Pedidos</button>
+                )}
                 <button onClick={() => { logout(); navigate('/login'); }} className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-500 flex items-center gap-2"><FaSignOutAlt size={16} /> Sair</button>
               </div>
             </div>
@@ -128,11 +138,27 @@ export default function Navbar() {
                 </button>
               </div>
               <ul className="flex flex-col gap-1 py-4 px-2">
-                <li><Link to="/restaurantes" className="flex items-center gap-2 px-4 py-3 rounded-lg font-semibold text-orange-600 hover:bg-orange-50 transition text-base" onClick={() => setMenuOpen(false)}>🍔 Restaurantes</Link></li>
+                <li><Link to="/restaurantes" className={
+                  `flex items-center gap-2 px-4 py-3 rounded-lg font-semibold text-base transition ${location.pathname.startsWith('/restaurantes') ? 'bg-orange-50 text-orange-600 shadow' : 'text-orange-600 hover:bg-orange-50'}`
+                } onClick={() => setMenuOpen(false)}>🍔 Restaurantes</Link></li>
+                {user?.tipo === 'lojista' && (
+                  <li><Link to="/lojista" className={
+                    `flex items-center gap-2 px-4 py-3 rounded-lg font-semibold text-base transition ${location.pathname.startsWith('/lojista') ? 'bg-orange-50 text-orange-600 shadow' : 'text-orange-600 hover:bg-orange-50'}`
+                  } onClick={() => setMenuOpen(false)}>🏪 Painel Lojista</Link></li>
+                )}
+                {user?.tipo === 'admin' && (
+                  <li><Link to="/admin" className={
+                    `flex items-center gap-2 px-4 py-3 rounded-lg font-semibold text-base transition ${location.pathname.startsWith('/admin') ? 'bg-orange-50 text-orange-600 shadow' : 'text-orange-600 hover:bg-orange-50'}`
+                  } onClick={() => setMenuOpen(false)}><FaUserShield size={16} /> Admin</Link></li>
+                )}
                 {(user?.tipo !== 'lojista' && user?.tipo !== 'admin') && (
                   <>
-                    <li><Link to="/pedidos" className="flex items-center gap-2 px-4 py-3 rounded-lg font-semibold text-orange-600 hover:bg-orange-50 transition text-base" onClick={() => setMenuOpen(false)}>🧾 Pedidos</Link></li>
-                    <li><Link to="/carrinho" className="flex items-center gap-2 px-4 py-3 rounded-lg font-semibold text-orange-600 hover:bg-orange-50 transition text-base" onClick={() => setMenuOpen(false)}>🛒 Carrinho {cartItems.length > 0 && (<span className="ml-1 bg-orange-500 text-white rounded-full px-2 py-0.5 text-xs font-bold">{cartItems.length}</span>)}</Link></li>
+                    <li><Link to="/pedidos" className={
+                      `flex items-center gap-2 px-4 py-3 rounded-lg font-semibold text-base transition ${location.pathname.startsWith('/pedidos') ? 'bg-orange-50 text-orange-600 shadow' : 'text-orange-600 hover:bg-orange-50'}`
+                    } onClick={() => setMenuOpen(false)}>🧾 Meus Pedidos</Link></li>
+                    <li><Link to="/carrinho" className={
+                      `flex items-center gap-2 px-4 py-3 rounded-lg font-semibold text-base transition ${location.pathname.startsWith('/carrinho') ? 'bg-orange-50 text-orange-600 shadow' : 'text-orange-600 hover:bg-orange-50'}`
+                    } onClick={() => setMenuOpen(false)}>🛒 Carrinho {cartItems.length > 0 && (<span className="ml-1 bg-orange-500 text-white rounded-full px-2 py-0.5 text-xs font-bold">{cartItems.length}</span>)}</Link></li>
                   </>
                 )}
               </ul>
@@ -147,8 +173,10 @@ export default function Navbar() {
                   </>
                 ) : (
                   <>
-                    <button onClick={() => { setMenuOpen(false); navigate('/profile'); }} className="w-full text-left px-4 py-3 rounded-lg hover:bg-orange-50 text-gray-700 text-base flex items-center gap-2"><FaUserCircle size={18} color="#fb923c" /> Meu Perfil</button>
-                    <button onClick={() => { setMenuOpen(false); navigate('/pedidos'); }} className="w-full text-left px-4 py-3 rounded-lg hover:bg-orange-50 text-orange-500 text-base font-semibold flex items-center gap-2"><span className="text-lg">🧾</span> Meus Pedidos</button>
+                    <button onClick={() => { setMenuOpen(false); navigate('/profile'); }} className="w-full text-left px-4 py-3 rounded-lg hover:bg-orange-50 text-orange-600 font-semibold text-base flex items-center gap-2"><FaUserCircle size={18} color="#fb923c" /> Meu Perfil</button>
+                    {user.tipo === 'cliente' && (
+                      <button onClick={() => { setMenuOpen(false); navigate('/pedidos'); }} className="w-full text-left px-4 py-3 rounded-lg hover:bg-orange-50 text-orange-600 font-semibold text-base flex items-center gap-2"><span className="text-lg">🧾</span> Meus Pedidos</button>
+                    )}
                     <button onClick={() => { setMenuOpen(false); logout(); navigate('/login'); }} className="w-full text-left px-4 py-3 rounded-lg hover:bg-red-50 text-red-500 flex items-center gap-2 text-base"><FaSignOutAlt size={16} /> Sair</button>
                   </>
                 )}
