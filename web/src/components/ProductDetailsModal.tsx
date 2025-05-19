@@ -110,15 +110,11 @@ export default function ProductDetailsModal({ product, isOpen, onClose, onAddToC
     return precoBase + precoAdicionais;
   };
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-lg">
-        <div className="p-6">
-          <div className="flex justify-between items-start mb-4">
-            <h2 className="text-2xl font-bold">{product.nome}</h2>
+  return (    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60]">      <div className="bg-white rounded-lg shadow-xl w-full max-w-lg relative overflow-hidden">
+        <div className="p-6 max-h-[90vh] overflow-y-auto"><div className="pr-8">
+            <h2 className="text-2xl font-bold text-orange-500 mb-4">{product.nome}</h2>
             <button
-              onClick={onClose}
-              className="text-gray-500 hover:text-gray-700"
+              onClick={onClose}className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100"
             >
               ✕
             </button>
@@ -128,7 +124,7 @@ export default function ProductDetailsModal({ product, isOpen, onClose, onAddToC
             <img
               src={product.imagem}
               alt={product.nome}
-              className="w-full h-48 object-cover rounded-lg mb-4"
+              className="w-full h-48 object-cover rounded-lg mb-4 bg-orange-50"
             />
           )}
 
