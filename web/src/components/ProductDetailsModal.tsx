@@ -40,19 +40,27 @@ export default function ProductDetailsModal({ product, isOpen, onClose, onAddToC
 
   useEffect(() => {
     if (isOpen && product) {
-      setLoading(true);
-      fetch(`/api/lojista/adicionais?productId=${product.id}`, { credentials: 'include' })
-        .then(res => res.json())
-        .then(data => {
-          setAdicionais(data);
-          setAdicionaisSelecionados([]);
-        })
-        .catch(error => {
-          console.error('Erro ao carregar adicionais:', error);
-        })
-        .finally(() => {
-          setLoading(false);
-        });
+      setQuantidade(1);
+      setAdicionaisSelecionados([]);
+      // Se o produto já vier com adicionais, usa eles
+      if ((product as any).adicionais && Array.isArray((product as any).adicionais)) {
+        setAdicionais((product as any).adicionais);
+        setLoading(false);
+      } else {
+        setLoading(true);
+        fetch(`/api/lojista/adicionais?productId=${product.id}`, { credentials: 'include' })
+          .then(res => res.json())
+          .then(data => {
+            setAdicionais(data);
+            setAdicionaisSelecionados([]);
+          })
+          .catch(error => {
+            console.error('Erro ao carregar adicionais:', error);
+          })
+          .finally(() => {
+            setLoading(false);
+          });
+      }
     }
   }, [isOpen, product]);
 

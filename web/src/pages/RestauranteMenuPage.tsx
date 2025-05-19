@@ -5,6 +5,13 @@ import theme from '../theme';
 import { FaMapMarkerAlt, FaPhone, FaClock, FaMoneyBill } from 'react-icons/fa';
 import ProductDetailsModal from '../components/ProductDetailsModal';
 
+interface Adicional {
+  id: number;
+  nome: string;
+  preco: number;
+  quantidadeMax: number;
+}
+
 interface Produto {
   id: number;
   nome: string;
@@ -12,6 +19,7 @@ interface Produto {
   preco: number;
   imagem: string;
   ativo: boolean;
+  adicionais?: Adicional[]; // Novo campo para adicionais
 }
 
 interface Categoria {

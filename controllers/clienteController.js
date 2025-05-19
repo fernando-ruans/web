@@ -131,7 +131,7 @@ module.exports = {
       const prisma = require('../prisma/prismaClient');
       const { id } = req.params;
 
-      // Busca o restaurante com suas categorias e produtos
+      // Busca o restaurante com suas categorias e produtos, incluindo adicionais
       const restaurante = await prisma.restaurant.findUnique({
         where: { id: Number(id) },
         include: {
@@ -139,7 +139,8 @@ module.exports = {
             include: {
               products: {
                 where: { ativo: true },
-                orderBy: { nome: 'asc' }
+                orderBy: { nome: 'asc' },
+                include: { adicionais: true }
               }
             }
           }
