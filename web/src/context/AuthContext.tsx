@@ -14,12 +14,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<any>(null);
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [tipo, setTipo] = useState<string | null>(localStorage.getItem('tipo'));
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
+  const [loading, setLoading] = useState(true);  useEffect(() => {
     if (token && tipo) {
-      let endpoint = '/api/cliente/profile';
-      if (tipo === 'lojista') endpoint = '/api/lojista/profile';
-      if (tipo === 'admin') endpoint = '/api/admin/profile';
+      // Define o endpoint baseado no tipo de usuário salvo no localStorage
+      const endpoint = tipo === 'lojista' 
+        ? '/api/lojista/profile'
+        : tipo === 'admin'
+          ? '/api/admin/profile'
+          : '/api/cliente/profile';
+
       fetch(endpoint, {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -63,23 +66,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     window.addEventListener('userUpdated', handleUserUpdated as EventListener);
     return () => window.removeEventListener('userUpdated', handleUserUpdated as EventListener);
   }, []);
-
   const login = async (email: string, senha: string) => {
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, senha })
-    });
-    if (res.ok) {
-      const data = await res.json();
-      setToken(data.token);
-      setTipo(data.user.tipo);
-      setUser(data.user);
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('tipo', data.user.tipo);
-      return true;
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, senha })
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        
+        // Validar se recebemos todos os dados necessários
+        if (!data.token || !data.user || !data.user.tipo) {
+          console.error('Dados de login incompletos');
+          return false;
+        }
+        
+        // Limpar dados antigos
+        localStorage.removeItem('token');
+        localStorage.removeItem('tipo');
+        
+        // Definir novos dados
+        setToken(data.token);
+        setTipo(data.user.tipo);
+        setUser(data.user);
+        
+        // Salvar no localStorage após validação
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('tipo', data.user.tipo);
+        
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Erro durante login:', error);
+      return false;
     }
-    return false;
   };
 
   const logout = () => {

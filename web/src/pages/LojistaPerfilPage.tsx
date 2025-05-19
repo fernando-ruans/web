@@ -22,28 +22,38 @@ interface Restaurant {
 
 export default function LojistaPerfilPage() {
   const { user, loading } = useAuth();
-  const navigate = useNavigate();
-  useEffect(() => {
-    // Não redirecionar enquanto estiver carregando
-    if (loading) return;
+  const navigate = useNavigate();  useEffect(() => {
+    const validateAccess = async () => {
+      // Não redirecionar enquanto estiver carregando
+      if (loading) return;
 
-    // Se não houver usuário, redirecionar para login
-    if (!user) {
-      navigate('/login');
-      return;
-    }
+      // Se não houver usuário, redirecionar para login
+      if (!user) {
+        navigate('/login');
+        return;
+      }
 
-    // Verificar o tipo de usuário após ter certeza que ele está carregado
-    if (user.tipo === 'admin') {
-      // Adiciona um pequeno delay para garantir que o token está disponível
-      setTimeout(() => navigate('/admin/restaurantes'), 100);
-      return;
-    }
-    
-    if (user.tipo !== 'lojista') {
-      navigate('/');
-      return;
-    }
+      const storedType = localStorage.getItem('tipo');
+      
+      // Se o tipo salvo não corresponder ao tipo do usuário atual, fazer logout
+      if (storedType !== user.tipo) {
+        window.location.href = '/login';
+        return;
+      }
+
+      // Verificar o tipo de usuário após ter certeza que ele está carregado
+      if (user.tipo === 'admin') {
+        navigate('/admin/restaurantes');
+        return;
+      }
+      
+      if (user.tipo !== 'lojista') {
+        navigate('/');
+        return;
+      }
+    };
+
+    validateAccess();
   }, [user, navigate, loading]);
 
   const [editMode, setEditMode] = useState(false);

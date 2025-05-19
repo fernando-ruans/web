@@ -23,11 +23,25 @@ module.exports = {
       res.status(500).json({ error: 'Erro ao buscar perfil' });
     }
   },
-
   updateProfile: async (req, res) => {
     try {
-      const data = req.body;
-      await prisma.user.update({ where: { id: req.user.id }, data });
+      const { nome, avatarUrl, telefone, cpf, endereco } = req.body;
+      
+      // Prepara o objeto com os campos que foram enviados
+      const data = {
+        ...(nome && { nome }),
+        ...(avatarUrl && { avatarUrl }),
+        ...(telefone && { telefone }),
+        ...(cpf && { cpf }),
+        ...(endereco && { endereco })
+      };
+
+      // Atualiza apenas os campos fornecidos
+      await prisma.user.update({ 
+        where: { id: req.user.id }, 
+        data 
+      });
+
       // Retorna o perfil atualizado igual ao getProfile
       const lojista = await prisma.user.findUnique({
         where: { id: req.user.id },

@@ -13,12 +13,19 @@ module.exports = (tiposPermitidos = []) => (req, res, next) => {
     token = req.cookies.token;
   }
   if (!token) return res.status(401).json({ error: 'Token não fornecido' });
-
   try {
     const decoded = jwt.verify(token, SECRET);
-    if (!tiposPermitidos.includes(decoded.tipo)) {
-      return res.status(403).json({ error: 'Acesso negado' });
+    
+    // Garantir que o token tem o tipo do usuário
+    if (!decoded.tipo) {
+      return res.status(401).json({ error: 'Token inválido: tipo de usuário não especificado' });
     }
+    
+    // Validar acesso apenas se houver tipos permitidos
+    if (tiposPermitidos.length > 0 && !tiposPermitidos.includes(decoded.tipo)) {
+      return res.status(403).json({ error: `Acesso negado para usuário do tipo ${decoded.tipo}` });
+    }
+    
     req.user = decoded;
     next();
   } catch (err) {
