@@ -3,7 +3,11 @@ const express = require('express');
 const router = express.Router();
 const clienteController = require('../controllers/clienteController');
 const auth = require('../middlewares/auth');
+const rateLimiter = require('../middlewares/rateLimiter');
 const Joi = require('joi');
+
+// Aplicar rate limiter em todas as rotas do cliente - usando configuração padrão por tipo de usuário
+router.use(rateLimiter());
 
 // Remover o uso global do auth apenas para cliente
 // router.use(auth(['cliente']));

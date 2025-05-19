@@ -3,7 +3,11 @@ const express = require('express');
 const router = express.Router();
 const lojistaController = require('../controllers/lojistaController');
 const auth = require('../middlewares/auth');
+const rateLimiter = require('../middlewares/rateLimiter');
 const multer = require('multer');
+
+// Aplicar rate limiter em todas as rotas do lojista - usando configuração padrão por tipo de usuário
+router.use(rateLimiter());
 const path = require('path');
 
 const storage = multer.diskStorage({
