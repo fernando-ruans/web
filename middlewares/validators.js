@@ -4,7 +4,7 @@ exports.register = Joi.object({
   nome: Joi.string().min(2).max(100).required(),
   email: Joi.string().email().required(),
   senha: Joi.string().min(6).required(),
-  tipo: Joi.string().valid('cliente', 'lojista').required()
+  tipo: Joi.string().valid('cliente').required() // Aceita apenas registro como cliente
 });
 
 exports.login = Joi.object({

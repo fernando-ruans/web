@@ -12,7 +12,7 @@ export default function LoginPage() {
   const [senha, setSenha] = useState('');
   const [error, setError] = useState('');
   // Register states
-  const [form, setForm] = useState({ nome: '', email: '', senha: '', tipo: 'cliente' });
+  const [form, setForm] = useState({ nome: '', email: '', senha: '' });
   const [regError, setRegError] = useState('');
   const [success, setSuccess] = useState('');
   const navigate = useNavigate();
@@ -42,7 +42,6 @@ export default function LoginPage() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
-
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setRegError('');
@@ -50,7 +49,7 @@ export default function LoginPage() {
     const res = await fetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form)
+      body: JSON.stringify({ ...form, tipo: 'cliente' }) // Sempre registra como cliente
     });
     if (res.ok) {
       setSuccess('Cadastro realizado! Faça login.');
@@ -168,11 +167,7 @@ export default function LoginPage() {
                   onChange={handleChange}
                   required
                 />
-              </div>
-              <select className={theme.input + ' w-full mb-2'} name="tipo" value={form.tipo} onChange={handleChange}>
-                <option value="cliente">Cliente</option>
-                <option value="lojista">Lojista</option>
-              </select>
+              </div>              {/* Tipo removido - todos usuários são registrados como clientes */}
               {regError && <div className="text-red-400 mb-2 text-center">{regError}</div>}
               {success && <div className="text-green-400 mb-2 text-center">{success}</div>}
               <button type="submit" className={theme.primary + ' w-full font-bold py-2 rounded'}>Cadastrar</button>
