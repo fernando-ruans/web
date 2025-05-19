@@ -85,20 +85,18 @@ export default function CarrinhoPage() {
     }
 
     setLoading(true);
-    setError('');
-
-    try {
-      const pedido = {
+    setError('');    try {      const pedido = {
         restaurantId: items[0].restauranteId,
         addressId: selectedAddressId,
-        observacao: observacao || undefined,          items: items.map(item => ({
+        observacao: observacao || undefined,
+        items: items.map(item => ({
             productId: item.id,
             quantidade: item.quantidade,
             preco_unitario: item.preco,
             adicionais: item.adicionais?.map(a => ({
-              adicionalId: a.adicionalId,
+              adicionalId: a.adicionalId, // Usando o campo correto adicionalId
               quantidade: a.quantidade,
-              preco_unitario: a.preco
+              preco: a.preco // Corrigido: era preco_unitario, agora é preco
             }))
           }))
       };

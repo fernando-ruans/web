@@ -189,9 +189,7 @@ module.exports = {
       console.error('Erro ao buscar cardápio:', err);
       res.status(500).json({ error: 'Erro ao buscar cardápio' });
     }
-  },
-
-  createOrder: async (req, res) => {
+  },  createOrder: async (req, res) => {
     try {
       const prisma = require('../prisma/prismaClient');
       const { restaurantId, addressId, items, observacao } = req.body;
@@ -233,8 +231,7 @@ module.exports = {
       }      // Criar pedido
       const order = await prisma.order.create({
         data: {
-          userId: req.user.id,
-          restaurantId,
+          userId: req.user.id,          restaurantId,
           addressId,
           status: 'Pendente',
           total: subtotal + taxa_entrega,

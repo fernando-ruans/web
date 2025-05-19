@@ -35,6 +35,7 @@ router.put('/profile', auth(['cliente']), async (req, res, next) => {
 const orderSchema = Joi.object({
   restaurantId: Joi.number().required(),
   addressId: Joi.number().required(),
+  observacao: Joi.string().allow('', null).optional(),
   items: Joi.array().items(
     Joi.object({
       productId: Joi.number().required(),
@@ -67,7 +68,7 @@ const addressSchema = Joi.object({
   cep: Joi.string().required()
 });
 
-router.post('/orders', async (req, res, next) => {
+router.post('/orders', auth(['cliente']), async (req, res, next) => {
   const { error } = orderSchema.validate(req.body);
   if (error) return res.status(400).json({ error: error.details[0].message });
   next();
