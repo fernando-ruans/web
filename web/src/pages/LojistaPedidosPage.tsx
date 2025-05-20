@@ -257,24 +257,48 @@ function CardPedido({ pedido, onAtualizarStatus, loadingStatus }: CardPedidoProp
   );
 }
 
-const ResumoCards = ({ pedidos = [] }: { pedidos: Pedido[] }) => {
+const ResumoCards = ({ pedidos = [], filtroPeriodo }: { pedidos: Pedido[], filtroPeriodo: string }) => {
   const contarPorStatus = (status: Pedido['status']) => 
     Array.isArray(pedidos) ? pedidos.filter(p => p.status === status).length : 0;
 
-  const calcularFaturamentoHoje = () => {
+  const calcularFaturamentoPeriodo = (periodo: string) => {
     if (!Array.isArray(pedidos)) return 0;
     
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
     
-    return pedidos
-      .filter(p => {
-        if (!p?.createdAt) return false;
-        const dataPedido = new Date(p.createdAt);
-        dataPedido.setHours(0, 0, 0, 0);
-        return dataPedido.getTime() === hoje.getTime() && p.status !== 'cancelado';
-      })
-      .reduce((total, pedido) => total + calcularTotal(pedido.items, pedido.taxa_entrega), 0);
+    const pedidosFiltrados = pedidos.filter(p => {
+      if (!p?.createdAt || p.status === 'cancelado') return false;
+      
+      const dataPedido = new Date(p.createdAt);
+      dataPedido.setHours(0, 0, 0, 0);
+
+      switch (periodo) {
+        case 'hoje':
+          return dataPedido.getTime() === hoje.getTime();
+        
+        case 'ontem':
+          const ontem = new Date(hoje);
+          ontem.setDate(hoje.getDate() - 1);
+          return dataPedido.getTime() === ontem.getTime();
+        
+        case 'semana':
+          const inicioSemana = new Date(hoje);
+          inicioSemana.setDate(hoje.getDate() - 7);
+          return dataPedido >= inicioSemana;
+        
+        case 'mes':
+          const inicioMes = new Date(hoje);
+          inicioMes.setMonth(hoje.getMonth() - 1);
+          return dataPedido >= inicioMes;
+        
+        default:
+          return false;
+      }
+    });
+
+    return pedidosFiltrados.reduce((total, pedido) => 
+      total + calcularTotal(pedido.items, pedido.taxa_entrega), 0);
   };
 
   const cards = [
@@ -326,15 +350,9 @@ const ResumoCards = ({ pedidos = [] }: { pedidos: Pedido[] }) => {
         </svg>
       )
     },
-    {
-      titulo: 'Faturamento',
-      valor: `R$ ${calcularFaturamentoHoje().toFixed(2)}`,
-      cor: 'from-green-400 to-green-600',
-      icone: (
-        <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none">
-          <path d="M12 2V6M12 18V22M4.93 4.93L7.76 7.76M16.24 16.24L19.07 19.07M2 12H6M18 12H22M4.93 19.07L7.76 16.24M16.24 7.76L19.07 4.93" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-        </svg>
-      )
+    {      titulo: 'Faturamento do Período',
+      valor: formatCurrency(calcularFaturamentoPeriodo(filtroPeriodo)),
+      cor: 'from-green-400 to-green-600'
     },
     {
       titulo: 'Concluídos',
@@ -619,7 +637,7 @@ export function LojistaPedidosPage() {
           </div>
         </div>
 
-        <ResumoCards pedidos={pedidos} />
+        <ResumoCards pedidos={pedidos} filtroPeriodo={filtroPeriodo} />
 
         <Filtros
           filtroStatus={filtroStatus}
