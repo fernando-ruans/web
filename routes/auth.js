@@ -34,10 +34,8 @@ router.post('/register', async (req, res, next) => {
   next();
 }, authController.register);
 
-// Verificar status da autenticação
-router.get('/me', auth(), (req, res) => {
-  res.json({ user: req.user });
-});
+// Rota protegida para buscar perfil do usuário logado
+router.get('/me', auth(), authController.me);
 
 // Logout
 router.post('/logout', auth(), authController.logout);

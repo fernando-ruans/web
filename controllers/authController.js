@@ -5,6 +5,56 @@ const prisma = new PrismaClient();
 const SECRET = process.env.JWT_SECRET || 'segredo123';
 
 module.exports = {
+  // Busca perfil do usuário baseado no token
+  me: async (req, res) => {
+    try {
+      console.log('Buscando perfil do usuário:', req.user.id);
+      const user = await prisma.user.findUnique({
+        where: { id: req.user.id },
+        select: {
+          id: true,
+          nome: true,
+          email: true,
+          tipo: true,
+          telefone: true,
+          endereco: true,
+          avatarUrl: true,
+          ativo: true,
+          addresses: true // Incluindo os endereços do usuário
+        }
+      });
+
+      if (!user) {
+        console.log('Usuário não encontrado');
+        return res.status(404).json({ error: 'Usuário não encontrado' });
+      }
+
+      if (!user.ativo) {
+        console.log('Usuário inativo');
+        return res.status(403).json({ error: 'Usuário inativo' });
+      }
+
+      console.log('Perfil encontrado:', { ...user, ativo: undefined });
+
+      // Remove campo sensível e garante que nenhum campo seja undefined
+      const userSemSenha = {
+        id: user.id,
+        nome: user.nome,
+        email: user.email,
+        tipo: user.tipo,
+        telefone: user.telefone || null,
+        endereco: user.endereco || null,
+        avatarUrl: user.avatarUrl || null,
+        addresses: user.addresses // Incluindo os endereços na resposta
+      };
+
+      res.json({ user: userSemSenha });
+    } catch (err) {
+      console.error('Erro ao buscar perfil:', err);
+      res.status(500).json({ error: 'Erro ao buscar perfil' });
+    }
+  },
+
   // Cadastro de usuário (cliente ou lojista)
   register: async (req, res) => {
     try {
@@ -45,7 +95,11 @@ module.exports = {
           email: true,
           tipo: true,
           senha_hash: true,
-          ativo: true
+          ativo: true,
+          telefone: true,
+          endereco: true,
+          avatarUrl: true,
+          addresses: true
         }
       });
 
@@ -92,12 +146,21 @@ module.exports = {
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         maxAge: 24 * 60 * 60 * 1000, // 24 horas
-        path: '/'
+        path: '/',
+        domain: undefined // Permite que o cookie funcione em localhost
       });
 
       console.log('Enviando resposta');
-      // Retorna apenas os dados do usuário
-      return res.json({ user: userSemSenha });
+      // Retorna os dados do usuário garantindo que nenhum campo seja undefined
+      return res.json({ 
+        user: {
+          ...userSemSenha,
+          telefone: userSemSenha.telefone || null,
+          endereco: userSemSenha.endereco || null,
+          avatarUrl: userSemSenha.avatarUrl || null,
+          addresses: userSemSenha.addresses || []
+        }
+      });
 
     } catch (err) {
       console.error('Erro detalhado no login:', err);
@@ -110,7 +173,13 @@ module.exports = {
 
   // Logout
   logout: async (req, res) => {
-    res.clearCookie('token');
+    res.clearCookie('token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      domain: undefined
+    });
     return res.json({ msg: 'Logout realizado com sucesso' });
   },
 

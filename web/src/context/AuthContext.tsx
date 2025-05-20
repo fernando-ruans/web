@@ -5,6 +5,7 @@ interface AuthContextType {
   login: (email: string, senha: string) => Promise<boolean>;
   logout: () => Promise<void>;
   loading: boolean;
+  error: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -12,18 +13,31 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Função auxiliar para fazer requisições autenticadas
   const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
-    const res = await fetch(url, {
-      ...options,
-      credentials: 'include', // Sempre inclui cookies
-      headers: {
-        ...options.headers,
-        'Content-Type': 'application/json',
+    try {
+      const res = await fetch(url, {
+        ...options,
+        credentials: 'include',
+        headers: {
+          ...options.headers,
+          'Content-Type': 'application/json',
+        }
+      });
+
+      // Se a resposta não for ok, tenta ler o erro
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Erro desconhecido' }));
+        throw new Error(errorData.error || 'Erro na requisição');
       }
-    });
-    return res;
+
+      return res;
+    } catch (err) {
+      console.error('Erro na requisição:', err);
+      throw err;
+    }
   };
 
   useEffect(() => {
@@ -31,26 +45,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const fetchProfile = async () => {
       try {
-        // Tenta buscar o perfil do usuário
+        setError(null);
         const res = await fetchWithAuth('/api/auth/me');
-
-        if (!isMounted) return;
-
-        if (!res.ok) {
-          if (res.status === 401 || res.status === 403) {
-            setUser(null);
-          }
-          throw new Error('Erro na requisição');
-        }
-
         const data = await res.json();
+        
         if (isMounted && data.user) {
           setUser(data.user);
         }
-      } catch (error) {
-        console.error('Erro ao buscar perfil:', error);
+      } catch (err: any) {
+        console.error('Erro ao buscar perfil:', err);
         if (isMounted) {
           setUser(null);
+          setError(err.message || 'Erro ao buscar perfil');
         }
       } finally {
         if (isMounted) {
@@ -82,48 +88,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, senha: string): Promise<boolean> => {
     try {
-      // Limpar qualquer estado anterior
+      setError(null);
       setUser(null);
-
+      
       const res = await fetchWithAuth('/api/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, senha })
       });
       
-      if (!res.ok) {
-        throw new Error('Falha na autenticação');
-      }
-
       const data = await res.json();
       
-      // Validar resposta
       if (!data.user || !data.user.tipo) {
         throw new Error('Resposta inválida do servidor');
       }
       
-      // Atualizar estado com dados do usuário
       setUser(data.user);
       return true;
       
-    } catch (error) {
-      console.error('Erro durante login:', error);
+    } catch (err: any) {
+      console.error('Erro durante login:', err);
       setUser(null);
+      setError(err.message || 'Erro ao fazer login');
       return false;
     }
   };
 
   const logout = async () => {
     try {
+      setError(null);
       await fetchWithAuth('/api/auth/logout', { method: 'POST' });
-    } catch (error) {
-      console.error('Erro durante logout:', error);
+    } catch (err: any) {
+      console.error('Erro durante logout:', err);
+      setError(err.message || 'Erro ao fazer logout');
     } finally {
       setUser(null);
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, logout, loading, error }}>
       {children}
     </AuthContext.Provider>
   );

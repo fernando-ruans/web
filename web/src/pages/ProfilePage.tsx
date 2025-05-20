@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import theme from '../theme';
 import UploadImage from '../components/UploadImage';
@@ -22,6 +22,41 @@ export default function ProfilePage() {
   const [cidade, setCidade] = useState('');
   const [estado, setEstado] = useState('');
   const [loadingCep, setLoadingCep] = useState(false);
+
+  // Função para inicializar campos de endereço
+  const initializeAddressFields = (userData: any) => {
+    if (userData.addresses?.length > 0) {
+      const enderecoPrincipal = userData.addresses[0];
+      setRua(enderecoPrincipal.rua || '');
+      setNumero(enderecoPrincipal.numero || '');
+      setComplemento(enderecoPrincipal.complemento || '');
+      setBairro(enderecoPrincipal.bairro || '');
+      setCidade(enderecoPrincipal.cidade || '');
+      setEstado(enderecoPrincipal.estado || '');
+      setCep(enderecoPrincipal.cep || '');
+    } else if (userData.endereco) {
+      // Tenta extrair informações do endereço formatado
+      const parts = userData.endereco.split(',').map((part: string) => part.trim());
+      if (parts.length >= 3) {
+        const ruaNumero = parts[0].split(' - ');
+        setRua(ruaNumero[0] || '');
+        setNumero(ruaNumero[1] || '');
+        setBairro(parts[1] || '');
+        const cidadeEstado = parts[2].split('/');
+        setCidade(cidadeEstado[0] || '');
+        const estadoCep = cidadeEstado[1]?.split('-');
+        setEstado(estadoCep?.[0]?.trim() || '');
+        setCep(estadoCep?.[1]?.replace('CEP:', '').trim() || '');
+      }
+    }
+  };
+
+  // Efeito para inicializar campos quando o usuário é carregado
+  useEffect(() => {
+    if (user) {
+      initializeAddressFields(user);
+    }
+  }, [user]);
 
   if (!user) return null;
 
@@ -52,37 +87,63 @@ export default function ProfilePage() {
     e.preventDefault();
     setMsg('');
     setError('');
-    try {      let endpoint = `/api/${user.tipo}/profile`;
-        // Formata o endereço completo
-      let endereco = null;
-      if (rua && numero && bairro && cidade && estado) {
-        endereco = `${rua}, ${numero}`;
-        if (complemento) endereco += ` - ${complemento}`;
-        endereco += `, ${bairro}, ${cidade}/${estado}`;
-        if (cep) endereco += ` - CEP: ${cep}`;
+
+    try {
+      const endpoint = `/api/${user.tipo}/profile`;
+
+      // Cria o objeto de dados apenas com campos válidos
+      const data = {
+        ...(nome && nome.trim() !== '' && { nome }),
+        ...(email && email.trim() !== '' && { email }),
+        ...(telefone && telefone.trim() !== '' && { telefone }),
+        ...(avatarUrl && avatarUrl.trim() !== '' && { avatarUrl })
+      };
+
+      // Adiciona os campos de endereço individuais
+      if (rua || numero || bairro || cidade || estado) {
+        data.rua = rua;
+        data.numero = numero;
+        data.complemento = complemento;
+        data.bairro = bairro;
+        data.cidade = cidade;
+        data.estado = estado;
+        data.cep = cep;
+      }
+
+      // Verifica se há dados para atualizar
+      if (Object.keys(data).length === 0) {
+        setError('Nenhum dado válido para atualizar');
+        return;
       }
 
       const res = await fetch(endpoint, {
         method: 'PUT',
         headers: { 
-          'Content-Type': 'application/json', 
-          Authorization: `Bearer ${localStorage.getItem('token')}` 
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ 
-          nome, 
-          email, 
-          avatarUrl, 
-          telefone,
-          endereco
-        })
+        credentials: 'include',
+        body: JSON.stringify(data)
       });
       
       if (res.ok) {
-        const data = await res.json();
-        if (data.msg && data.user) {
-          setMsg(data.msg);
-          window.dispatchEvent(new CustomEvent('userUpdated', { detail: data }));
+        const responseData = await res.json();
+        if (responseData.user) {
+          setMsg('Perfil atualizado com sucesso!');
+          // Dispara evento para atualizar o usuário no contexto de autenticação
+          window.dispatchEvent(new CustomEvent('userUpdated', { detail: responseData }));
           setEditMode(false);
+
+          // Atualiza os campos de endereço a partir do endereço principal do usuário
+          if (responseData.user.addresses?.length > 0) {
+            const enderecoPrincipal = responseData.user.addresses[0];
+            setRua(enderecoPrincipal.rua || '');
+            setNumero(enderecoPrincipal.numero || '');
+            setComplemento(enderecoPrincipal.complemento || '');
+            setBairro(enderecoPrincipal.bairro || '');
+            setCidade(enderecoPrincipal.cidade || '');
+            setEstado(enderecoPrincipal.estado || '');
+            setCep(enderecoPrincipal.cep || '');
+          }
         } else {
           setError('Resposta inválida do servidor');
         }
@@ -90,7 +151,8 @@ export default function ProfilePage() {
         const err = await res.json();
         setError(err.error || 'Erro ao atualizar perfil');
       }
-    } catch {
+    } catch (err) {
+      console.error('Erro ao atualizar perfil:', err);
       setError('Erro ao atualizar perfil');
     }
   };
@@ -280,6 +342,29 @@ export default function ProfilePage() {
                   </div>
                 )}
               </div>
+
+              {!editMode && (
+                <div className="mt-4">
+                  <div className="flex flex-col gap-1">
+                    {user.addresses?.length > 0 ? (
+                      <div>
+                        <div className="font-semibold text-gray-600 mb-0.5">Endereço</div>
+                        <div>{user.addresses[0].rua}, {user.addresses[0].numero}
+                          {user.addresses[0].complemento && ` - ${user.addresses[0].complemento}`}</div>
+                        <div>{user.addresses[0].bairro} - {user.addresses[0].cidade}/{user.addresses[0].estado}</div>
+                        <div>CEP: {user.addresses[0].cep}</div>
+                      </div>
+                    ) : user.endereco ? (
+                      <div>
+                        <div className="font-semibold text-gray-600 mb-0.5">Endereço</div>
+                        <div>{user.endereco}</div>
+                      </div>
+                    ) : (
+                      <div className="text-gray-500">Nenhum endereço cadastrado</div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               <div className="flex flex-col gap-2 w-full mt-6">
                 <button 

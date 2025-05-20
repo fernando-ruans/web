@@ -1,4 +1,6 @@
 const prisma = require('../prisma/prismaClient');
+const jwt = require('jsonwebtoken');
+const SECRET = process.env.JWT_SECRET || 'segredo123';
 
 module.exports = {
   listUsers: async (req, res) => {
@@ -164,7 +166,6 @@ module.exports = {
           email: true,
           tipo: true,
           telefone: true,
-          cpf: true,
           endereco: true,
           avatarUrl: true
         }
@@ -176,35 +177,107 @@ module.exports = {
   },
   updateProfile: async (req, res) => {
     try {
-      const { nome, email, telefone, cpf, endereco, avatarUrl } = req.body;
-      await prisma.user.update({
-        where: { id: req.user.id },
-        data: {
-          ...(nome && { nome }),
-          ...(email && { email }),
-          ...(telefone && { telefone }),
-          ...(cpf && { cpf }),
-          ...(endereco && { endereco }),
-          ...(avatarUrl && { avatarUrl })
+      console.log('Dados recebidos:', req.body);
+      const { nome, email, telefone, endereco, avatarUrl } = req.body;
+      const userId = Number(req.user.id);
+
+      // Valida se há dados para atualizar
+      if (!nome && !email && !telefone && !endereco && !avatarUrl) {
+        return res.status(400).json({ error: 'Nenhum dado fornecido para atualização' });
+      }
+
+      // Valida o email se fornecido
+      if (email) {
+        const existingUser = await prisma.user.findFirst({
+          where: {
+            email,
+            id: { not: userId }
+          }
+        });
+        
+        if (existingUser) {
+          return res.status(400).json({ error: 'Este e-mail já está em uso' });
         }
-      });
-      // Retorna o perfil atualizado igual ao getProfile
-      const admin = await prisma.user.findUnique({
-        where: { id: req.user.id },
+      }
+
+      // Prepara os dados para atualização, tratando campos vazios corretamente
+      const updateData = {
+        ...(nome?.trim() && { nome: nome.trim() }),
+        ...(email?.trim() && { email: email.trim() }),
+        ...(telefone?.trim() && { telefone: telefone.trim() }),
+        ...(endereco?.trim() && { endereco: endereco.trim() }),
+        ...(avatarUrl?.trim() && { avatarUrl: avatarUrl.trim() })
+      };
+
+      console.log('Dados para atualização:', updateData);
+
+      // Atualiza o perfil
+      const updatedUser = await prisma.user.update({
+        where: { id: userId },
+        data: updateData,
         select: {
           id: true,
           nome: true,
           email: true,
           tipo: true,
           telefone: true,
-          cpf: true,
           endereco: true,
-          avatarUrl: true
+          avatarUrl: true,
+          ativo: true
         }
       });
-      res.json({ msg: 'Perfil atualizado!', user: admin });
+
+      console.log('Usuário atualizado:', { ...updatedUser, ativo: undefined });
+
+      // Gera um novo token com os dados atualizados
+      const token = jwt.sign(
+        { 
+          id: updatedUser.id,
+          tipo: updatedUser.tipo,
+          nome: updatedUser.nome,
+          email: updatedUser.email 
+        },
+        SECRET,
+        { expiresIn: '24h' }
+      );
+
+      // Atualiza o cookie com o novo token
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 24 * 60 * 60 * 1000, // 24 horas
+        path: '/'
+      });
+
+      // Prepara o objeto de resposta garantindo que nenhum campo seja undefined
+      const adminData = {
+        id: updatedUser.id,
+        nome: updatedUser.nome,
+        email: updatedUser.email,
+        tipo: updatedUser.tipo,
+        telefone: updatedUser.telefone || null,
+        endereco: updatedUser.endereco || null,
+        avatarUrl: updatedUser.avatarUrl || null
+      };
+
+      res.json({ 
+        msg: 'Perfil atualizado com sucesso', 
+        user: adminData
+      });
     } catch (err) {
-      res.status(500).json({ error: 'Erro ao atualizar perfil do admin' });
+      console.error('Erro ao atualizar perfil:', err);
+      
+      if (err.code === 'P2002') {
+        return res.status(400).json({ error: 'Este e-mail já está em uso' });
+      } else if (err.code === 'P2025') {
+        return res.status(404).json({ error: 'Usuário não encontrado' });
+      }
+      
+      res.status(500).json({ 
+        error: 'Erro ao atualizar perfil do admin',
+        details: process.env.NODE_ENV === 'development' ? err.message : undefined
+      });
     }
   },
   promoteUser: async (req, res) => {

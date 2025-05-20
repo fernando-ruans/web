@@ -12,14 +12,17 @@ module.exports = {
           tipo: true,
           telefone: true,
           endereco: true,
-          avatarUrl: true
+          avatarUrl: true,
+          addresses: true
         }
       });
       res.json(cliente);
     } catch (err) {
       res.status(500).json({ error: 'Erro ao buscar perfil' });
     }
-  },  updateProfile: async (req, res) => {
+  },  
+
+  updateProfile: async (req, res) => {
     try {
       const prisma = require('../prisma/prismaClient');
       const { 
@@ -37,57 +40,67 @@ module.exports = {
       } = req.body;
 
       // Se recebeu campos individuais, formatar o endereço
-      let enderecoFormatado = endereco; // Usar o endereço já formatado se foi enviado
+      let enderecoFormatado = endereco;
       if (rua && numero && bairro && cidade && estado) {
         enderecoFormatado = `${rua}, ${numero}`;
         if (complemento) enderecoFormatado += ` - ${complemento}`;
         enderecoFormatado += `, ${bairro}, ${cidade}/${estado}`;
         if (cep) enderecoFormatado += ` - CEP: ${cep}`;
-      }      // Atualizar o usuário
+      }
+
+      // Preparar dados para atualização do usuário
+      const updateData = {
+        ...(nome && { nome }),
+        ...(avatarUrl && { avatarUrl }),
+        ...(telefone && { telefone }),
+        ...(enderecoFormatado && { endereco: enderecoFormatado })
+      };
+
+      // Verifica se há dados para atualizar
+      if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({ error: 'Nenhum dado válido para atualização' });
+      }
+
+      // Atualizar o usuário
       await prisma.user.update({
         where: { id: req.user.id },
-        data: {
-          ...(nome && { nome }),
-          ...(avatarUrl && { avatarUrl }),
-          ...(telefone && { telefone }),
-          ...(enderecoFormatado && { endereco: enderecoFormatado })
-        }
-      });      // Se tiver informações de endereço, criar ou atualizar na tabela Address
-      if (rua && numero && bairro && cidade && estado) {
-        // Verificar se já existe um endereço principal
+        data: updateData
+      });
+
+      // Se tiver informações de endereço, criar ou atualizar na tabela Address
+      if (rua || numero || bairro || cidade || estado || cep) {
         const enderecoPrincipal = await prisma.address.findFirst({
           where: { userId: req.user.id }
         });
 
+        const addressData = {
+          ...(rua && { rua }),
+          ...(numero && { numero }),
+          ...(bairro && { bairro }),
+          ...(cidade && { cidade }),
+          ...(estado && { estado }),
+          ...(complemento && { complemento }),
+          ...(cep && { cep })
+        };
+
         if (enderecoPrincipal) {
-          // Atualizar endereço existente com campos individuais
+          // Atualizar endereço existente com os campos fornecidos
           await prisma.address.update({
             where: { id: enderecoPrincipal.id },
+            data: addressData
+          });
+        } else if (rua && numero && bairro && cidade && estado) {
+          // Criar novo endereço apenas se tiver todos os campos obrigatórios
+          await prisma.address.create({
             data: {
-              rua,
-              numero,
-              bairro,
-              cidade,
-              complemento,
-              cep
+              userId: req.user.id,
+              ...addressData
             }
           });
-        } else {          // Criar novo endereço apenas se tiver os campos individuais
-          if (rua && numero && bairro && cidade && estado) {
-            await prisma.address.create({
-              data: {
-                userId: req.user.id,
-                rua,
-                numero,
-                bairro,
-                cidade,
-                complemento,
-                cep
-              }
-            });
-          }
         }
-      }      // Retorne o perfil atualizado
+      }
+
+      // Retorna o perfil atualizado incluindo os endereços
       const user = await prisma.user.findUnique({
         where: { id: req.user.id },
         select: {
@@ -97,14 +110,21 @@ module.exports = {
           tipo: true,
           avatarUrl: true,
           telefone: true,
-          endereco: true
+          endereco: true,
+          addresses: true
         }
       });
-      res.json({ msg: 'Perfil atualizado!', user });
+
+      res.json({ 
+        msg: 'Perfil atualizado com sucesso!', 
+        user 
+      });
     } catch (err) {
+      console.error('Erro ao atualizar perfil:', err);
       res.status(500).json({ error: 'Erro ao atualizar perfil' });
     }
   },
+
   listRestaurants: async (req, res) => {
     try {
       const prisma = require('../prisma/prismaClient');
@@ -582,5 +602,5 @@ module.exports = {
     } catch (err) {
       res.status(500).json({ error: 'Erro ao excluir endereço' });
     }
-  },
+  }
 };

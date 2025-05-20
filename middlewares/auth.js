@@ -65,8 +65,9 @@ module.exports = (tiposPermitidos = []) => (req, res, next) => {
           httpOnly: true,
           secure: process.env.NODE_ENV === 'production',
           sameSite: 'lax',
-          maxAge: 24 * 60 * 60 * 1000,
-          path: '/'
+          maxAge: 24 * 60 * 60 * 1000, // 24 horas
+          path: '/',
+          domain: undefined // Permite que o cookie funcione em localhost
         });
       }
 
