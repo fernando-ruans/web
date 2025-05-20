@@ -1,70 +1,94 @@
 const jwt = require('jsonwebtoken');
 const SECRET = process.env.JWT_SECRET || 'segredo123';
 
-// Perfis possíveis: ['cliente', 'lojista', 'admin']
 module.exports = (tiposPermitidos = []) => (req, res, next) => {
-  console.log('Iniciando autenticação');
+  console.log('\n=== Middleware de Autenticação ===');
+  console.log('URL:', req.url);
+  console.log('Método:', req.method);
+  console.log('Headers:', req.headers);
+  console.log('Cookies:', req.cookies);
+
   let token;
 
   try {
-    // Tenta extrair o token do header Authorization
-    const authHeader = req.headers.authorization;
-    if (authHeader) {
-      const parts = authHeader.split(' ');
-      if (parts.length !== 2 || parts[0] !== 'Bearer') {
-        console.error('Formato de header Authorization inválido');
-        return res.status(401).json({ error: 'Formato de token inválido' });
-      }
-      token = parts[1];
-    } 
-    // Tenta extrair o token dos cookies
-    else if (req.cookies && req.cookies.token) {
+    // Prioriza o token do cookie
+    if (req.cookies && req.cookies.token) {
+      console.log('Token encontrado no cookie');
       token = req.cookies.token;
+    }
+    // Se não encontrou no cookie, tenta o header Authorization
+    else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+      console.log('Token encontrado no header Authorization');
+      token = req.headers.authorization.split(' ')[1];
     }
 
     if (!token) {
-      console.error('Token não fornecido');
-      return res.status(401).json({ error: 'Token não fornecido' });
+      console.log('Token não encontrado');
+      return res.status(401).json({ error: 'Autenticação necessária' });
     }
 
-    console.log('Token recebido:', token);
-    const decoded = jwt.verify(token, SECRET);
-    console.log('Token decodificado:', { ...decoded, secret: undefined });
-    
-    // Validações do token decodificado
-    if (!decoded.id) {
-      console.error('Token sem ID de usuário');
-      return res.status(401).json({ error: 'Token inválido: ID de usuário não especificado' });
-    }
+    try {
+      console.log('Verificando token');
+      const decoded = jwt.verify(token, SECRET);
+      console.log('Token válido para:', decoded.email);
+      
+      // Verifica se o tipo do usuário tem permissão
+      if (tiposPermitidos.length > 0 && !tiposPermitidos.includes(decoded.tipo)) {
+        console.log('Acesso negado - tipo não permitido:', decoded.tipo);
+        return res.status(403).json({ 
+          error: `Acesso negado para usuário do tipo ${decoded.tipo}` 
+        });
+      }
+      
+      // Atribui os dados do usuário à requisição
+      req.user = decoded;
 
-    if (!decoded.tipo) {
-      console.error('Token sem tipo de usuário');
-      return res.status(401).json({ error: 'Token inválido: tipo de usuário não especificado' });
-    }
-    
-    // Valida o tipo de usuário se houver restrição
-    if (tiposPermitidos.length > 0 && !tiposPermitidos.includes(decoded.tipo)) {
-      console.error(`Acesso negado: usuário tipo ${decoded.tipo}, permitidos:`, tiposPermitidos);
-      return res.status(403).json({ error: `Acesso negado para usuário do tipo ${decoded.tipo}` });
-    }
-    
-    // Atribui os dados do usuário à requisição
-    req.user = {
-      id: decoded.id,
-      tipo: decoded.tipo,
-      nome: decoded.nome,
-      email: decoded.email
-    };
+      // Renova o cookie se o token estiver próximo de expirar
+      const agora = Math.floor(Date.now() / 1000);
+      const tempoRestante = decoded.exp - agora;
+      const dozeHorasEmSegundos = 12 * 60 * 60;
 
-    next();
+      if (tempoRestante < dozeHorasEmSegundos) {
+        console.log('Renovando token');
+        const novoToken = jwt.sign(
+          { 
+            id: decoded.id,
+            tipo: decoded.tipo,
+            nome: decoded.nome,
+            email: decoded.email 
+          },
+          SECRET,
+          { expiresIn: '24h' }
+        );
+
+        res.cookie('token', novoToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: 24 * 60 * 60 * 1000,
+          path: '/'
+        });
+      }
+
+      console.log('Autenticação bem-sucedida');
+      next();
+    } catch (err) {
+      console.log('Erro na verificação do token:', err.name);
+      res.clearCookie('token');
+      
+      if (err.name === 'TokenExpiredError') {
+        return res.status(401).json({ error: 'Sessão expirada, faça login novamente' });
+      }
+      if (err.name === 'JsonWebTokenError') {
+        return res.status(401).json({ error: 'Token inválido' });
+      }
+      throw err;
+    }
   } catch (err) {
-    console.error('Erro na autenticação:', err.message);
-    if (err.name === 'TokenExpiredError') {
-      return res.status(401).json({ error: 'Token expirado' });
-    }
-    if (err.name === 'JsonWebTokenError') {
-      return res.status(401).json({ error: 'Token inválido' });
-    }
-    return res.status(500).json({ error: 'Erro na autenticação: ' + err.message });
+    console.error('Erro na autenticação:', err);
+    return res.status(500).json({ 
+      error: 'Erro interno na autenticação',
+      details: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 };

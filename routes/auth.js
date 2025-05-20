@@ -2,6 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
+const auth = require('../middlewares/auth');
 const multer = require('multer');
 const path = require('path');
 const Joi = require('joi');
@@ -33,8 +34,17 @@ router.post('/register', async (req, res, next) => {
   next();
 }, authController.register);
 
+// Verificar status da autenticação
+router.get('/me', auth(), (req, res) => {
+  res.json({ user: req.user });
+});
+
+// Logout
+router.post('/logout', auth(), authController.logout);
+
 // Recuperação de senha
 router.post('/forgot-password', authController.forgotPassword);
+
 // Redefinição de senha
 router.post('/reset-password/:token', authController.resetPassword);
 

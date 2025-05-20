@@ -17,6 +17,7 @@ model User {
   endereco    String?
   telefone    String?
   createdAt   DateTime     @default(now())
+  ativo       Boolean      @default(true)
   addresses   Address[]
   orders      Order[]
   restaurants Restaurant[]
@@ -82,9 +83,9 @@ model Order {
   addressId    Int
   status       String
   total        Float
-  taxa_entrega Float?
-  observacao   String?
   data_criacao DateTime    @default(now())
+  observacao   String?
+  taxa_entrega Float?
   address      Address     @relation(fields: [addressId], references: [id])
   restaurant   Restaurant  @relation(fields: [restaurantId], references: [id])
   user         User        @relation(fields: [userId], references: [id])

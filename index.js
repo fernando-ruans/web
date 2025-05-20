@@ -16,14 +16,40 @@ const adminRoutes = require('./routes/admin');
 const app = express();
 const server = http.createServer(app);
 
-// Configuração do CORS
-app.use(cors({
+// Configuração do CORS com mais opções
+const corsOptions = {
   origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  credentials: true
-}));
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Set-Cookie'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
+};
 
+// Aplica CORS e outros middlewares
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
+
+// Headers adicionais para CORS
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Credentials', 'true');
+  if (req.method === 'OPTIONS') {
+    return res.status(204).end();
+  }
+  next();
+});
+
+// Middleware para logging de requisições
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  console.log('Headers:', req.headers);
+  console.log('Body:', req.body);
+  next();
+});
+
+// Rotas estáticas
 app.use('/uploads', express.static('uploads'));
 
 // Configuração do WebSocket
@@ -144,7 +170,7 @@ const sendWebSocketUpdate = (userId, type, data) => {
 // Disponibilizar a função sendWebSocketUpdate para outros módulos
 app.set('sendWebSocketUpdate', sendWebSocketUpdate);
 
-// Rotas
+// Rotas da API
 app.use('/api/auth', authRoutes);
 app.use('/api/cliente', clienteRoutes);
 app.use('/api/lojista', lojistaRoutes);

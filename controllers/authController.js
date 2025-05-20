@@ -27,21 +27,91 @@ module.exports = {
   // Login
   login: async (req, res) => {
     try {
+      console.log('Tentativa de login - body:', req.body);
       const { email, senha } = req.body;
-      const user = await prisma.user.findUnique({ where: { email } });
-      if (!user) return res.status(401).json({ error: 'Usuário ou senha inválidos' });
-      const ok = await bcrypt.compare(senha, user.senha_hash);
-      if (!ok) return res.status(401).json({ error: 'Usuário ou senha inválidos' });
-      const token = jwt.sign({ id: user.id, tipo: user.tipo, nome: user.nome, email: user.email }, SECRET, { expiresIn: '7d' });
+
+      if (!email || !senha) {
+        console.log('Email ou senha não fornecidos');
+        return res.status(400).json({ error: 'Email e senha são obrigatórios' });
+      }
+
+      // Busca usuário com senha e status
+      console.log('Buscando usuário:', email);
+      const user = await prisma.user.findUnique({ 
+        where: { email },
+        select: {
+          id: true,
+          nome: true,
+          email: true,
+          tipo: true,
+          senha_hash: true,
+          ativo: true
+        }
+      });
+
+      console.log('Usuário encontrado:', user ? 'Sim' : 'Não');
+
+      // Verificações de segurança
+      if (!user) {
+        return res.status(401).json({ error: 'E-mail ou senha inválidos' });
+      }
+
+      console.log('Verificando senha');
+      const senhaValida = await bcrypt.compare(senha, user.senha_hash);
+      if (!senhaValida) {
+        console.log('Senha inválida');
+        return res.status(401).json({ error: 'E-mail ou senha inválidos' });
+      }
+
+      // Verifica se o usuário está ativo
+      if (user.ativo === false) {
+        console.log('Usuário inativo');
+        return res.status(403).json({ error: 'Usuário inativo ou bloqueado' });
+      }
+
+      console.log('Gerando token');
+      // Gera token JWT com informações importantes
+      const token = jwt.sign(
+        { 
+          id: user.id,
+          tipo: user.tipo,
+          nome: user.nome,
+          email: user.email 
+        },
+        SECRET,
+        { expiresIn: '24h' }
+      );
+
+      // Remove dados sensíveis antes de enviar
+      const { senha_hash, ativo, ...userSemSenha } = user;
+
+      console.log('Definindo cookie');
+      // Define cookie seguro
       res.cookie('token', token, {
         httpOnly: true,
-        sameSite: 'lax', // use 'none' e secure: true se for HTTPS/domínios diferentes
-        secure: false // true se for HTTPS
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 24 * 60 * 60 * 1000, // 24 horas
+        path: '/'
       });
-      return res.json({ token, user: { id: user.id, nome: user.nome, email: user.email, tipo: user.tipo } });
+
+      console.log('Enviando resposta');
+      // Retorna apenas os dados do usuário
+      return res.json({ user: userSemSenha });
+
     } catch (err) {
-      return res.status(500).json({ error: 'Erro ao fazer login' });
+      console.error('Erro detalhado no login:', err);
+      return res.status(500).json({ 
+        error: 'Erro ao realizar login',
+        details: process.env.NODE_ENV === 'development' ? err.message : undefined
+      });
     }
+  },
+
+  // Logout
+  logout: async (req, res) => {
+    res.clearCookie('token');
+    return res.json({ msg: 'Logout realizado com sucesso' });
   },
 
   // Recuperação de senha (envia token por e-mail - mock)
@@ -57,18 +127,38 @@ module.exports = {
     return res.json({ msg: 'Se o e-mail existir, enviaremos instruções.' });
   },
 
-  // Endpoint para redefinir senha
+  // Redefinição de senha
   resetPassword: async (req, res) => {
-    const { token } = req.params;
-    const { senha } = req.body;
-    if (!senha || senha.length < 6) return res.status(400).json({ error: 'Senha inválida' });
     try {
-      const decoded = jwt.verify(token, SECRET);
-      const senha_hash = await bcrypt.hash(senha, 10);
-      await prisma.user.update({ where: { id: decoded.id }, data: { senha_hash } });
-      return res.json({ msg: 'Senha redefinida com sucesso!' });
+      const { token } = req.params;
+      const { senha } = req.body;
+
+      if (!token || !senha) {
+        return res.status(400).json({ error: 'Dados inválidos' });
+      }
+
+      try {
+        const decoded = jwt.verify(token, SECRET);
+        const senha_hash = await bcrypt.hash(senha, 10);
+
+        await prisma.user.update({
+          where: { id: decoded.id },
+          data: { senha_hash }
+        });
+
+        return res.json({ msg: 'Senha alterada com sucesso' });
+      } catch (err) {
+        if (err.name === 'TokenExpiredError') {
+          return res.status(401).json({ error: 'Link expirado. Solicite um novo.' });
+        }
+        if (err.name === 'JsonWebTokenError') {
+          return res.status(401).json({ error: 'Link inválido. Solicite um novo.' });
+        }
+        throw err;
+      }
     } catch (err) {
-      return res.status(400).json({ error: 'Token inválido ou expirado' });
+      console.error('Erro ao redefinir senha:', err);
+      return res.status(500).json({ error: 'Erro ao redefinir senha' });
     }
-  },
+  }
 };

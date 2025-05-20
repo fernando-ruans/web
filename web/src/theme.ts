@@ -11,6 +11,7 @@ const theme = {
   input: 'bg-gray-100 border border-orange-200 rounded px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-400',
   title: 'text-3xl font-extrabold text-orange-500 mb-2',
   subtitle: 'text-lg text-gray-700 mb-4',
+  button: 'bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded transition-colors',
 };
 
 export default theme;
