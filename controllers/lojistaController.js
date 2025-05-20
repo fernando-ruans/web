@@ -31,6 +31,18 @@ module.exports = {  getProfile: async (req, res) => {
           cpf: true,
           endereco: true,
           avatarUrl: true,
+          addresses: {
+            select: {
+              id: true,
+              rua: true,
+              numero: true,
+              bairro: true,
+              cidade: true,
+              estado: true,
+              complemento: true,
+              cep: true
+            }
+          },
           restaurants: {
             select: {
               id: true,
@@ -49,6 +61,10 @@ module.exports = {  getProfile: async (req, res) => {
           }
         }
       });
+      
+      // Log para debug
+      console.log('Perfil lojista recuperado com endereços:', 
+                 lojista?.addresses ? `${lojista.addresses.length} endereços encontrados` : 'Sem endereços');
 
       if (!lojista) {
         console.error('Lojista não encontrado:', req.user.id);
@@ -61,43 +77,226 @@ module.exports = {  getProfile: async (req, res) => {
       console.error('Erro ao buscar perfil:', err);
       res.status(500).json({ error: 'Erro ao buscar perfil: ' + err.message });
     }
-  },
-  updateProfile: async (req, res) => {
+  },  updateProfile: async (req, res) => {
     try {
-      const { nome, avatarUrl, telefone, endereco } = req.body;
-      
-      // Prepara o objeto com os campos que foram enviados
-      const data = {
-        ...(nome && { nome }),
-        ...(avatarUrl && { avatarUrl }),
-        ...(telefone && { telefone }),
-        ...(endereco && { endereco })
+      if (!req.user?.id) {
+        return res.status(401).json({ error: "Usuário não autenticado" });
+      }
+
+      const { nome, avatarUrl, telefone, address } = req.body;
+      console.log('Dados recebidos para lojista:', { nome, avatarUrl, telefone, address });
+
+      // Função para formatar CEP
+      const formatarCEP = (cep) => {
+        if (!cep) return '';
+        
+        const cepStr = String(cep);
+        const cepNumeros = cepStr.replace(/\D/g, '');
+        
+        if (cepNumeros.length < 8) return '';
+        
+        const cepOito = cepNumeros.substring(0, 8);
+        return cepOito.replace(/(\d{5})(\d{3})/, '$1-$2');
       };
 
-      // Atualiza apenas os campos fornecidos
-      await prisma.user.update({ 
-        where: { id: req.user.id }, 
-        data 
-      });
+      // Função para formatar endereço como string
+      const formatarEndereco = (address) => {
+        if (!address) return null;
+        
+        if (!address.rua || !address.numero || !address.bairro || !address.cidade || !address.estado || !address.cep) {
+          return null;
+        }
 
-      // Retorna o perfil atualizado igual ao getProfile
-      const lojista = await prisma.user.findUnique({
+        const cep = formatarCEP(address.cep);
+        
+        const complementoStr = address.complemento ? ` - ${address.complemento.trim()}` : '';
+        return `${address.rua.trim()}, ${address.numero.trim()}${complementoStr}, ${address.bairro.trim()}, ${address.cidade.trim()}/${address.estado.trim()} - CEP: ${cep}`;
+      };
+
+      // Validação dos dados do usuário
+      const updateData = {
+        ...(nome?.trim() && { nome: nome.trim() }),
+        ...(avatarUrl?.trim() && { avatarUrl: avatarUrl.trim() }),
+        ...(telefone?.trim() && { telefone: telefone.trim() })
+      };
+
+      // Validação do endereço
+      let addressData = null;
+      if (address) {
+        const requiredFields = ['rua', 'numero', 'bairro', 'cidade', 'estado', 'cep'];
+        const missingFields = requiredFields.filter(field => {
+          const value = address[field]?.toString().trim();
+          return !value || value.length === 0;
+        });
+        
+        if (missingFields.length > 0) {
+          return res.status(400).json({ 
+            error: "Campos obrigatórios do endereço faltando", 
+            fields: missingFields 
+          });
+        }
+
+        // Normaliza os campos do endereço
+        for (const field of [...requiredFields, 'complemento']) {
+          if (address[field] !== undefined) {
+            address[field] = address[field].toString().trim();
+          }
+        }
+        
+        // Prepara os dados do endereço para salvar
+        const cepLimpo = address.cep.replace(/\D/g, '');
+        const cepFormatado = formatarCEP(cepLimpo);
+        
+        if (!cepFormatado || !cepFormatado.match(/^\d{5}-\d{3}$/)) {
+          return res.status(400).json({ error: "CEP inválido. Use o formato: 00000-000" });
+        }
+        
+        addressData = {
+          rua: address.rua.trim(),
+          numero: address.numero.trim(),
+          bairro: address.bairro.trim(),
+          cidade: address.cidade.trim(),
+          estado: address.estado.trim(),
+          cep: cepFormatado,
+          complemento: address.complemento?.trim() || null
+        };
+      }
+
+      // Verifica se o usuário existe
+      const existingUser = await prisma.user.findUnique({
         where: { id: req.user.id },
-        select: {
-          id: true,
-          nome: true,
-          email: true,
-          tipo: true,
-          avatarUrl: true,
-          telefone: true,
-          cpf: true,
-          endereco: true,
+        include: {
+          addresses: true,
           restaurants: true
         }
       });
-      res.json({ msg: 'Perfil atualizado!', user: lojista });
+
+      if (!existingUser) {
+        return res.status(404).json({ error: "Usuário não encontrado" });
+      }
+
+      // Atualização em transação
+      const result = await prisma.$transaction(async (tx) => {
+        console.log('Iniciando transação para atualizar perfil e endereço do lojista');
+        
+        // Variável para armazenar o endereço formatado em string para o campo endereco
+        let addressStr = existingUser.endereco;
+        let userAddress = null;
+        
+        // Manipula o endereço primeiro, se foi fornecido
+        if (address && addressData) {
+          console.log('Processando dados de endereço para lojista:', addressData);
+          
+          // Formata o endereço como string para o campo endereco legado
+          addressStr = formatarEndereco(addressData);
+          
+          try {
+            // Verifica se o usuário já possui um endereço
+            const userAddresses = await tx.address.findMany({
+              where: { userId: req.user.id }
+            });
+            
+            console.log(`Lojista - endereços existentes encontrados: ${userAddresses.length}`);
+            
+            // Upsert: atualiza se existir, cria se não existir
+            if (userAddresses && userAddresses.length > 0) {
+              console.log('Atualizando endereço existente do lojista:', userAddresses[0].id);
+              userAddress = await tx.address.update({
+                where: { id: userAddresses[0].id },
+                data: addressData
+              });
+              console.log('Endereço do lojista atualizado com sucesso:', userAddress);
+            } else {
+              console.log('Criando novo endereço para o lojista:', req.user.id);
+              userAddress = await tx.address.create({
+                data: {
+                  userId: req.user.id,
+                  ...addressData
+                }
+              });
+              console.log('Novo endereço do lojista criado com sucesso:', userAddress);
+            }
+          } catch (error) {
+            console.error('ERRO ao processar endereço do lojista:', error);
+            throw error;
+          }
+        }
+        
+        // Atualização do usuário
+        console.log('Atualizando dados do lojista');
+        const updatedUserData = {
+          ...updateData
+        };
+        
+        // Apenas atualiza o endereco string se tivermos um novo endereço
+        if (addressStr) {
+          updatedUserData.endereco = addressStr;
+        }
+        
+        const updatedUser = await tx.user.update({
+          where: { id: req.user.id },
+          data: updatedUserData,
+          include: {
+            restaurants: true
+          }
+        });
+        
+        console.log('Lojista atualizado com sucesso');
+        
+        // Criar o objeto de retorno completo
+        return {
+          ...updatedUser,
+          addresses: userAddress ? [userAddress] : []
+        };
+      });
+
+      if (!result) {
+        throw new Error("Usuário não encontrado após atualização");
+      }
+
+      console.log('Perfil lojista atualizado:', result);
+      
+      // Verifica se os endereços estão no resultado
+      if (!result.addresses || result.addresses.length === 0) {
+        console.log('Endereços do lojista não encontrados no resultado da transação. Buscando novamente...');
+        
+        // Busca os endereços atualizados diretamente
+        const addresses = await prisma.address.findMany({
+          where: { userId: req.user.id }
+        });
+        
+        if (addresses.length > 0) {
+          console.log('Adicionando endereços do lojista ao resultado:', addresses);
+          result.addresses = addresses;
+        } else if (addressData) {
+          console.warn('Nenhum endereço do lojista encontrado! Tentando criar como último recurso...');
+          
+          try {
+            const newAddress = await prisma.address.create({
+              data: {
+                userId: req.user.id,
+                ...addressData
+              }
+            });
+            
+            result.addresses = [newAddress];
+            console.log('Novo endereço do lojista criado e adicionado ao resultado:', newAddress);
+          } catch (error) {
+            console.error('Erro ao criar endereço do lojista como último recurso:', error);
+          }
+        }
+      }
+      
+      res.json({
+        msg: "Perfil atualizado com sucesso!",
+        user: {
+          ...result,
+          addresses: result.addresses || []
+        }
+      });
     } catch (err) {
-      res.status(500).json({ error: 'Erro ao atualizar perfil' });
+      console.error("[updateProfile] Erro ao atualizar perfil de lojista:", err);
+      res.status(500).json({ error: "Erro ao atualizar perfil de lojista" });
     }
   },
 
@@ -909,6 +1108,25 @@ module.exports = {  getProfile: async (req, res) => {
     } catch (err) {
       console.error('Erro ao listar pedidos ativos:', err);
       res.status(500).json({ error: 'Erro ao listar pedidos ativos' });
+    }
+  },
+
+  listAddresses: async (req, res) => {
+    try {
+      if (!req.user?.id) {
+        return res.status(401).json({ error: "Usuário não autenticado" });
+      }
+
+      const enderecos = await prisma.address.findMany({
+        where: { userId: req.user.id }
+      });
+      
+      console.log(`Endereços do lojista (id: ${req.user.id}) encontrados:`, enderecos.length);
+      
+      res.json(enderecos);
+    } catch (err) {
+      console.error("[listAddresses] Erro ao listar endereços do lojista:", err);
+      res.status(500).json({ error: "Erro ao listar endereços" });
     }
   },
 };

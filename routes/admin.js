@@ -18,6 +18,10 @@ router.delete('/restaurants/:id', adminController.deleteRestaurant);
 router.get('/reviews', adminController.listReviews);
 router.delete('/reviews/:id', adminController.deleteReview);
 router.get('/profile', adminController.getProfile);
+router.get('/addresses', adminController.listAddresses); 
+router.post('/addresses', adminController.createAddress);
+router.put('/addresses/:id', adminController.updateAddress);
+router.delete('/addresses/:id', adminController.deleteAddress);
 router.put('/profile', adminController.updateProfile);
 router.get('/relatorios/resumo', adminController.relatorioResumo);
 

@@ -2,7 +2,21 @@
 
 const formatarCEP = (cep) => {
   if (!cep) return '';
-  return cep.replace(/\D/g, '').replace(/(\d{5})(\d{3})/, '$1-$2');
+  
+  // Garante que estamos trabalhando com uma string
+  const cepStr = String(cep);
+  
+  // Limpa todos os caracteres não numéricos
+  const cepNumeros = cepStr.replace(/\D/g, '');
+  
+  // Se o CEP tiver menos de 8 dígitos, retorna vazio
+  if (cepNumeros.length < 8) return '';
+  
+  // Pega apenas os primeiros 8 dígitos caso tenha mais
+  const cepOito = cepNumeros.substring(0, 8);
+  
+  // Formata o CEP no padrão 00000-000
+  return cepOito.replace(/(\d{5})(\d{3})/, '$1-$2');
 };
 
 const formatarEndereco = (address) => {
@@ -13,8 +27,8 @@ const formatarEndereco = (address) => {
     return null;
   }
 
-  // Valida e formata o CEP
-  const cep = address.cep.replace(/\D/g, '').replace(/(\d{5})(\d{3})/, '$1-$2');
+  // Valida e formata o CEP usando a função formatarCEP
+  const cep = formatarCEP(address.cep);
   
   // Monta o endereço no formato padrão
   const complementoStr = address.complemento ? ` - ${address.complemento.trim()}` : '';
@@ -38,9 +52,24 @@ module.exports = {
           telefone: true,
           endereco: true,
           avatarUrl: true,
-          addresses: true
+          addresses: {
+            select: {
+              id: true,
+              rua: true,
+              numero: true,
+              bairro: true,
+              cidade: true,
+              estado: true,
+              complemento: true,
+              cep: true
+            }
+          }
         }
       });
+      
+      // Logging para debug
+      console.log('Perfil recuperado com endereços:', 
+                 cliente?.addresses ? `${cliente.addresses.length} endereços encontrados` : 'Sem endereços');
 
       if (!cliente) {
         return res.status(404).json({ error: "Usuário não encontrado" });
@@ -64,6 +93,7 @@ module.exports = {
 
       const { nome, avatarUrl, telefone, address } = req.body;
       console.log('Dados recebidos:', { nome, avatarUrl, telefone, address });
+      console.log('Endereço recebido:', JSON.stringify(address));
 
       // Validação dos dados do usuário
       const updateData = {
@@ -72,7 +102,8 @@ module.exports = {
         ...(telefone?.trim() && { telefone: telefone.trim() })
       };
 
-      // Validação dos dados do endereço
+      // Verificação e validação dos dados de endereço
+      let addressData = null;
       if (address) {
         const requiredFields = ['rua', 'numero', 'bairro', 'cidade', 'estado', 'cep'];
         const missingFields = requiredFields.filter(field => {
@@ -93,6 +124,24 @@ module.exports = {
             address[field] = address[field].toString().trim();
           }
         }
+        
+        // Prepara os dados do endereço para salvar
+        const cepLimpo = address.cep.replace(/\D/g, '');
+        const cepFormatado = formatarCEP(cepLimpo);
+        
+        if (!cepFormatado || !cepFormatado.match(/^\d{5}-\d{3}$/)) {
+          return res.status(400).json({ error: "CEP inválido. Use o formato: 00000-000" });
+        }
+        
+        addressData = {
+          rua: address.rua.trim(),
+          numero: address.numero.trim(),
+          bairro: address.bairro.trim(),
+          cidade: address.cidade.trim(),
+          estado: address.estado.trim(),
+          cep: cepFormatado,
+          complemento: address.complemento?.trim() || null
+        };
       }
 
       // Verifica se o usuário existe
@@ -109,75 +158,78 @@ module.exports = {
 
       // Atualização em transação
       const result = await prisma.$transaction(async (tx) => {
-        // Atualização do usuário
-        if (Object.keys(updateData).length > 0 || address) {
-          const addressStr = address ? formatarEndereco(address) : existingUser.endereco;
-          await tx.user.update({
-            where: { id: req.user.id },
-            data: {
-              ...updateData,
-              endereco: addressStr
+        console.log('Iniciando transação para atualizar perfil e endereço');
+        
+        // Variável para armazenar o endereço formatado em string para o campo endereco
+        let addressStr = existingUser.endereco;
+        let userAddress = null;
+        
+        // Manipula o endereço primeiro, se foi fornecido
+        if (address && addressData) {
+          console.log('Processando dados de endereço:', addressData);
+          
+          // Formata o endereço como string para o campo endereco legado
+          addressStr = formatarEndereco(addressData);
+          
+          try {
+            // Verifica se o usuário já possui um endereço
+            const userAddresses = await tx.address.findMany({
+              where: { userId: req.user.id }
+            });
+            
+            console.log(`Endereços existentes encontrados: ${userAddresses.length}`);
+            
+            // Upsert: atualiza se existir, cria se não existir
+            if (userAddresses && userAddresses.length > 0) {
+              console.log('Atualizando endereço existente:', userAddresses[0].id);
+              userAddress = await tx.address.update({
+                where: { id: userAddresses[0].id },
+                data: addressData
+              });
+              console.log('Endereço atualizado com sucesso:', userAddress);
+            } else {
+              console.log('Criando novo endereço para o usuário:', req.user.id);
+              userAddress = await tx.address.create({
+                data: {
+                  userId: req.user.id,
+                  ...addressData
+                }
+              });
+              console.log('Novo endereço criado com sucesso:', userAddress);
             }
-          });
+          } catch (error) {
+            console.error('ERRO ao processar endereço:', error);
+            throw error;
+          }
         }
-
-        // Atualização ou criação do endereço
-        if (address) {
-          const addressData = {
-            rua: address.rua,
-            numero: address.numero,
-            bairro: address.bairro,
-            cidade: address.cidade,
-            estado: address.estado,
-            cep: address.cep,
-            complemento: address.complemento || null
-          };
-
-          if (existingUser.addresses.length > 0) {
-            await tx.address.update({
-              where: { id: existingUser.addresses[0].id },
-              data: addressData
-            });      } else {
-        // Deleta endereços antigos se houver
-        await tx.address.deleteMany({
-          where: { userId: req.user.id }
+        
+        // Atualização do usuário
+        console.log('Atualizando dados do usuário');
+        const updatedUserData = {
+          ...updateData
+        };
+        
+        // Apenas atualiza o endereco string se tivermos um novo endereço
+        if (addressStr) {
+          updatedUserData.endereco = addressStr;
+        }
+        
+        const updatedUser = await tx.user.update({
+          where: { id: req.user.id },
+          data: updatedUserData
         });
         
-        // Cria o novo endereço
-        await tx.address.create({
-          data: {
-            userId: req.user.id,
-            ...addressData
-          }
-        });
-      }
-        }
+        console.log('Usuário atualizado com sucesso');
+        
+        // Criar o objeto de retorno completo
+        const result = {
+          ...updatedUser,
+          addresses: userAddress ? [userAddress] : []
+        };
+        
+        return result;
 
-        // Busca o usuário atualizado com os endereços
-        return await tx.user.findUnique({
-          where: { id: req.user.id },
-          select: {
-            id: true,
-            nome: true,
-            email: true,
-            tipo: true,
-            avatarUrl: true,
-            telefone: true,
-            endereco: true,
-            addresses: {
-              select: {
-                id: true,
-                rua: true,
-                numero: true,
-                bairro: true,
-                cidade: true,
-                estado: true,
-                complemento: true,
-                cep: true
-              }
-            }
-          }
-        });
+        // O retorno é construído diretamente (veja o bloco anterior)
       });
 
       if (!result) {
@@ -185,10 +237,56 @@ module.exports = {
       }
 
       console.log('Perfil atualizado:', result);
+      console.log('Chaves do objeto result:', Object.keys(result));
+      
+      // Verifica se os endereços estão no resultado
+      if (!result.addresses || result.addresses.length === 0) {
+        console.log('Endereços não encontrados no resultado da transação. Buscando novamente...');
+        
+        // Busca os endereços atualizados diretamente
+        const addresses = await prisma.address.findMany({
+          where: { userId: req.user.id }
+        });
+        
+        console.log('Endereços encontrados após busca adicional:', addresses);
+        
+        if (addresses.length > 0) {
+          console.log('Adicionando endereços ao resultado:', addresses);
+          result.addresses = addresses;
+        } else if (addressData) {
+          console.warn('Nenhum endereço encontrado! Tentando criar como último recurso...');
+          
+          try {
+            const newAddress = await prisma.address.create({
+              data: {
+                userId: req.user.id,
+                ...addressData
+              }
+            });
+            
+            result.addresses = [newAddress];
+            console.log('Novo endereço criado e adicionado ao resultado:', newAddress);
+          } catch (error) {
+            console.error('Erro ao criar endereço como último recurso:', error);
+          }
+        }
+      }
+      
+      // Log final antes de enviar resposta
+      console.log('Resposta final:', {
+        msg: "Perfil atualizado com sucesso!",
+        user: {
+          ...result,
+          addresses: result.addresses || []
+        }
+      });
 
       res.json({
         msg: "Perfil atualizado com sucesso!",
-        user: result
+        user: {
+          ...result,
+          addresses: result.addresses || []
+        }
       });
     } catch (err) {
       console.error("[updateProfile] Erro ao atualizar perfil:", err);
@@ -241,10 +339,18 @@ module.exports = {
         });
       }
 
-      // Valida e formata o CEP
-      const cepFormatado = formatarCEP(cep);
+      // Limpa o CEP recebido
+      const cepNumeros = cep ? cep.replace(/\D/g, '') : '';
+      
+      // Valida se tem 8 dígitos
+      if (cepNumeros.length !== 8) {
+        return res.status(400).json({ error: "CEP inválido. Deve conter 8 dígitos numéricos." });
+      }
+      
+      // Formata o CEP
+      const cepFormatado = formatarCEP(cepNumeros);
       if (!cepFormatado.match(/^\d{5}-\d{3}$/)) {
-        return res.status(400).json({ error: "CEP inválido. Use o formato: 00000-000" });
+        return res.status(400).json({ error: "Erro ao formatar CEP." });
       }
 
       const endereco = await prisma.address.create({
@@ -300,9 +406,14 @@ module.exports = {
       // Verifica e formata o CEP se fornecido
       let cepFormatado = undefined;
       if (cep) {
-        cepFormatado = formatarCEP(cep);
+        const cepNumeros = cep.replace(/\D/g, '');
+        if (cepNumeros.length !== 8) {
+          return res.status(400).json({ error: "CEP inválido. Deve conter 8 dígitos numéricos." });
+        }
+        
+        cepFormatado = formatarCEP(cepNumeros);
         if (!cepFormatado.match(/^\d{5}-\d{3}$/)) {
-          return res.status(400).json({ error: "CEP inválido. Use o formato: 00000-000" });
+          return res.status(400).json({ error: "Erro ao formatar CEP." });
         }
       }
 

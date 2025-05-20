@@ -30,8 +30,6 @@ export default function ProfilePage() {
     // Verificação adicional para debug
     if (userData.addresses) {
       console.log('Array de endereços:', Array.isArray(userData.addresses) ? `Array com ${userData.addresses.length} item(s)` : 'Não é um array');
-    } else {
-      console.log('Nenhum endereço encontrado em userData.addresses');
     }
     
     if (userData.addresses?.length > 0) {
@@ -44,9 +42,12 @@ export default function ProfilePage() {
       setBairro(enderecoPrincipal.bairro || '');
       setCidade(enderecoPrincipal.cidade || '');
       setEstado(enderecoPrincipal.estado || '');
-        // Garante que o CEP esteja formatado corretamente
+      
+      // Garante que o CEP esteja formatado corretamente
       if (enderecoPrincipal.cep) {
-        const cepFormatado = formatCep(enderecoPrincipal.cep);
+        const cepNumeros = enderecoPrincipal.cep.toString().replace(/\D/g, '');
+        const cepFormatado = cepNumeros.length === 8 ? 
+          cepNumeros.replace(/(\d{5})(\d{3})/, '$1-$2') : enderecoPrincipal.cep;
         setCep(cepFormatado);
         console.log('CEP formatado:', cepFormatado);
       } else {
@@ -97,32 +98,15 @@ export default function ProfilePage() {
       initializeAddressFields(user);
     }
   }, [user]);
-  const formatCep = (value: string | null | undefined) => {
+  
+  const formatCep = (value: string) => {
     if (!value) return '';
-    
-    // Garantir que value é uma string
-    const strValue = String(value);
-    const numbers = strValue.replace(/\D/g, '');
-    
-    // Pega apenas os primeiros 8 dígitos caso tenha mais
-    const cepOito = numbers.substring(0, 8);
+    const numbers = value.replace(/\D/g, '');
     
     // Garantir que só formatamos se tivermos 8 dígitos
-    if (cepOito.length !== 8) return cepOito;
+    if (numbers.length !== 8) return numbers;
     
-    return cepOito.replace(/(\d{5})(\d{3})/, '$1-$2');
-  };
-  
-  // Função para debug de objetos circulares
-  const safeStringify = (obj: any, indent = 2) => {
-    const cache = new Set();
-    return JSON.stringify(obj, (key, value) => {
-      if (typeof value === 'object' && value !== null) {
-        if (cache.has(value)) return '[Circular]';
-        cache.add(value);
-      }
-      return value;
-    }, indent);
+    return numbers.substring(0, 8).replace(/(\d{5})(\d{3})/, '$1-$2');
   };
   
   const handleCepChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -199,7 +183,8 @@ export default function ProfilePage() {
         setError('CEP inválido. Use o formato: 00000-000');
         return;
       }
-        // Prepara os dados do endereço se todos os campos obrigatórios estiverem preenchidos
+      
+      // Prepara os dados do endereço se todos os campos obrigatórios estiverem preenchidos
       const addressData = hasAllAddressFields ? {
         rua: rua.trim(),
         numero: numero.trim(),
@@ -209,8 +194,6 @@ export default function ProfilePage() {
         estado: estado.trim(),
         cep: cepNumeros // Envia apenas os números e deixa o backend formatar
       } : undefined;
-      
-      console.log('Dados de endereço preparados para envio:', addressData);
 
       // Combina os dados para enviar
       const data = {
@@ -243,53 +226,26 @@ export default function ProfilePage() {
           setEditMode(false);
 
           // Atualiza os campos de endereço com os dados recebidos
-          initializeAddressFields(responseData.user);          // Verifica se o endereço foi retornado corretamente
-          console.log('Verificando endereços na resposta:', safeStringify(responseData.user));
+          initializeAddressFields(responseData.user);
           
-          // Se não temos endereços ou se a lista está vazia
+          // Verifica se o endereço foi retornado corretamente
           if (!responseData.user.addresses || responseData.user.addresses.length === 0) {
             console.warn('Endereço não retornado pelo servidor após atualização');
+            console.log('Resposta completa sem endereços:', JSON.stringify(responseData.user));
             
-            // Se temos um endereço formatado como string, vamos usá-lo como fallback
-            if (responseData.user.endereco) {
-              console.log('Usando endereço string como fallback:', responseData.user.endereco);
-              initializeAddressFields(responseData.user);
-            }
-            
-            // Tentar recarregar o perfil após um breve delay para buscar os endereços
+            // Tentar recarregar o perfil após um breve delay
             setTimeout(() => {
               console.log('Recarregando perfil para buscar endereços...');
-              
               fetch(`/api/${user?.tipo}/profile`, {
                 credentials: 'include'
               })
               .then(res => res.json())
               .then(data => {
-                console.log('Perfil recarregado:', safeStringify(data));
-                
-                // Tenta encontrar endereços na resposta
-                if (data.addresses && data.addresses.length > 0) {
-                  console.log('Endereços encontrados na resposta recarregada:', data.addresses);
+                console.log('Perfil recarregado:', data);
+                console.log('Endereços no perfil recarregado:', data.addresses);
+                if (data && data.addresses && data.addresses.length > 0) {
+                  console.log('Inicializando campos com endereços recarregados');
                   initializeAddressFields(data);
-                } else {
-                  console.warn('Endereços não encontrados na resposta recarregada');
-                  
-                  // Tenta buscar endereços como último recurso
-                  fetch(`/api/${user?.tipo}/addresses`, {
-                    credentials: 'include'
-                  })
-                  .then(res => res.json())
-                  .then(addresses => {
-                    console.log('Busca específica de endereços:', addresses);
-                    if (addresses && addresses.length > 0) {
-                      console.log('Endereços encontrados em busca específica:', addresses);
-                      // Combina os dados do usuário com os endereços
-                      initializeAddressFields({...data, addresses});
-                    } else {
-                      console.warn('Nenhum endereço encontrado em nenhuma tentativa');
-                    }
-                  })
-                  .catch(err => console.error('Erro ao buscar endereços:', err));
                 }
               })
               .catch(err => console.error('Erro ao recarregar perfil:', err));
@@ -481,7 +437,7 @@ export default function ProfilePage() {
               <span className="px-3 py-1 rounded-full bg-orange-100 text-orange-600 text-xs font-bold mb-2">{tipoLabel}</span>
               
               <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-3 mb-2">
-                {user?.telefone && (
+                {user.telefone && (
                   <div className="text-gray-500 text-sm flex items-start gap-2 p-4 bg-gray-50 rounded-xl">
                     <FaPhone size={16} color="#f97316" /> 
                     <div>

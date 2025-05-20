@@ -14,19 +14,22 @@ router.use(rateLimiter());
 
 // Exemplo de rotas
 router.get('/profile', auth(['cliente']), clienteController.getProfile);
+router.get('/addresses', auth(['cliente']), clienteController.listAddresses);
 
 const updateProfileSchema = Joi.object({
   nome: Joi.string().min(2).max(100).optional(),
   email: Joi.string().email().optional(),
   avatarUrl: Joi.string().optional(),
   telefone: Joi.string().optional(),
-  rua: Joi.string().optional(),
-  numero: Joi.string().optional(),
-  complemento: Joi.string().optional(),
-  bairro: Joi.string().optional(),
-  cidade: Joi.string().optional(),
-  estado: Joi.string().optional(),
-  cep: Joi.string().optional(),
+  address: Joi.object({
+    rua: Joi.string().min(2).max(255).optional(),
+    numero: Joi.string().max(20).optional(),
+    complemento: Joi.string().max(255).allow(null, '').optional(),
+    bairro: Joi.string().min(2).max(100).optional(),
+    cidade: Joi.string().min(2).max(100).optional(),
+    estado: Joi.string().length(2).optional(),
+    cep: Joi.string().pattern(/^\d{5}-?\d{3}$|^\d{8}$/).optional(),
+  }).optional(),
   senha: Joi.string().min(6).optional(),
   endereco: Joi.string().optional(),
 });

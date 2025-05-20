@@ -26,6 +26,7 @@ router.use(auth(['lojista']));
 const validators = require('../middlewares/validators');
 
 router.get('/profile', lojistaController.getProfile);
+router.get('/addresses', lojistaController.listAddresses);
 router.put('/profile', async (req, res, next) => {
   const { error } = validators.lojistaProfile.validate(req.body);
   if (error) return res.status(400).json({ error: error.details[0].message });

@@ -2,6 +2,19 @@ const prisma = require('../prisma/prismaClient');
 const jwt = require('jsonwebtoken');
 const SECRET = process.env.JWT_SECRET || 'segredo123';
 
+// Função para formatar CEP padrão: 00000-000
+const formatarCEP = (cep) => {
+  if (!cep) return '';
+  
+  const cepStr = String(cep);
+  const cepNumeros = cepStr.replace(/\D/g, '');
+  
+  if (cepNumeros.length < 8) return '';
+  
+  const cepOito = cepNumeros.substring(0, 8);
+  return cepOito.replace(/(\d{5})(\d{3})/, '$1-$2');
+};
+
 module.exports = {
   listUsers: async (req, res) => {
     try {
@@ -158,6 +171,10 @@ module.exports = {
   },
   getProfile: async (req, res) => {
     try {
+      if (!req.user?.id) {
+        return res.status(401).json({ error: "Usuário não autenticado" });
+      }
+
       const admin = await prisma.user.findUnique({
         where: { id: req.user.id },
         select: {
@@ -167,119 +184,268 @@ module.exports = {
           tipo: true,
           telefone: true,
           endereco: true,
-          avatarUrl: true
+          avatarUrl: true,
+          addresses: {
+            select: {
+              id: true,
+              rua: true,
+              numero: true,
+              bairro: true,
+              cidade: true,
+              estado: true,
+              complemento: true,
+              cep: true
+            }
+          }
         }
       });
+
+      if (!admin) {
+        return res.status(404).json({ error: "Usuário não encontrado" });
+      }
+
+      console.log('Perfil admin recuperado com endereços:', 
+                 admin?.addresses ? `${admin.addresses.length} endereços encontrados` : 'Sem endereços');
+
       res.json(admin);
     } catch (err) {
-      res.status(500).json({ error: 'Erro ao buscar perfil do admin' });
+      console.error("[getProfile] Erro ao buscar perfil de admin:", err);
+      res.status(500).json({ error: "Erro ao buscar perfil de admin" });
     }
   },
+
   updateProfile: async (req, res) => {
     try {
-      console.log('Dados recebidos:', req.body);
-      const { nome, email, telefone, endereco, avatarUrl } = req.body;
-      const userId = Number(req.user.id);
-
-      // Valida se há dados para atualizar
-      if (!nome && !email && !telefone && !endereco && !avatarUrl) {
-        return res.status(400).json({ error: 'Nenhum dado fornecido para atualização' });
+      if (!req.user?.id) {
+        return res.status(401).json({ error: "Usuário não autenticado" });
       }
 
-      // Valida o email se fornecido
-      if (email) {
-        const existingUser = await prisma.user.findFirst({
-          where: {
-            email,
-            id: { not: userId }
-          }
-        });
+      const { nome, avatarUrl, telefone, address } = req.body;
+      console.log('Dados recebidos para admin:', { nome, avatarUrl, telefone, address });
+
+      // Função para formatar CEP
+      const formatarCEP = (cep) => {
+        if (!cep) return '';
         
-        if (existingUser) {
-          return res.status(400).json({ error: 'Este e-mail já está em uso' });
-        }
-      }
+        const cepStr = String(cep);
+        const cepNumeros = cepStr.replace(/\D/g, '');
+        
+        if (cepNumeros.length < 8) return '';
+        
+        const cepOito = cepNumeros.substring(0, 8);
+        return cepOito.replace(/(\d{5})(\d{3})/, '$1-$2');
+      };
 
-      // Prepara os dados para atualização, tratando campos vazios corretamente
+      // Função para formatar endereço como string
+      const formatarEndereco = (address) => {
+        if (!address) return null;
+        
+        if (!address.rua || !address.numero || !address.bairro || !address.cidade || !address.estado || !address.cep) {
+          return null;
+        }
+
+        const cep = formatarCEP(address.cep);
+        
+        const complementoStr = address.complemento ? ` - ${address.complemento.trim()}` : '';
+        return `${address.rua.trim()}, ${address.numero.trim()}${complementoStr}, ${address.bairro.trim()}, ${address.cidade.trim()}/${address.estado.trim()} - CEP: ${cep}`;
+      };
+
+      // Validação dos dados do usuário
       const updateData = {
         ...(nome?.trim() && { nome: nome.trim() }),
-        ...(email?.trim() && { email: email.trim() }),
-        ...(telefone?.trim() && { telefone: telefone.trim() }),
-        ...(endereco?.trim() && { endereco: endereco.trim() }),
-        ...(avatarUrl?.trim() && { avatarUrl: avatarUrl.trim() })
+        ...(avatarUrl?.trim() && { avatarUrl: avatarUrl.trim() }),
+        ...(telefone?.trim() && { telefone: telefone.trim() })
       };
 
-      console.log('Dados para atualização:', updateData);
+      // Validação do endereço
+      let addressData = null;
+      if (address) {
+        const requiredFields = ['rua', 'numero', 'bairro', 'cidade', 'estado', 'cep'];
+        const missingFields = requiredFields.filter(field => {
+          const value = address[field]?.toString().trim();
+          return !value || value.length === 0;
+        });
+        
+        if (missingFields.length > 0) {
+          return res.status(400).json({ 
+            error: "Campos obrigatórios do endereço faltando", 
+            fields: missingFields 
+          });
+        }
 
-      // Atualiza o perfil
-      const updatedUser = await prisma.user.update({
-        where: { id: userId },
-        data: updateData,
-        select: {
-          id: true,
-          nome: true,
-          email: true,
-          tipo: true,
-          telefone: true,
-          endereco: true,
-          avatarUrl: true,
-          ativo: true
+        // Normaliza os campos do endereço
+        for (const field of [...requiredFields, 'complemento']) {
+          if (address[field] !== undefined) {
+            address[field] = address[field].toString().trim();
+          }
+        }
+        
+        // Prepara os dados do endereço para salvar
+        const cepLimpo = address.cep.replace(/\D/g, '');
+        const cepFormatado = formatarCEP(cepLimpo);
+        
+        if (!cepFormatado || !cepFormatado.match(/^\d{5}-\d{3}$/)) {
+          return res.status(400).json({ error: "CEP inválido. Use o formato: 00000-000" });
+        }
+        
+        addressData = {
+          rua: address.rua.trim(),
+          numero: address.numero.trim(),
+          bairro: address.bairro.trim(),
+          cidade: address.cidade.trim(),
+          estado: address.estado.trim(),
+          cep: cepFormatado,
+          complemento: address.complemento?.trim() || null
+        };
+      }
+
+      // Verifica se o usuário existe
+      const existingUser = await prisma.user.findUnique({
+        where: { id: req.user.id },
+        include: {
+          addresses: true
         }
       });
 
-      console.log('Usuário atualizado:', { ...updatedUser, ativo: undefined });
+      if (!existingUser) {
+        return res.status(404).json({ error: "Usuário não encontrado" });
+      }
 
-      // Gera um novo token com os dados atualizados
-      const token = jwt.sign(
-        { 
-          id: updatedUser.id,
-          tipo: updatedUser.tipo,
-          nome: updatedUser.nome,
-          email: updatedUser.email 
-        },
-        SECRET,
-        { expiresIn: '24h' }
-      );
-
-      // Atualiza o cookie com o novo token
-      res.cookie('token', token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 24 * 60 * 60 * 1000, // 24 horas
-        path: '/'
+      // Atualização em transação
+      const result = await prisma.$transaction(async (tx) => {
+        console.log('Iniciando transação para atualizar perfil e endereço do admin');
+        
+        let addressStr = existingUser.endereco;
+        let userAddress = null;
+        
+        // Manipula o endereço primeiro, se foi fornecido
+        if (address && addressData) {
+          console.log('Processando dados de endereço para admin:', addressData);
+          
+          // Formata o endereço como string para o campo endereco legado
+          addressStr = formatarEndereco(addressData);
+          
+          // Verifica se o usuário já possui um endereço
+          const userAddresses = await tx.address.findMany({
+            where: { userId: req.user.id }
+          });
+          
+          console.log(`Admin - endereços existentes encontrados: ${userAddresses.length}`);
+          
+          // Upsert: atualiza se existir, cria se não existir
+          if (userAddresses && userAddresses.length > 0) {
+            console.log('Atualizando endereço existente do admin:', userAddresses[0].id);
+            userAddress = await tx.address.update({
+              where: { id: userAddresses[0].id },
+              data: addressData
+            });
+            console.log('Endereço do admin atualizado com sucesso:', userAddress);
+          } else {
+            console.log('Criando novo endereço para o admin:', req.user.id);
+            userAddress = await tx.address.create({
+              data: {
+                userId: req.user.id,
+                ...addressData
+              }
+            });
+            console.log('Novo endereço do admin criado com sucesso:', userAddress);
+          }
+        }
+        
+        // Atualização do usuário
+        console.log('Atualizando dados do admin');
+        const updatedUserData = {
+          ...updateData
+        };
+        
+        // Apenas atualiza o endereco string se tivermos um novo endereço
+        if (addressStr) {
+          updatedUserData.endereco = addressStr;
+        }
+        
+        const updatedUser = await tx.user.update({
+          where: { id: req.user.id },
+          data: updatedUserData
+        });
+        
+        console.log('Admin atualizado com sucesso');
+        
+        // Criar o objeto de retorno completo
+        return {
+          ...updatedUser,
+          addresses: userAddress ? [userAddress] : []
+        };
       });
 
-      // Prepara o objeto de resposta garantindo que nenhum campo seja undefined
-      const adminData = {
-        id: updatedUser.id,
-        nome: updatedUser.nome,
-        email: updatedUser.email,
-        tipo: updatedUser.tipo,
-        telefone: updatedUser.telefone || null,
-        endereco: updatedUser.endereco || null,
-        avatarUrl: updatedUser.avatarUrl || null
-      };
+      if (!result) {
+        throw new Error("Usuário não encontrado após atualização");
+      }
 
-      res.json({ 
-        msg: 'Perfil atualizado com sucesso', 
-        user: adminData
-      });
-    } catch (err) {
-      console.error('Erro ao atualizar perfil:', err);
+      console.log('Perfil admin atualizado:', result);
       
-      if (err.code === 'P2002') {
-        return res.status(400).json({ error: 'Este e-mail já está em uso' });
-      } else if (err.code === 'P2025') {
-        return res.status(404).json({ error: 'Usuário não encontrado' });
+      // Verifica se os endereços estão no resultado
+      if (!result.addresses || result.addresses.length === 0) {
+        console.log('Endereços do admin não encontrados no resultado da transação. Buscando novamente...');
+        
+        // Busca os endereços atualizados diretamente
+        const addresses = await prisma.address.findMany({
+          where: { userId: req.user.id }
+        });
+        
+        if (addresses.length > 0) {
+          console.log('Adicionando endereços do admin ao resultado:', addresses);
+          result.addresses = addresses;
+        } else if (addressData) {
+          console.warn('Nenhum endereço do admin encontrado! Tentando criar como último recurso...');
+          
+          try {
+            const newAddress = await prisma.address.create({
+              data: {
+                userId: req.user.id,
+                ...addressData
+              }
+            });
+            
+            result.addresses = [newAddress];
+            console.log('Novo endereço do admin criado e adicionado ao resultado:', newAddress);
+          } catch (error) {
+            console.error('Erro ao criar endereço do admin como último recurso:', error);
+          }
+        }
       }
       
-      res.status(500).json({ 
-        error: 'Erro ao atualizar perfil do admin',
-        details: process.env.NODE_ENV === 'development' ? err.message : undefined
+      res.json({
+        msg: "Perfil atualizado com sucesso!",
+        user: {
+          ...result,
+          addresses: result.addresses || []
+        }
       });
+    } catch (err) {
+      console.error("[updateProfile] Erro ao atualizar perfil de admin:", err);
+      res.status(500).json({ error: "Erro ao atualizar perfil de admin" });
     }
   },
+
+  listAddresses: async (req, res) => {
+    try {
+      if (!req.user?.id) {
+        return res.status(401).json({ error: "Usuário não autenticado" });
+      }
+
+      const enderecos = await prisma.address.findMany({
+        where: { userId: req.user.id }
+      });
+      
+      console.log(`Endereços do admin (id: ${req.user.id}) encontrados:`, enderecos.length);
+      
+      res.json(enderecos);
+    } catch (err) {
+      console.error("[listAddresses] Erro ao listar endereços do admin:", err);
+      res.status(500).json({ error: "Erro ao listar endereços" });
+    }
+  },
+  
   promoteUser: async (req, res) => {
     try {
       const { id } = req.params;
@@ -358,6 +524,160 @@ module.exports = {
       });
     } catch (err) {
       res.status(500).json({ error: 'Erro ao gerar relatório geral' });
+    }
+  },
+
+  createAddress: async (req, res) => {
+    try {
+      if (!req.user?.id) {
+        return res.status(401).json({ error: "Usuário não autenticado" });
+      }
+
+      const { rua, numero, bairro, cidade, estado, complemento, cep } = req.body;
+      
+      const requiredFields = ['rua', 'numero', bairro, 'cidade', 'estado', 'cep'];
+      const missingFields = requiredFields.filter(field => !req.body[field]?.trim());
+      
+      if (missingFields.length > 0) {
+        return res.status(400).json({ 
+          error: "Campos obrigatórios faltando",
+          fields: missingFields
+        });
+      }
+
+      // Limpa o CEP recebido
+      const cepNumeros = cep ? cep.replace(/\D/g, '') : '';
+      
+      // Valida se tem 8 dígitos
+      if (cepNumeros.length !== 8) {
+        return res.status(400).json({ error: "CEP inválido. Deve conter 8 dígitos numéricos." });
+      }
+      
+      // Formata o CEP
+      const cepFormatado = formatarCEP(cep);
+      if (!cepFormatado.match(/^\d{5}-\d{3}$/)) {
+        return res.status(400).json({ error: "Erro ao formatar CEP." });
+      }
+
+      const endereco = await prisma.address.create({
+        data: {
+          userId: req.user.id,
+          rua: rua.trim(),
+          numero: numero.trim(),
+          bairro: bairro.trim(),
+          cidade: cidade.trim(),
+          estado: estado.trim(),
+          complemento: complemento?.trim() || null,
+          cep: cepFormatado
+        }
+      });
+      
+      console.log('Novo endereço do admin criado:', endereco);
+      res.status(201).json(endereco);
+    } catch (err) {
+      console.error("[createAddress] Erro ao cadastrar endereço do admin:", err);
+      res.status(500).json({ error: "Erro ao cadastrar endereço" });
+    }
+  },
+
+  updateAddress: async (req, res) => {
+    try {
+      if (!req.user?.id) {
+        return res.status(401).json({ error: "Usuário não autenticado" });
+      }
+
+      const { id } = req.params;
+      const { rua, numero, bairro, cidade, estado, complemento, cep } = req.body;
+
+      // Verificar se o endereço existe e pertence ao usuário
+      const endereco = await prisma.address.findUnique({
+        where: { id: Number(id) }
+      });
+
+      if (!endereco) {
+        return res.status(404).json({ error: "Endereço não encontrado" });
+      }
+
+      if (endereco.userId !== req.user.id) {
+        return res.status(403).json({ error: "Sem permissão para editar este endereço" });
+      }
+
+      // Validações dos campos
+      const requiredFields = ['rua', 'numero', 'bairro', 'cidade', 'estado', 'cep'];
+      const missingFields = requiredFields.filter(field => !req.body[field]?.trim());
+      
+      if (missingFields.length > 0) {
+        return res.status(400).json({ 
+          error: "Campos obrigatórios faltando",
+          fields: missingFields
+        });
+      }
+
+      // Validação do CEP
+      const cepNumeros = cep ? cep.replace(/\D/g, '') : '';
+      if (cepNumeros.length !== 8) {
+        return res.status(400).json({ error: "CEP inválido. Deve conter 8 dígitos numéricos." });
+      }
+      
+      // Formata o CEP
+      const cepFormatado = formatarCEP(cep);
+      if (!cepFormatado.match(/^\d{5}-\d{3}$/)) {
+        return res.status(400).json({ error: "Erro ao formatar CEP." });
+      }
+
+      // Atualiza o endereço
+      const updatedAddress = await prisma.address.update({
+        where: { id: Number(id) },
+        data: {
+          rua: rua.trim(),
+          numero: numero.trim(),
+          bairro: bairro.trim(),
+          cidade: cidade.trim(),
+          estado: estado.trim(),
+          complemento: complemento?.trim() || null,
+          cep: cepFormatado
+        }
+      });
+      
+      console.log('Endereço do admin atualizado:', updatedAddress);
+      res.json(updatedAddress);
+    } catch (err) {
+      console.error("[updateAddress] Erro ao atualizar endereço do admin:", err);
+      res.status(500).json({ error: "Erro ao atualizar endereço" });
+    }
+  },
+
+  deleteAddress: async (req, res) => {
+    try {
+      if (!req.user?.id) {
+        return res.status(401).json({ error: "Usuário não autenticado" });
+      }
+
+      const { id } = req.params;
+
+      // Verificar se o endereço existe e pertence ao usuário
+      const endereco = await prisma.address.findUnique({
+        where: { id: Number(id) }
+      });
+
+      if (!endereco) {
+        return res.status(404).json({ error: "Endereço não encontrado" });
+      }
+
+      if (endereco.userId !== req.user.id) {
+        return res.status(403).json({ error: "Sem permissão para excluir este endereço" });
+      }
+
+      // Exclui o endereço
+      await prisma.address.delete({
+        where: { id: Number(id) }
+      });
+      
+      console.log(`Endereço do admin id: ${id} excluído com sucesso`);
+      res.json({ msg: "Endereço excluído com sucesso" });
+    } catch (err) {
+      console.error("[deleteAddress] Erro ao excluir endereço do admin:", err);
+      res.status(500).json({ error: "Erro ao excluir endereço" });
     }
   },
 };
