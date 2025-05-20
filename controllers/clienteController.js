@@ -24,7 +24,30 @@ module.exports = {
   updateProfile: async (req, res) => {
     try {
       const prisma = require('../prisma/prismaClient');
-      const { nome, avatarUrl, telefone, cpf, endereco } = req.body;
+      const { 
+        nome, 
+        avatarUrl, 
+        telefone, 
+        cpf, 
+        rua, 
+        numero, 
+        complemento, 
+        bairro, 
+        cidade, 
+        estado, 
+        cep 
+      } = req.body;
+
+      // Formatar o endereço completo como string para o campo endereco do usuário
+      let endereco = null;
+      if (rua && numero && bairro && cidade && estado) {
+        endereco = `${rua}, ${numero}`;
+        if (complemento) endereco += ` - ${complemento}`;
+        endereco += `, ${bairro}, ${cidade}/${estado}`;
+        if (cep) endereco += ` - CEP: ${cep}`;
+      }
+
+      // Atualizar o usuário
       await prisma.user.update({
         where: { id: req.user.id },
         data: {
@@ -35,7 +58,44 @@ module.exports = {
           ...(endereco && { endereco })
         }
       });
-      // Retorne o perfil atualizado no mesmo formato do getProfile
+
+      // Se tiver informações de endereço, criar ou atualizar na tabela Address
+      if (rua && numero && bairro && cidade && estado) {
+        // Verificar se já existe um endereço principal
+        const enderecoPrincipal = await prisma.address.findFirst({
+          where: { userId: req.user.id }
+        });
+
+        if (enderecoPrincipal) {
+          // Atualizar endereço existente
+          await prisma.address.update({
+            where: { id: enderecoPrincipal.id },
+            data: {
+              rua,
+              numero,
+              bairro,
+              cidade,
+              complemento,
+              cep
+            }
+          });
+        } else {
+          // Criar novo endereço
+          await prisma.address.create({
+            data: {
+              userId: req.user.id,
+              rua,
+              numero,
+              bairro,
+              cidade,
+              complemento,
+              cep
+            }
+          });
+        }
+      }
+
+      // Retorne o perfil atualizado
       const user = await prisma.user.findUnique({
         where: { id: req.user.id },
         select: {

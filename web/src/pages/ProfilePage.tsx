@@ -16,7 +16,12 @@ export default function ProfilePage() {
   const [telefone, setTelefone] = useState(user.telefone || '');
   const [cpf, setCpf] = useState(user.cpf || '');
   const [cep, setCep] = useState(user.cep || '');
-  const [endereco, setEndereco] = useState(user.endereco || '');
+  const [rua, setRua] = useState('');
+  const [numero, setNumero] = useState('');
+  const [complemento, setComplemento] = useState('');
+  const [bairro, setBairro] = useState('');
+  const [cidade, setCidade] = useState('');
+  const [estado, setEstado] = useState('');
   const [loadingCep, setLoadingCep] = useState(false);
 
   if (!user) return null;
@@ -33,7 +38,10 @@ export default function ProfilePage() {
       try {
         const enderecoCep = await buscarCEP(cepValue);
         if (enderecoCep) {
-          setEndereco(formatarEndereco(enderecoCep));
+          setRua(enderecoCep.logradouro || '');
+          setBairro(enderecoCep.bairro || '');
+          setCidade(enderecoCep.localidade || '');
+          setEstado(enderecoCep.uf || '');
         }
       } finally {
         setLoadingCep(false);
@@ -50,10 +58,27 @@ export default function ProfilePage() {
       if (user.tipo === 'lojista') endpoint = '/api/lojista/profile';
       if (user.tipo === 'admin') endpoint = '/api/admin/profile';
       
+      const enderecoCompleto = {
+        rua,
+        numero,
+        complemento,
+        bairro,
+        cidade,
+        estado,
+        cep
+      };
+
       const res = await fetch(endpoint, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
-        body: JSON.stringify({ nome, email, avatarUrl, telefone, cpf, cep, endereco })
+        body: JSON.stringify({ 
+          nome, 
+          email, 
+          avatarUrl, 
+          telefone, 
+          cpf,
+          ...enderecoCompleto
+        })
       });
       
       if (res.ok) {
@@ -92,69 +117,150 @@ export default function ProfilePage() {
           </div>
 
           {editMode ? (
-            <form className="w-full flex flex-col items-center gap-2" onSubmit={handleSubmit}>
-              <div className="w-full flex flex-col items-center mb-2">
-                <UploadImage onUpload={setAvatarUrl} label=" " buttonClassName="mt-0 mb-2 px-3 py-1 text-sm rounded-full bg-orange-400 hover:bg-orange-500 text-white shadow-sm transition" />
+            <form className="w-full space-y-4" onSubmit={handleSubmit}>
+              <div className="flex flex-col items-center mb-4">
+                <UploadImage onUpload={setAvatarUrl} label="Alterar foto" buttonClassName="bg-orange-500 hover:bg-orange-600 text-white text-sm px-4 py-2 rounded-full shadow transition" />
               </div>
               
-              <input
-                className={theme.input + ' w-full mb-2'}
-                value={nome}
-                onChange={e => setNome(e.target.value)}
-                placeholder="Nome"
-                required
-              />
-              
-              <input
-                className={theme.input + ' w-full mb-2'}
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="E-mail"
-                type="email"
-                required
-                disabled
-              />
-              
-              <input
-                className={theme.input + ' w-full mb-2'}
-                value={telefone}
-                onChange={e => setTelefone(e.target.value)}
-                placeholder="Telefone"
-                type="tel"
-              />
-              
-              <input
-                className={theme.input + ' w-full mb-2'}
-                value={cpf}
-                onChange={e => setCpf(e.target.value)}
-                placeholder="CPF"
-              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
+                  <label className="text-sm font-medium text-gray-600 mb-1 block">Nome Completo</label>
+                  <input
+                    className={theme.input + ' w-full'}
+                    value={nome}
+                    onChange={e => setNome(e.target.value)}
+                    placeholder="Nome completo"
+                    required
+                  />
+                </div>
+                
+                <div className="md:col-span-2">
+                  <label className="text-sm font-medium text-gray-600 mb-1 block">E-mail</label>
+                  <input
+                    className={theme.input + ' w-full bg-gray-50'}
+                    value={email}
+                    placeholder="E-mail"
+                    type="email"
+                    required
+                    disabled
+                  />
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium text-gray-600 mb-1 block">Telefone</label>
+                  <input
+                    className={theme.input + ' w-full'}
+                    value={telefone}
+                    onChange={e => setTelefone(e.target.value)}
+                    placeholder="Telefone"
+                    type="tel"
+                  />
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium text-gray-600 mb-1 block">CPF</label>
+                  <input
+                    className={theme.input + ' w-full'}
+                    value={cpf}
+                    onChange={e => setCpf(e.target.value)}
+                    placeholder="CPF"
+                  />
+                </div>
 
-              <div className="w-full flex flex-col gap-2">
-                <input
-                  className={theme.input + ' w-full'}
-                  value={cep}
-                  onChange={e => setCep(e.target.value.replace(/\D/g, ''))}
-                  onBlur={handleCepBlur}
-                  placeholder="CEP (apenas números)"
-                  maxLength={8}
-                />
-                {loadingCep && <div className="text-sm text-gray-500">Buscando CEP...</div>}
+                <div className="md:col-span-2">
+                  <label className="text-sm font-medium text-gray-600 mb-1 block">CEP</label>
+                  <div className="relative">
+                    <input
+                      className={theme.input + ' w-full'}
+                      value={cep}
+                      onChange={e => setCep(e.target.value.replace(/\D/g, ''))}
+                      onBlur={handleCepBlur}
+                      placeholder="CEP (apenas números)"
+                      maxLength={8}
+                    />
+                    {loadingCep && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-orange-500"></div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="md:col-span-2">
+                  <label className="text-sm font-medium text-gray-600 mb-1 block">Rua</label>
+                  <input
+                    className={theme.input + ' w-full'}
+                    value={rua}
+                    onChange={e => setRua(e.target.value)}
+                    placeholder="Rua"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-gray-600 mb-1 block">Número</label>
+                  <input
+                    className={theme.input + ' w-full'}
+                    value={numero}
+                    onChange={e => setNumero(e.target.value)}
+                    placeholder="Número"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-gray-600 mb-1 block">Complemento</label>
+                  <input
+                    className={theme.input + ' w-full'}
+                    value={complemento}
+                    onChange={e => setComplemento(e.target.value)}
+                    placeholder="Complemento (opcional)"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-gray-600 mb-1 block">Bairro</label>
+                  <input
+                    className={theme.input + ' w-full'}
+                    value={bairro}
+                    onChange={e => setBairro(e.target.value)}
+                    placeholder="Bairro"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-gray-600 mb-1 block">Cidade</label>
+                  <input
+                    className={theme.input + ' w-full'}
+                    value={cidade}
+                    onChange={e => setCidade(e.target.value)}
+                    placeholder="Cidade"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="text-sm font-medium text-gray-600 mb-1 block">Estado</label>
+                  <input
+                    className={theme.input + ' w-full'}
+                    value={estado}
+                    onChange={e => setEstado(e.target.value)}
+                    placeholder="Estado"
+                  />
+                </div>
               </div>
+
+              {msg && <div className="text-green-500 text-center mt-4">{msg}</div>}
+              {error && <div className="text-red-400 text-center mt-4">{error}</div>}
               
-              <input
-                className={theme.input + ' w-full mb-2'}
-                value={endereco}
-                onChange={e => setEndereco(e.target.value)}
-                placeholder="Endereço completo"
-              />
-              
-              {msg && <div className="text-green-500 mb-2 text-center">{msg}</div>}
-              {error && <div className="text-red-400 mb-2 text-center">{error}</div>}
-              
-              <div className="flex gap-2 w-full mt-2">
-                <button type="submit" className={theme.primary + ' w-full py-2 rounded font-bold'}>Salvar</button>
-                <button type="button" className={theme.secondary + ' w-full py-2 rounded font-bold'} onClick={() => setEditMode(false)}>Cancelar</button>
+              <div className="flex gap-2 w-full mt-6">
+                <button type="submit" className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-6 rounded-xl shadow transition">
+                  Salvar Alterações
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => setEditMode(false)} 
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 px-6 rounded-xl transition"
+                >
+                  Cancelar
+                </button>
               </div>
             </form>
           ) : (
@@ -165,51 +271,52 @@ export default function ProfilePage() {
               </div>
               <span className="px-3 py-1 rounded-full bg-orange-100 text-orange-600 text-xs font-bold mb-2">{tipoLabel}</span>
               
-              <div className="w-full flex flex-col gap-3 mb-2 mt-2">
+              <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-3 mb-2">
                 {user.telefone && (
-                  <div className="text-gray-500 text-sm flex items-start gap-2 px-4 py-2 bg-gray-50 rounded-lg">
-                    <FaPhone size={16} /> 
+                  <div className="text-gray-500 text-sm flex items-start gap-2 p-4 bg-gray-50 rounded-xl">
+                    <FaPhone size={16} color="#f97316" /> 
                     <div>
                       <div className="font-semibold text-gray-600 mb-0.5">Telefone</div>
                       <div>{user.telefone}</div>
                     </div>
                   </div>
                 )}
+                
                 {user.cpf && (
-                  <div className="text-gray-500 text-sm flex items-start gap-2 px-4 py-2 bg-gray-50 rounded-lg">
-                    <FaIdCard size={16} />
+                  <div className="text-gray-500 text-sm flex items-start gap-2 p-4 bg-gray-50 rounded-xl">
+                    <FaIdCard size={16} color="#f97316" />
                     <div>
                       <div className="font-semibold text-gray-600 mb-0.5">CPF</div>
                       <div>{user.cpf}</div>
                     </div>
                   </div>
                 )}
-                {user.cep && (
-                  <div className="text-gray-500 text-sm flex items-start gap-2 px-4 py-2 bg-gray-50 rounded-lg">
-                    <FaMapMarkerAlt size={16} />
-                    <div>
-                      <div className="font-semibold text-gray-600 mb-0.5">CEP</div>
-                      <div>{user.cep}</div>
-                    </div>
-                  </div>
-                )}
-                {user.endereco && (
-                  <div className="text-gray-500 text-sm flex items-start gap-2 px-4 py-2 bg-gray-50 rounded-lg">
-                    <FaMapMarkerAlt size={16} />
+
+                {cep && (
+                  <div className="text-gray-500 text-sm flex items-start gap-2 p-4 bg-gray-50 rounded-xl md:col-span-2">
+                    <FaMapMarkerAlt size={16} color="#f97316" />
                     <div>
                       <div className="font-semibold text-gray-600 mb-0.5">Endereço</div>
-                      <div className="break-words">{user.endereco}</div>
+                      <div>{rua}, {numero}{complemento ? ` - ${complemento}` : ''}</div>
+                      <div>{bairro} - {cidade}/{estado}</div>
+                      <div>CEP: {cep}</div>
                     </div>
                   </div>
                 )}
               </div>
-              
-              <div className="flex flex-col gap-2 w-full mt-4">
-                <button className={theme.secondary + ' w-full py-2.5 rounded-lg font-bold transition'} onClick={() => setEditMode(true)}>
-                  Editar dados
+
+              <div className="flex flex-col gap-2 w-full mt-6">
+                <button 
+                  className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-6 rounded-xl shadow transition flex items-center justify-center gap-2"
+                  onClick={() => setEditMode(true)}
+                >
+                  <FaUserEdit size={20} /> Editar Perfil
                 </button>
-                <a href="/reset-password/" className={theme.primary + ' w-full py-2.5 rounded-lg font-bold text-center'}>
-                  Alterar senha
+                <a 
+                  href="/reset-password/" 
+                  className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 px-6 rounded-xl text-center transition"
+                >
+                  Alterar Senha
                 </a>
               </div>
             </>

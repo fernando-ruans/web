@@ -21,8 +21,13 @@ const updateProfileSchema = Joi.object({
   avatarUrl: Joi.string().optional(),
   telefone: Joi.string().optional(),
   cpf: Joi.string().optional(),
+  rua: Joi.string().optional(),
+  numero: Joi.string().optional(),
+  complemento: Joi.string().optional(),
+  bairro: Joi.string().optional(),
+  cidade: Joi.string().optional(),
+  estado: Joi.string().optional(),
   cep: Joi.string().optional(),
-  endereco: Joi.string().optional(),
   senha: Joi.string().min(6).optional(),
 });
 
