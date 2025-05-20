@@ -419,7 +419,8 @@ export function LojistaPedidosPage() {
   const atualizarStatusPedido = async (pedidoId: number, novoStatus: Pedido['status']) => {
     try {
       console.log('Atualizando status do pedido:', pedidoId, 'para:', novoStatus);
-      const response = await axios.put(`/api/lojista/orders/${pedidoId}/status`, { 
+      const response = await axios.put(`/api/lojista/orders/status`, { 
+        orderId: pedidoId,
         status: novoStatus 
       }, {
         headers: {
@@ -431,8 +432,8 @@ export function LojistaPedidosPage() {
       console.log('Resposta da atualização de status:', response.data);
       await buscarPedidos(); // Recarrega a lista de pedidos após a atualização
     } catch (err) {
-      console.error('Erro ao atualizar status:', err);
       const error = err as any;
+      console.error('Erro ao atualizar status:', err);
       console.error('Status da resposta:', error?.response?.status);
       console.error('Dados do erro:', error?.response?.data);
       console.error('Stack trace:', error?.stack);

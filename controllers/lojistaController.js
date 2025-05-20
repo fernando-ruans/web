@@ -256,8 +256,11 @@ module.exports = {  getProfile: async (req, res) => {
   },
   updateOrderStatus: async (req, res) => {
     try {
-      const { orderId } = req.params;
-      const { status } = req.body;
+      const { orderId, status } = req.body;
+
+      if (!orderId) {
+        return res.status(400).json({ error: 'ID do pedido é obrigatório' });
+      }
 
       if (!['pendente', 'aceito', 'preparando', 'pronto', 'entregue', 'cancelado'].includes(status)) {
         return res.status(400).json({ error: 'Status inválido' });
@@ -330,19 +333,21 @@ module.exports = {  getProfile: async (req, res) => {
       // Enviar atualização via WebSocket
       const sendWebSocketUpdate = req.app.get('sendWebSocketUpdate');
       
-      // Notificar o cliente
-      sendWebSocketUpdate(order.userId, 'order-update', {
-        type: 'status-update',
-        orderId: order.id,
-        order: updatedOrder
-      });
+      if (sendWebSocketUpdate) {
+        // Notificar o cliente
+        sendWebSocketUpdate(order.user.id, 'order-update', {
+          type: 'status-update',
+          orderId: order.id,
+          order: updatedOrder
+        });
 
-      // Notificar o lojista
-      sendWebSocketUpdate(req.user.id, 'order-update', {
-        type: 'status-update',
-        orderId: order.id,
-        order: updatedOrder
-      });
+        // Notificar o lojista
+        sendWebSocketUpdate(req.user.id, 'order-update', {
+          type: 'status-update',
+          orderId: order.id,
+          order: updatedOrder
+        });
+      }
 
       res.json(updatedOrder);
     } catch (err) {

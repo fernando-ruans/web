@@ -30,8 +30,10 @@ router.get('/restaurants', lojistaController.listRestaurants);
 router.put('/restaurants/:id', lojistaController.updateRestaurant);
 router.delete('/restaurants/:id', lojistaController.deleteRestaurant);
 router.put('/restaurants/:id/toggle-open', lojistaController.toggleRestaurantOpen); // Nova rota para abrir/fechar restaurante
+
+// Rotas de pedidos
 router.get('/orders', lojistaController.listOrders);
-router.put('/orders/:id/status', lojistaController.updateOrderStatus);
+router.put('/orders/status', lojistaController.updateOrderStatus); // Rota atualizada
 router.get('/reviews', lojistaController.listReviews);
 router.get('/orders/active', lojistaController.listActiveOrders);
 router.get('/relatorios/:id', lojistaController.getRelatorioRestaurante); // Nova rota para relatórios do restaurante
