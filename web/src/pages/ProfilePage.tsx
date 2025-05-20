@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import theme from '../theme';
 import UploadImage from '../components/UploadImage';
-import { FaUser, FaEnvelope, FaPhone, FaIdCard, FaMapMarkerAlt, FaUserEdit } from 'react-icons/fa';
+import { FaUser, FaEnvelope, FaPhone, FaIdCard, FaMapMarkerAlt, FaUserEdit, FaSpinner } from 'react-icons/fa';
 import { buscarCEP, formatarEndereco } from '../utils/cepUtils';
 
 export default function ProfilePage() {
@@ -14,7 +14,7 @@ export default function ProfilePage() {
   const [error, setError] = useState('');
   const [avatarUrl, setAvatarUrl] = useState(user.avatarUrl || '');
   const [telefone, setTelefone] = useState(user.telefone || '');
-  const [cep, setCep] = useState(user.cep || '');
+  const [cep, setCep] = useState('');
   const [rua, setRua] = useState('');
   const [numero, setNumero] = useState('');
   const [complemento, setComplemento] = useState('');
@@ -22,7 +22,6 @@ export default function ProfilePage() {
   const [cidade, setCidade] = useState('');
   const [estado, setEstado] = useState('');
   const [loadingCep, setLoadingCep] = useState(false);
-
   // Função para inicializar campos de endereço
   const initializeAddressFields = (userData: any) => {
     if (userData.addresses?.length > 0) {
@@ -33,20 +32,42 @@ export default function ProfilePage() {
       setBairro(enderecoPrincipal.bairro || '');
       setCidade(enderecoPrincipal.cidade || '');
       setEstado(enderecoPrincipal.estado || '');
-      setCep(enderecoPrincipal.cep || '');
+      // Formata o CEP no padrão 00000-000
+      const cepFormatado = enderecoPrincipal.cep?.replace(/\D/g, '').replace(/(\d{5})(\d{3})/, '$1-$2') || '';
+      setCep(cepFormatado);
     } else if (userData.endereco) {
-      // Tenta extrair informações do endereço formatado
-      const parts = userData.endereco.split(',').map((part: string) => part.trim());
-      if (parts.length >= 3) {
-        const ruaNumero = parts[0].split(' - ');
-        setRua(ruaNumero[0] || '');
-        setNumero(ruaNumero[1] || '');
-        setBairro(parts[1] || '');
-        const cidadeEstado = parts[2].split('/');
-        setCidade(cidadeEstado[0] || '');
-        const estadoCep = cidadeEstado[1]?.split('-');
-        setEstado(estadoCep?.[0]?.trim() || '');
-        setCep(estadoCep?.[1]?.replace('CEP:', '').trim() || '');
+      // Tenta extrair informações do endereço formatado no formato: "Rua, Número - Complemento, Bairro, Cidade/Estado - CEP: 00000-000"
+      try {
+        const enderecoRegex = /^(.+?),\s*(\d+)(?:\s*-\s*(.+?))?,\s*(.+?),\s*(.+?)\/(\w{2})\s*-\s*CEP:\s*(\d{5}-?\d{3})$/;
+        const match = userData.endereco.match(enderecoRegex);
+        
+        if (match) {
+          setRua(match[1].trim());
+          setNumero(match[2].trim());
+          setComplemento(match[3]?.trim() || '');
+          setBairro(match[4].trim());
+          setCidade(match[5].trim());
+          setEstado(match[6].trim());
+          setCep(match[7].trim());        } else {
+          // Se o regex não funcionar, limpa os campos
+          setRua('');
+          setNumero('');
+          setComplemento('');
+          setBairro('');
+          setCidade('');
+          setEstado('');
+          setCep('');
+        }
+      } catch (error) {
+        console.error('Erro ao processar endereço:', error);
+        // Em caso de erro, limpa os campos
+        setRua('');
+        setNumero('');
+        setComplemento('');
+        setBairro('');
+        setCidade('');
+        setEstado('');
+        setCep('');
       }
     }
   };
@@ -58,15 +79,31 @@ export default function ProfilePage() {
     }
   }, [user]);
 
-  if (!user) return null;
+  const formatCep = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    return numbers.replace(/(\d{5})(\d{3})/, '$1-$2');
+  };
+  const handleCepChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value.replace(/\D/g, '');
+    
+    // Limita o CEP a 8 dígitos
+    if (rawValue.length > 8) return;
+    
+    // Formata o CEP enquanto digita
+    if (rawValue.length > 5) {
+      setCep(`${rawValue.slice(0, 5)}-${rawValue.slice(5)}`);
+    } else {
+      setCep(rawValue);
+    }
 
-  let tipoLabel = 'Usuário';
-  if (user.tipo === 'cliente') tipoLabel = 'Cliente';
-  else if (user.tipo === 'lojista') tipoLabel = 'Lojista';
-  else if (user.tipo === 'admin') tipoLabel = 'Administrador';
+    // Se o CEP estiver completo, busca automaticamente
+    if (rawValue.length === 8) {
+      handleCepBlur({ target: { value: rawValue } } as React.FocusEvent<HTMLInputElement>);
+    }
+  };
 
   const handleCepBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
-    const cepValue = e.target.value;
+    const cepValue = e.target.value.replace(/\D/g, '');
     if (cepValue.length === 8) {
       setLoadingCep(true);
       try {
@@ -91,71 +128,93 @@ export default function ProfilePage() {
     try {
       const endpoint = `/api/${user.tipo}/profile`;
 
-      // Cria o objeto de dados apenas com campos válidos
-      const data = {
-        ...(nome && nome.trim() !== '' && { nome }),
-        ...(email && email.trim() !== '' && { email }),
-        ...(telefone && telefone.trim() !== '' && { telefone }),
-        ...(avatarUrl && avatarUrl.trim() !== '' && { avatarUrl })
-      };
-
-      // Adiciona os campos de endereço individuais
-      if (rua || numero || bairro || cidade || estado) {
-        data.rua = rua;
-        data.numero = numero;
-        data.complemento = complemento;
-        data.bairro = bairro;
-        data.cidade = cidade;
-        data.estado = estado;
-        data.cep = cep;
-      }
-
-      // Verifica se há dados para atualizar
-      if (Object.keys(data).length === 0) {
-        setError('Nenhum dado válido para atualizar');
+      // Validação dos campos obrigatórios
+      if (!nome?.trim()) {
+        setError('O nome é obrigatório');
         return;
       }
 
+      // Validação do endereço
+      const hasPartialAddress = [rua, numero, bairro, cidade, estado, cep].some(field => field?.trim());
+      const hasAllAddressFields = [rua, numero, bairro, cidade, estado, cep].every(field => field?.trim());
+      
+      if (hasPartialAddress && !hasAllAddressFields) {
+        setError('Todos os campos do endereço são obrigatórios');
+        return;
+      }
+
+      // Prepara os dados do usuário
+      const userData = {
+        nome: nome.trim(),
+        ...(email && email.trim() !== '' && { email }),
+        ...(telefone && telefone.trim() !== '' && { telefone }),
+        ...(avatarUrl && avatarUrl.trim() !== '' && { avatarUrl })
+      };      // Validação adicional do CEP
+      const cepNumeros = cep.replace(/\D/g, '');
+      if (hasAllAddressFields && cepNumeros.length !== 8) {
+        setError('CEP inválido. Use o formato: 00000-000');
+        return;
+      }
+
+      // Prepara os dados do endereço se todos os campos obrigatórios estiverem preenchidos
+      const addressData = hasAllAddressFields ? {
+        rua: rua.trim(),
+        numero: numero.trim(),
+        complemento: complemento?.trim(),
+        bairro: bairro.trim(),
+        cidade: cidade.trim(),
+        estado: estado.trim(),
+        cep: cepNumeros.replace(/(\d{5})(\d{3})/, '$1-$2')
+      } : undefined;
+
+      // Combina os dados para enviar
+      const data = {
+        ...userData,
+        address: addressData
+      };
+
+      setMsg('Salvando alterações...');
+
       const res = await fetch(endpoint, {
         method: 'PUT',
-        headers: { 
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify(data)
       });
       
+      const responseData = await res.json();
+
       if (res.ok) {
-        const responseData = await res.json();
         if (responseData.user) {
           setMsg('Perfil atualizado com sucesso!');
           // Dispara evento para atualizar o usuário no contexto de autenticação
           window.dispatchEvent(new CustomEvent('userUpdated', { detail: responseData }));
           setEditMode(false);
 
-          // Atualiza os campos de endereço a partir do endereço principal do usuário
-          if (responseData.user.addresses?.length > 0) {
-            const enderecoPrincipal = responseData.user.addresses[0];
-            setRua(enderecoPrincipal.rua || '');
-            setNumero(enderecoPrincipal.numero || '');
-            setComplemento(enderecoPrincipal.complemento || '');
-            setBairro(enderecoPrincipal.bairro || '');
-            setCidade(enderecoPrincipal.cidade || '');
-            setEstado(enderecoPrincipal.estado || '');
-            setCep(enderecoPrincipal.cep || '');
-          }
+          // Atualiza os campos de endereço
+          initializeAddressFields(responseData.user);
         } else {
           setError('Resposta inválida do servidor');
         }
       } else {
-        const err = await res.json();
-        setError(err.error || 'Erro ao atualizar perfil');
+        if (responseData.fields) {
+          setError(`Campos obrigatórios faltando: ${responseData.fields.join(', ')}`);
+        } else {
+          setError(responseData.error || 'Erro ao atualizar perfil');
+        }
       }
     } catch (err) {
       console.error('Erro ao atualizar perfil:', err);
-      setError('Erro ao atualizar perfil');
+      setError('Erro ao atualizar perfil. Por favor, tente novamente.');
     }
   };
+
+  if (!user) return null;
+
+  let tipoLabel = 'Usuário';
+  if (user.tipo === 'cliente') tipoLabel = 'Cliente';
+  else if (user.tipo === 'lojista') tipoLabel = 'Lojista';
+  else if (user.tipo === 'admin') tipoLabel = 'Administrador';
 
   return (
     <div className={theme.bg + ' flex flex-col items-center justify-center min-h-screen pb-24 sm:pb-32'}>
@@ -221,26 +280,26 @@ export default function ProfilePage() {
                     <input
                       className={theme.input + ' w-full'}
                       value={cep}
-                      onChange={e => setCep(e.target.value.replace(/\D/g, ''))}
+                      onChange={handleCepChange}
                       onBlur={handleCepBlur}
-                      placeholder="CEP (apenas números)"
-                      maxLength={8}
+                      placeholder="00000-000"
+                      maxLength={9}
                     />
                     {loadingCep && (
-                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-orange-500"></div>
+                      <div className="absolute right-2 top-1/2 -translate-y-1/2 text-orange-500 animate-spin">
+                        <FaSpinner />
                       </div>
                     )}
                   </div>
                 </div>
                 
                 <div className="md:col-span-2">
-                  <label className="text-sm font-medium text-gray-600 mb-1 block">Rua</label>
+                  <label className="text-sm font-medium text-gray-600 mb-1 block">Logradouro</label>
                   <input
                     className={theme.input + ' w-full'}
                     value={rua}
                     onChange={e => setRua(e.target.value)}
-                    placeholder="Rua"
+                    placeholder="Rua, Avenida, etc."
                   />
                 </div>
 
@@ -260,7 +319,7 @@ export default function ProfilePage() {
                     className={theme.input + ' w-full'}
                     value={complemento}
                     onChange={e => setComplemento(e.target.value)}
-                    placeholder="Complemento (opcional)"
+                    placeholder="Apto, Sala, etc."
                   />
                 </div>
 
@@ -284,7 +343,7 @@ export default function ProfilePage() {
                   />
                 </div>
 
-                <div className="md:col-span-2">
+                <div>
                   <label className="text-sm font-medium text-gray-600 mb-1 block">Estado</label>
                   <input
                     className={theme.input + ' w-full'}
@@ -325,46 +384,36 @@ export default function ProfilePage() {
                     <FaPhone size={16} color="#f97316" /> 
                     <div>
                       <div className="font-semibold text-gray-600 mb-0.5">Telefone</div>
-                      <div>{user.telefone}</div>
+                      <div>{telefone}</div>
                     </div>
                   </div>
                 )}
                 
-                {cep && (
-                  <div className="text-gray-500 text-sm flex items-start gap-2 p-4 bg-gray-50 rounded-xl md:col-span-2">
-                    <FaMapMarkerAlt size={16} color="#f97316" />
-                    <div>
-                      <div className="font-semibold text-gray-600 mb-0.5">Endereço</div>
-                      <div>{rua}, {numero}{complemento ? ` - ${complemento}` : ''}</div>
-                      <div>{bairro} - {cidade}/{estado}</div>
-                      <div>CEP: {cep}</div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {!editMode && (
-                <div className="mt-4">
-                  <div className="flex flex-col gap-1">
-                    {user.addresses?.length > 0 ? (
-                      <div>
-                        <div className="font-semibold text-gray-600 mb-0.5">Endereço</div>
-                        <div>{user.addresses[0].rua}, {user.addresses[0].numero}
-                          {user.addresses[0].complemento && ` - ${user.addresses[0].complemento}`}</div>
-                        <div>{user.addresses[0].bairro} - {user.addresses[0].cidade}/{user.addresses[0].estado}</div>
-                        <div>CEP: {user.addresses[0].cep}</div>
-                      </div>
-                    ) : user.endereco ? (
-                      <div>
-                        <div className="font-semibold text-gray-600 mb-0.5">Endereço</div>
-                        <div>{user.endereco}</div>
-                      </div>
+                <div className="text-gray-500 text-sm flex items-start gap-2 p-4 bg-gray-50 rounded-xl md:col-span-2">
+                  <FaMapMarkerAlt size={16} color="#f97316" />
+                  <div className="flex-1">
+                    <div className="font-semibold text-gray-600 mb-0.5">Endereço</div>
+                    {rua ? (                        <div className="flex flex-col gap-1">
+                          <div className="font-medium">
+                            {rua}, {numero}
+                            {complemento && <span className="text-gray-600"> • {complemento}</span>}
+                          </div>
+                          <div className="text-gray-600">
+                            {bairro} • {cidade}/{estado}
+                          </div>
+                          <div className="text-sm text-orange-600 font-medium mt-1">
+                            CEP: {cep?.replace(/\D/g, '').replace(/(\d{5})(\d{3})/, '$1-$2')}
+                          </div>
+                        </div>
                     ) : (
-                      <div className="text-gray-500">Nenhum endereço cadastrado</div>
+                      <div className="text-gray-400 italic">Nenhum endereço cadastrado</div>
                     )}
                   </div>
                 </div>
-              )}
+              </div>
+
+              {msg && <div className="text-green-500 text-center mt-4">{msg}</div>}
+              {error && <div className="text-red-400 text-center mt-4">{error}</div>}
 
               <div className="flex flex-col gap-2 w-full mt-6">
                 <button 

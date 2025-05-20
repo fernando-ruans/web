@@ -1,8 +1,33 @@
-// Exemplo de controller do cliente
-module.exports = {  
+﻿const prisma = require('../prisma/prismaClient');
+
+const formatarCEP = (cep) => {
+  if (!cep) return '';
+  return cep.replace(/\D/g, '').replace(/(\d{5})(\d{3})/, '$1-$2');
+};
+
+const formatarEndereco = (address) => {
+  if (!address) return null;
+  
+  // Garante que todos os campos obrigatórios existem
+  if (!address.rua || !address.numero || !address.bairro || !address.cidade || !address.estado || !address.cep) {
+    return null;
+  }
+
+  // Valida e formata o CEP
+  const cep = address.cep.replace(/\D/g, '').replace(/(\d{5})(\d{3})/, '$1-$2');
+  
+  // Monta o endereço no formato padrão
+  const complementoStr = address.complemento ? ` - ${address.complemento.trim()}` : '';
+  return `${address.rua.trim()}, ${address.numero.trim()}${complementoStr}, ${address.bairro.trim()}, ${address.cidade.trim()}/${address.estado.trim()} - CEP: ${cep}`;
+};
+
+module.exports = {
   getProfile: async (req, res) => {
     try {
-      const prisma = require('../prisma/prismaClient');
+      if (!req.user?.id) {
+        return res.status(401).json({ error: "Usuário não autenticado" });
+      }
+
       const cliente = await prisma.user.findUnique({
         where: { id: req.user.id },
         select: {
@@ -16,591 +41,740 @@ module.exports = {
           addresses: true
         }
       });
+
+      if (!cliente) {
+        return res.status(404).json({ error: "Usuário não encontrado" });
+      }
+
       res.json(cliente);
     } catch (err) {
-      res.status(500).json({ error: 'Erro ao buscar perfil' });
+      console.error("[getProfile] Erro ao buscar perfil:", err);
+      res.status(500).json({ 
+        error: "Erro ao buscar perfil",
+        details: process.env.NODE_ENV === 'development' ? err.message : undefined
+      });
     }
-  },  
+  },
 
   updateProfile: async (req, res) => {
     try {
-      const prisma = require('../prisma/prismaClient');
-      const { 
-        nome, 
-        avatarUrl, 
-        telefone,
-        endereco,
-        rua, 
-        numero, 
-        complemento, 
-        bairro, 
-        cidade, 
-        estado, 
-        cep 
-      } = req.body;
-
-      // Se recebeu campos individuais, formatar o endereço
-      let enderecoFormatado = endereco;
-      if (rua && numero && bairro && cidade && estado) {
-        enderecoFormatado = `${rua}, ${numero}`;
-        if (complemento) enderecoFormatado += ` - ${complemento}`;
-        enderecoFormatado += `, ${bairro}, ${cidade}/${estado}`;
-        if (cep) enderecoFormatado += ` - CEP: ${cep}`;
+      if (!req.user?.id) {
+        return res.status(401).json({ error: "Usuário não autenticado" });
       }
 
-      // Preparar dados para atualização do usuário
+      const { nome, avatarUrl, telefone, address } = req.body;
+      console.log('Dados recebidos:', { nome, avatarUrl, telefone, address });
+
+      // Validação dos dados do usuário
       const updateData = {
-        ...(nome && { nome }),
-        ...(avatarUrl && { avatarUrl }),
-        ...(telefone && { telefone }),
-        ...(enderecoFormatado && { endereco: enderecoFormatado })
+        ...(nome?.trim() && { nome: nome.trim() }),
+        ...(avatarUrl?.trim() && { avatarUrl: avatarUrl.trim() }),
+        ...(telefone?.trim() && { telefone: telefone.trim() })
       };
 
-      // Verifica se há dados para atualizar
-      if (Object.keys(updateData).length === 0) {
-        return res.status(400).json({ error: 'Nenhum dado válido para atualização' });
-      }
-
-      // Atualizar o usuário
-      await prisma.user.update({
-        where: { id: req.user.id },
-        data: updateData
-      });
-
-      // Se tiver informações de endereço, criar ou atualizar na tabela Address
-      if (rua || numero || bairro || cidade || estado || cep) {
-        const enderecoPrincipal = await prisma.address.findFirst({
-          where: { userId: req.user.id }
+      // Validação dos dados do endereço
+      if (address) {
+        const requiredFields = ['rua', 'numero', 'bairro', 'cidade', 'estado', 'cep'];
+        const missingFields = requiredFields.filter(field => {
+          const value = address[field]?.toString().trim();
+          return !value || value.length === 0;
         });
-
-        const addressData = {
-          ...(rua && { rua }),
-          ...(numero && { numero }),
-          ...(bairro && { bairro }),
-          ...(cidade && { cidade }),
-          ...(estado && { estado }),
-          ...(complemento && { complemento }),
-          ...(cep && { cep })
-        };
-
-        if (enderecoPrincipal) {
-          // Atualizar endereço existente com os campos fornecidos
-          await prisma.address.update({
-            where: { id: enderecoPrincipal.id },
-            data: addressData
+        
+        if (missingFields.length > 0) {
+          return res.status(400).json({ 
+            error: "Campos obrigatórios do endereço faltando", 
+            fields: missingFields 
           });
-        } else if (rua && numero && bairro && cidade && estado) {
-          // Criar novo endereço apenas se tiver todos os campos obrigatórios
-          await prisma.address.create({
-            data: {
-              userId: req.user.id,
-              ...addressData
-            }
-          });
+        }
+
+        // Normaliza os campos do endereço
+        for (const field of [...requiredFields, 'complemento']) {
+          if (address[field] !== undefined) {
+            address[field] = address[field].toString().trim();
+          }
         }
       }
 
-      // Retorna o perfil atualizado incluindo os endereços
-      const user = await prisma.user.findUnique({
+      // Verifica se o usuário existe
+      const existingUser = await prisma.user.findUnique({
         where: { id: req.user.id },
-        select: {
-          id: true,
-          nome: true,
-          email: true,
-          tipo: true,
-          avatarUrl: true,
-          telefone: true,
-          endereco: true,
+        include: {
           addresses: true
         }
       });
 
-      res.json({ 
-        msg: 'Perfil atualizado com sucesso!', 
-        user 
-      });
-    } catch (err) {
-      console.error('Erro ao atualizar perfil:', err);
-      res.status(500).json({ error: 'Erro ao atualizar perfil' });
-    }
-  },
-
-  listRestaurants: async (req, res) => {
-    try {
-      const prisma = require('../prisma/prismaClient');
-      const { endereco, categoria, nome, precoMin, precoMax, page = 1, limit = 10, orderBy = 'nome', order = 'asc' } = req.query;
-
-      // Construir where clause dinamicamente
-      const where = {
-        status: 'aprovado', // Apenas restaurantes aprovados
-        AND: []
-      };
-
-      // Adicionar filtros condicionalmente
-      if (nome) {
-        where.AND.push({ nome: { contains: nome, mode: 'insensitive' } });
+      if (!existingUser) {
+        return res.status(404).json({ error: "Usuário não encontrado" });
       }
 
-      if (endereco) {
-        where.AND.push({ endereco: { contains: endereco, mode: 'insensitive' } });
-      }
-
-      if (categoria) {
-        where.AND.push({
-          categories: {
-            some: {
-              nome: { contains: categoria, mode: 'insensitive' }
+      // Atualização em transação
+      const result = await prisma.$transaction(async (tx) => {
+        // Atualização do usuário
+        if (Object.keys(updateData).length > 0 || address) {
+          const addressStr = address ? formatarEndereco(address) : existingUser.endereco;
+          await tx.user.update({
+            where: { id: req.user.id },
+            data: {
+              ...updateData,
+              endereco: addressStr
             }
-          }
+          });
+        }
+
+        // Atualização ou criação do endereço
+        if (address) {
+          const addressData = {
+            rua: address.rua,
+            numero: address.numero,
+            bairro: address.bairro,
+            cidade: address.cidade,
+            estado: address.estado,
+            cep: address.cep,
+            complemento: address.complemento || null
+          };
+
+          if (existingUser.addresses.length > 0) {
+            await tx.address.update({
+              where: { id: existingUser.addresses[0].id },
+              data: addressData
+            });      } else {
+        // Deleta endereços antigos se houver
+        await tx.address.deleteMany({
+          where: { userId: req.user.id }
         });
-      }
-
-      // Remove AND vazio
-      if (where.AND.length === 0) {
-        delete where.AND;
-      }
-
-      // Buscar restaurantes com paginação
-      const skip = (Number(page) - 1) * Number(limit);
-      const take = Number(limit);      
-      const [total, restaurants] = await prisma.$transaction([
-        prisma.restaurant.count({ 
-          where: {
-            ...where,
-            status: "aprovado"
-          }
-        }),
-        prisma.restaurant.findMany({
-          where: {
-            ...where,
-            status: "aprovado"
-          },
-          skip,
-          take,
-          orderBy: { [orderBy]: order },
-          include: {
-            categories: {
-              include: {
-                products: {
-                  select: {
-                    preco: true,
-                    id: true,
-                    nome: true,
-                    imagem: true
-                  }
-                }
-              }
-            },
-            reviews: {
-              select: {
-                nota: true
-              }
-            }
-          }
-        })
-      ]);      
-      // Calcular médias e informações adicionais
-      const restaurantsWithStats = restaurants.map(restaurant => {
-        // Obter todos os produtos de todas as categorias
-        const allProducts = restaurant.categories.flatMap(cat => cat.products || []);
         
-        const mediaPreco = allProducts.length > 0
-          ? allProducts.reduce((acc, prod) => acc + prod.preco, 0) / allProducts.length
-          : 0;
-
-        const mediaAvaliacao = restaurant.reviews?.length > 0
-          ? restaurant.reviews.reduce((acc, rev) => acc + rev.nota, 0) / restaurant.reviews.length
-          : 0;
-
-        const { products, reviews, ...restRestaurant } = restaurant;
-
-        return {
-          ...restRestaurant,
-          mediaPreco: Number(mediaPreco.toFixed(2)),
-          mediaAvaliacao: Number(mediaAvaliacao.toFixed(1)),
-          totalAvaliacoes: reviews.length
-        };
-      });
-
-      // Filtrar por preço após calcular a média
-      let filteredRestaurants = restaurantsWithStats;
-      if (precoMin || precoMax) {
-        filteredRestaurants = restaurantsWithStats.filter(rest => {
-          const price = rest.mediaPreco;
-          if (precoMin && precoMax) {
-            return price >= Number(precoMin) && price <= Number(precoMax);
+        // Cria o novo endereço
+        await tx.address.create({
+          data: {
+            userId: req.user.id,
+            ...addressData
           }
-          if (precoMin) {
-            return price >= Number(precoMin);
-          }
-          if (precoMax) {
-            return price <= Number(precoMax);
-          }
-          return true;
         });
       }
+        }
 
-      res.json({
-        total,
-        page: Number(page),
-        limit: Number(limit),
-        data: filteredRestaurants
-      });
-
-    } catch (err) {
-      console.error('Erro ao listar restaurantes:', err);
-      res.status(500).json({ error: 'Erro ao listar restaurantes: ' + err.message });
-    }
-  },
-  getRestaurant: async (req, res) => {
-    try {
-      const prisma = require('../prisma/prismaClient');
-      const { id } = req.params;
-      
-      const restaurante = await prisma.restaurant.findUnique({
-        where: { id: Number(id) }
-      });
-
-      if (!restaurante) {
-        return res.status(404).json({ error: 'Restaurante não encontrado' });
-      }
-
-      // Extrair cidade do endereço se não estiver preenchida
-      const cidade = restaurante.endereco?.split(',').slice(-2)[0]?.trim() || '';
-      
-      // Enviar apenas os campos necessários
-      res.json({
-        id: restaurante.id,
-        nome: restaurante.nome,
-        endereco: restaurante.endereco,
-        cidade: cidade,
-        telefone: restaurante.telefone,
-        banner: restaurante.banner,
-        imagem: restaurante.imagem,
-        taxa_entrega: restaurante.taxa_entrega || 0,
-        tempo_entrega: restaurante.tempo_entrega,
-        aberto: restaurante.aberto
-      });
-    } catch (err) {
-      console.error('Erro ao buscar restaurante:', err);
-      res.status(500).json({ error: 'Erro ao buscar restaurante' });
-    }
-  },
-
-  getRestaurantMenu: async (req, res) => {
-    try {
-      const prisma = require('../prisma/prismaClient');
-      const { id } = req.params;
-
-      // Busca o restaurante com suas categorias e produtos, incluindo adicionais
-      const restaurante = await prisma.restaurant.findUnique({
-        where: { id: Number(id) },
-        include: {
-          categories: {
-            include: {
-              products: {
-                where: { ativo: true },
-                orderBy: { nome: 'asc' },
-                include: { adicionais: true }
+        // Busca o usuário atualizado com os endereços
+        return await tx.user.findUnique({
+          where: { id: req.user.id },
+          select: {
+            id: true,
+            nome: true,
+            email: true,
+            tipo: true,
+            avatarUrl: true,
+            telefone: true,
+            endereco: true,
+            addresses: {
+              select: {
+                id: true,
+                rua: true,
+                numero: true,
+                bairro: true,
+                cidade: true,
+                estado: true,
+                complemento: true,
+                cep: true
               }
             }
           }
-        }
-      });
-
-      if (!restaurante) {
-        return res.status(404).json({ error: 'Restaurante não encontrado' });
-      }
-      
-      // Organiza o cardápio por categorias
-      const cardapio = restaurante.categories.map(cat => ({
-        id: cat.id,
-        nome: cat.nome,
-        produtos: cat.products
-      }));      
-      res.json({ 
-        data: cardapio, 
-        restaurant: {
-          id: restaurante.id,
-          nome: restaurante.nome,
-          cidade: restaurante.endereco?.split(',').slice(-2)[0]?.trim() || '',
-          taxa_entrega: restaurante.taxa_entrega,
-          tempo_entrega: restaurante.tempo_entrega,
-          telefone: restaurante.telefone,
-          endereco: restaurante.endereco,
-          cep: restaurante.cep,
-          aberto: restaurante.aberto,
-          banner: restaurante.banner,
-          imagem: restaurante.imagem
-        } 
-      });
-    } catch (err) {
-      console.error('Erro ao buscar cardápio:', err);
-      res.status(500).json({ error: 'Erro ao buscar cardápio' });
-    }
-  },  
-  createOrder: async (req, res) => {
-    try {
-      const prisma = require('../prisma/prismaClient');
-      const { restaurantId, addressId, items, observacao } = req.body;
-      if (!restaurantId || !addressId || !Array.isArray(items) || items.length === 0) {
-        return res.status(400).json({ error: 'Dados do pedido inválidos' });
-      }
-
-      // Verificar se o restaurante está aberto
-      const restaurante = await prisma.restaurant.findUnique({ where: { id: restaurantId } });
-      if (!restaurante) return res.status(400).json({ error: 'Restaurante inválido' });
-      if (!restaurante.aberto) return res.status(400).json({ error: 'O restaurante está fechado no momento' });
-
-      // Calcular total
-      let subtotal = 0;
-      const taxa_entrega = restaurante.taxa_entrega || 0;
-
-      // Primeiro valida todos os produtos e adicionais
-      for (const item of items) {
-        // Verificar produto
-        const product = await prisma.product.findUnique({ where: { id: item.productId } });
-        if (!product || !product.ativo) return res.status(400).json({ error: 'Produto inválido' });
-        subtotal += product.preco * item.quantidade;
-
-        // Verificar adicionais
-        if (item.adicionais && Array.isArray(item.adicionais)) {
-          for (const adicional of item.adicionais) {
-            const adicionalDb = await prisma.adicional.findUnique({ 
-              where: { id: adicional.adicionalId } 
-            });
-            if (!adicionalDb || adicionalDb.productId !== item.productId) {
-              return res.status(400).json({ error: 'Adicional inválido' });
-            }
-            if (adicional.quantidade > adicionalDb.quantidadeMax) {
-              return res.status(400).json({ error: `Quantidade máxima excedida para o adicional ${adicionalDb.nome}` });
-            }
-            subtotal += adicionalDb.preco * adicional.quantidade;
-          }
-        }
-      }      
-      // Criar pedido
-      const order = await prisma.order.create({
-        data: {
-          userId: req.user.id,          
-          restaurantId,
-          addressId,
-          status: 'Pendente',
-          total: subtotal + taxa_entrega,
-          taxa_entrega,
-          observacao,
-          orderItems: {
-            create: items.map(item => ({
-              productId: item.productId,
-              quantidade: item.quantidade,
-              preco_unitario: item.preco_unitario,
-              adicionais: item.adicionais ? {
-                create: item.adicionais.map(adicional => ({
-                  adicionalId: adicional.adicionalId,
-                  quantidade: adicional.quantidade,
-                  preco_unitario: adicional.preco
-                }))
-              } : undefined
-            }))
-          }
-        },
-        include: { 
-          orderItems: { include: { product: true } },
-          user: true,
-          restaurant: true,
-          address: true
-        }
-      });
-
-      // Obter referência do io do app
-      const io = req.app.get('io');
-
-      // Emitir notificação para o lojista
-      if (order.restaurant?.userId) {
-        io.to(`user:${order.restaurant.userId}`).emit('order-update', {
-          type: 'new-order',
-          orderId: order.id,
-          order: {
-            ...order,
-            user: {
-              nome: order.user.nome,
-              email: order.user.email,
-              telefone: order.user.telefone
-            }
-          }
         });
+      });
+
+      if (!result) {
+        throw new Error("Usuário não encontrado após atualização");
       }
 
-      res.status(201).json(order);
-    } catch (err) {
-      console.error('Erro ao criar pedido:', err);
-      res.status(500).json({ error: 'Erro ao criar pedido' });
-    }
-  },
+      console.log('Perfil atualizado:', result);
 
-  listOrders: async (req, res) => {
-    try {
-      const prisma = require('../prisma/prismaClient');
-      const { page = 1, limit = 10, orderBy = 'data_criacao', order = 'desc', status } = req.query;
-      const where = { userId: req.user.id, ...(status && { status }) };
-      const total = await prisma.order.count({ where });
-      const pedidos = await prisma.order.findMany({
-        where,
-        include: {
-          restaurant: true,
-          orderItems: { include: { product: true } },
-          address: true,
-          review: true
-        },
-        skip: (Number(page) - 1) * Number(limit),
-        take: Number(limit),
-        orderBy: { [orderBy]: order }
+      res.json({
+        msg: "Perfil atualizado com sucesso!",
+        user: result
       });
-      res.json({ total, page: Number(page), limit: Number(limit), data: pedidos });
     } catch (err) {
-      res.status(500).json({ error: 'Erro ao listar pedidos' });
-    }
-  },
-
-  getOrder: async (req, res) => {
-    try {
-      const prisma = require('../prisma/prismaClient');
-      const { id } = req.params;
-      const pedido = await prisma.order.findUnique({
-        where: { id: Number(id) },
-        include: {
-          restaurant: true,
-          orderItems: { include: { product: true } },
-          address: true,
-          review: true
-        }
-      });
-      if (!pedido || pedido.userId !== req.user.id) return res.status(404).json({ error: 'Pedido não encontrado' });
-      res.json(pedido);
-    } catch (err) {
-      res.status(500).json({ error: 'Erro ao buscar pedido' });
-    }
-  },
-
-  createReview: async (req, res) => {
-    try {
-      const prisma = require('../prisma/prismaClient');
-      const { orderId, nota, comentario } = req.body;
-      if (!orderId || typeof nota !== 'number' || !comentario) {
-        return res.status(400).json({ error: 'Dados da avaliação inválidos' });
-      }
-      // Só pode avaliar pedido entregue e do próprio usuário
-      const pedido = await prisma.order.findUnique({ where: { id: orderId }, include: { review: true } });
-      if (!pedido || pedido.userId !== req.user.id || pedido.status !== 'Entregue') {
-        return res.status(400).json({ error: 'Pedido não elegível para avaliação' });
-      }
-      if (pedido.review) return res.status(400).json({ error: 'Pedido já avaliado' });
-      const review = await prisma.review.create({
-        data: {
-          orderId,
-          nota,
-          comentario,
-          restaurantId: pedido.restaurantId
-        }
-      });
-      res.status(201).json(review);
-    } catch (err) {
-      res.status(500).json({ error: 'Erro ao registrar avaliação' });
-    }
-  },
-
-  // Adiciona um novo endereço
-  createAddress: async (req, res) => {
-    try {
-      const prisma = require('../prisma/prismaClient');
-      const { rua, numero, bairro, cidade, complemento, cep } = req.body;
+      console.error("[updateProfile] Erro ao atualizar perfil:", err);
       
-      if (!rua || !numero || !bairro || !cidade || !cep) {
-        return res.status(400).json({ error: 'Campos obrigatórios faltando' });
+      if (err.code === 'P2002') {
+        return res.status(400).json({ error: "Dados já existem no sistema" });
       }
-
-      const endereco = await prisma.address.create({
-        data: {
-          userId: req.user.id,
-          rua,
-          numero,
-          bairro,
-          cidade,
-          complemento,
-          cep
-        }
-      });
-      res.status(201).json(endereco);
-    } catch (err) {
-      res.status(500).json({ error: 'Erro ao cadastrar endereço' });
-    }
-  },
-
-  // Atualiza um endereço existente
-  updateAddress: async (req, res) => {
-    try {
-      const prisma = require('../prisma/prismaClient');
-      const { id } = req.params;
-      const { rua, numero, bairro, cidade, complemento, cep } = req.body;
       
-      const endereco = await prisma.address.findUnique({
-        where: { id: Number(id) }
+      res.status(500).json({ 
+        error: "Erro ao atualizar perfil",
+        details: process.env.NODE_ENV === 'development' ? err.message : undefined
       });
-
-      if (!endereco || endereco.userId !== req.user.id) {
-        return res.status(404).json({ error: 'Endereço não encontrado' });
-      }
-
-      const updatedEndereco = await prisma.address.update({
-        where: { id: Number(id) },
-        data: {
-          ...(rua && { rua }),
-          ...(numero && { numero }),
-          ...(bairro && { bairro }),
-          ...(cidade && { cidade }),
-          ...(complemento && { complemento }),
-          ...(cep && { cep })
-        }
-      });
-      res.json(updatedEndereco);
-    } catch (err) {
-      res.status(500).json({ error: 'Erro ao atualizar endereço' });
     }
   },
 
-  // Lista endereços do usuário
   listAddresses: async (req, res) => {
     try {
-      const prisma = require('../prisma/prismaClient');
+      if (!req.user?.id) {
+        return res.status(401).json({ error: "Usuário não autenticado" });
+      }
+
       const enderecos = await prisma.address.findMany({
         where: { userId: req.user.id }
       });
       res.json(enderecos);
     } catch (err) {
-      res.status(500).json({ error: 'Erro ao listar endereços' });
+      console.error("[listAddresses] Erro ao listar endereços:", err);
+      res.status(500).json({ 
+        error: "Erro ao listar endereços",
+        details: process.env.NODE_ENV === 'development' ? err.message : undefined
+      });
     }
   },
 
-  // Deleta um endereço
-  deleteAddress: async (req, res) => {
+  createAddress: async (req, res) => {
     try {
-      const prisma = require('../prisma/prismaClient');
-      const { id } = req.params;
+      if (!req.user?.id) {
+        return res.status(401).json({ error: "Usuário não autenticado" });
+      }
+
+      const { rua, numero, bairro, cidade, estado, complemento, cep } = req.body;
       
+      const requiredFields = ['rua', 'numero', 'bairro', 'cidade', 'estado', 'cep'];
+      const missingFields = requiredFields.filter(field => !req.body[field]?.trim());
+      
+      if (missingFields.length > 0) {
+        return res.status(400).json({ 
+          error: "Campos obrigatórios faltando",
+          fields: missingFields
+        });
+      }
+
+      // Valida e formata o CEP
+      const cepFormatado = formatarCEP(cep);
+      if (!cepFormatado.match(/^\d{5}-\d{3}$/)) {
+        return res.status(400).json({ error: "CEP inválido. Use o formato: 00000-000" });
+      }
+
+      const endereco = await prisma.address.create({
+        data: {
+          userId: req.user.id,
+          rua: rua.trim(),
+          numero: numero.trim(),
+          bairro: bairro.trim(),
+          cidade: cidade.trim(),
+          estado: estado.trim(),
+          complemento: complemento?.trim() || null,
+          cep: cepFormatado
+        }
+      });
+      
+      res.status(201).json(endereco);
+    } catch (err) {
+      console.error("[createAddress] Erro ao cadastrar endereço:", err);
+      res.status(500).json({ 
+        error: "Erro ao cadastrar endereço",
+        details: process.env.NODE_ENV === 'development' ? err.message : undefined
+      });
+    }
+  },
+
+  updateAddress: async (req, res) => {
+    try {
+      if (!req.user?.id) {
+        return res.status(401).json({ error: "Usuário não autenticado" });
+      }
+
+      const { id } = req.params;
+      const { rua, numero, bairro, cidade, estado, complemento, cep } = req.body;
+      
+      // Validação do ID
+      if (!id || isNaN(Number(id))) {
+        return res.status(400).json({ error: "ID do endereço inválido" });
+      }
+
       const endereco = await prisma.address.findUnique({
         where: { id: Number(id) }
       });
 
-      if (!endereco || endereco.userId !== req.user.id) {
-        return res.status(404).json({ error: 'Endereço não encontrado' });
+      if (!endereco) {
+        return res.status(404).json({ error: "Endereço não encontrado" });
+      }
+
+      if (endereco.userId !== req.user.id) {
+        return res.status(403).json({ error: "Sem permissão para editar este endereço" });
+      }
+
+      // Valida campos obrigatórios se fornecidos
+      // Verifica e formata o CEP se fornecido
+      let cepFormatado = undefined;
+      if (cep) {
+        cepFormatado = formatarCEP(cep);
+        if (!cepFormatado.match(/^\d{5}-\d{3}$/)) {
+          return res.status(400).json({ error: "CEP inválido. Use o formato: 00000-000" });
+        }
+      }
+
+      const updatedFields = {
+        ...(rua?.trim() && { rua: rua.trim() }),
+        ...(numero?.trim() && { numero: numero.trim() }),
+        ...(bairro?.trim() && { bairro: bairro.trim() }),
+        ...(cidade?.trim() && { cidade: cidade.trim() }),
+        ...(estado?.trim() && { estado: estado.trim() }),
+        ...(cepFormatado && { cep: cepFormatado }),
+        ...(complemento !== undefined && { complemento: complemento?.trim() || null })
+      };
+
+      if (Object.keys(updatedFields).length === 0) {
+        return res.status(400).json({ error: "Nenhum dado válido para atualização" });
+      }
+
+      const updatedEndereco = await prisma.address.update({
+        where: { id: Number(id) },
+        data: updatedFields
+      });
+
+      res.json(updatedEndereco);
+    } catch (err) {
+      console.error("[updateAddress] Erro ao atualizar endereço:", err);
+      res.status(500).json({ 
+        error: "Erro ao atualizar endereço",
+        details: process.env.NODE_ENV === 'development' ? err.message : undefined
+      });
+    }
+  },
+
+  deleteAddress: async (req, res) => {
+    try {
+      if (!req.user?.id) {
+        return res.status(401).json({ error: "Usuário não autenticado" });
+      }
+
+      const { id } = req.params;
+      
+      // Validação do ID
+      if (!id || isNaN(Number(id))) {
+        return res.status(400).json({ error: "ID do endereço inválido" });
+      }
+
+      const endereco = await prisma.address.findUnique({
+        where: { id: Number(id) }
+      });
+
+      if (!endereco) {
+        return res.status(404).json({ error: "Endereço não encontrado" });
+      }
+
+      if (endereco.userId !== req.user.id) {
+        return res.status(403).json({ error: "Sem permissão para excluir este endereço" });
       }
 
       await prisma.address.delete({
         where: { id: Number(id) }
       });
-      res.json({ msg: 'Endereço excluído!' });
+
+      res.json({ msg: "Endereço excluído com sucesso!" });
     } catch (err) {
-      res.status(500).json({ error: 'Erro ao excluir endereço' });
+      console.error("[deleteAddress] Erro ao excluir endereço:", err);
+      res.status(500).json({ 
+        error: "Erro ao excluir endereço",
+        details: process.env.NODE_ENV === 'development' ? err.message : undefined
+      });
+    }
+  },
+
+  createOrder: async (req, res) => {
+    try {
+      if (!req.user?.id) {
+        return res.status(401).json({ error: "Usuário não autenticado" });
+      }
+
+      const { restaurantId, addressId, observacao, items } = req.body;
+
+      // Validar se o restaurante existe
+      const restaurant = await prisma.restaurant.findUnique({
+        where: { id: restaurantId }
+      });
+
+      if (!restaurant) {
+        return res.status(404).json({ error: "Restaurante não encontrado" });
+      }
+
+      // Validar se o endereço pertence ao usuário
+      const address = await prisma.address.findUnique({
+        where: { id: addressId }
+      });
+
+      if (!address || address.userId !== req.user.id) {
+        return res.status(404).json({ error: "Endereço não encontrado" });
+      }
+
+      // Criar o pedido em uma transação
+      const order = await prisma.$transaction(async (tx) => {
+        // Criar o pedido
+        const order = await tx.order.create({
+          data: {
+            userId: req.user.id,
+            restaurantId,
+            addressId,
+            observacao: observacao || null,
+            status: 'PENDING',
+            items: {
+              create: items.map(item => ({
+                productId: item.productId,
+                quantidade: item.quantidade,
+                preco_unitario: item.preco_unitario,
+                adicionais: item.adicionais ? {
+                  create: item.adicionais.map(adicional => ({
+                    adicionalId: adicional.adicionalId,
+                    quantidade: adicional.quantidade,
+                    preco: adicional.preco
+                  }))
+                } : undefined
+              }))
+            }
+          },
+          include: {
+            items: {
+              include: {
+                product: true,
+                adicionais: {
+                  include: {
+                    adicional: true
+                  }
+                }
+              }
+            },
+            address: true,
+            restaurant: true
+          }
+        });
+
+        return order;
+      });
+
+      res.status(201).json(order);
+    } catch (err) {
+      console.error("[createOrder] Erro ao criar pedido:", err);
+      res.status(500).json({ 
+        error: "Erro ao criar pedido",
+        details: process.env.NODE_ENV === 'development' ? err.message : undefined
+      });
+    }
+  },
+
+  createReview: async (req, res) => {
+    try {
+      if (!req.user?.id) {
+        return res.status(401).json({ error: "Usuário não autenticado" });
+      }
+
+      const { orderId, nota, comentario } = req.body;
+
+      // Verificar se o pedido existe e pertence ao usuário
+      const order = await prisma.order.findUnique({
+        where: { id: orderId }
+      });
+
+      if (!order) {
+        return res.status(404).json({ error: "Pedido não encontrado" });
+      }
+
+      if (order.userId !== req.user.id) {
+        return res.status(403).json({ error: "Sem permissão para avaliar este pedido" });
+      }
+
+      // Verificar se já existe uma avaliação para este pedido
+      const existingReview = await prisma.review.findFirst({
+        where: { orderId }
+      });
+
+      if (existingReview) {
+        return res.status(400).json({ error: "Este pedido já foi avaliado" });
+      }
+
+      // Criar a avaliação
+      const review = await prisma.review.create({
+        data: {
+          orderId,
+          userId: req.user.id,
+          restaurantId: order.restaurantId,
+          nota,
+          comentario
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              nome: true,
+              avatarUrl: true
+            }
+          }
+        }
+      });
+
+      res.status(201).json(review);
+    } catch (err) {
+      console.error("[createReview] Erro ao criar avaliação:", err);
+      res.status(500).json({ 
+        error: "Erro ao criar avaliação",
+        details: process.env.NODE_ENV === 'development' ? err.message : undefined
+      });
+    }
+  },
+
+  listRestaurants: async (req, res) => {
+    try {
+      const restaurants = await prisma.restaurant.findMany({
+        where: { 
+          // O campo 'ativo' não existe no modelo Restaurant, então vamos buscar todos
+        },
+        select: {
+          id: true,
+          nome: true,
+          imagem: true,
+          banner: true,
+          endereco: true,
+          taxa_entrega: true,
+          tempo_entrega: true,
+          status: true,
+          telefone: true,
+          aberto: true, 
+          cep: true,
+          _count: {
+            select: {
+              reviews: true
+            }
+          },
+          reviews: {
+            select: {
+              nota: true
+            }
+          }
+        }
+      });
+
+      // Calcular média das avaliações
+      const restaurantsWithRating = restaurants.map(restaurant => {
+        const avgRating = restaurant.reviews.length > 0
+          ? restaurant.reviews.reduce((acc, review) => acc + review.nota, 0) / restaurant.reviews.length
+          : null;
+
+        const { reviews, ...rest } = restaurant;
+        return {
+          ...rest,
+          avaliacaoMedia: Number(avgRating?.toFixed(1)) || null,
+          totalAvaliacoes: restaurant._count.reviews
+        };
+      });
+
+      res.json({ data: restaurantsWithRating });
+    } catch (err) {
+      console.error("[listRestaurants] Erro ao listar restaurantes:", err);
+      res.status(500).json({ 
+        error: "Erro ao listar restaurantes",
+        details: process.env.NODE_ENV === 'development' ? err.message : undefined
+      });
+    }
+  },
+
+  getRestaurant: async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      if (!id || isNaN(Number(id))) {
+        return res.status(400).json({ error: "ID do restaurante inválido" });
+      }
+
+      const restaurant = await prisma.restaurant.findUnique({
+        where: { 
+          id: Number(id),
+          ativo: true
+        },
+        include: {
+          categorias: true,
+          produtos: {
+            where: { ativo: true },
+            include: {
+              adicionais: {
+                where: { ativo: true }
+              }
+            }
+          },
+          reviews: {
+            select: {
+              id: true,
+              nota: true,
+              comentario: true,
+              createdAt: true,
+              user: {
+                select: {
+                  id: true,
+                  nome: true,
+                  avatarUrl: true
+                }
+              }
+            },
+            orderBy: {
+              createdAt: 'desc'
+            },
+            take: 10
+          },
+          _count: {
+            select: {
+              reviews: true
+            }
+          }
+        }
+      });
+
+      if (!restaurant) {
+        return res.status(404).json({ error: "Restaurante não encontrado" });
+      }
+
+      // Calcular média das avaliações
+      const avgRating = restaurant.reviews.length > 0
+        ? restaurant.reviews.reduce((acc, review) => acc + review.nota, 0) / restaurant.reviews.length
+        : null;
+
+      const response = {
+        ...restaurant,
+        avaliacaoMedia: Number(avgRating?.toFixed(1)) || null,
+        totalAvaliacoes: restaurant._count.reviews
+      };
+
+      res.json(response);
+    } catch (err) {
+      console.error("[getRestaurant] Erro ao buscar restaurante:", err);
+      res.status(500).json({ 
+        error: "Erro ao buscar restaurante",
+        details: process.env.NODE_ENV === 'development' ? err.message : undefined
+      });
+    }
+  },
+
+  getRestaurantMenu: async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      if (!id || isNaN(Number(id))) {
+        return res.status(400).json({ error: "ID do restaurante inválido" });
+      }
+
+      const menu = await prisma.categoria.findMany({
+        where: {
+          restaurantId: Number(id),
+          produtos: {
+            some: {
+              ativo: true
+            }
+          }
+        },
+        include: {
+          produtos: {
+            where: { ativo: true },
+            include: {
+              adicionais: {
+                where: { ativo: true }
+              }
+            }
+          }
+        }
+      });
+
+      res.json(menu);
+    } catch (err) {
+      console.error("[getRestaurantMenu] Erro ao buscar cardápio:", err);
+      res.status(500).json({ 
+        error: "Erro ao buscar cardápio",
+        details: process.env.NODE_ENV === 'development' ? err.message : undefined
+      });
+    }
+  },
+
+  listOrders: async (req, res) => {
+    try {
+      if (!req.user?.id) {
+        return res.status(401).json({ error: "Usuário não autenticado" });
+      }
+
+      const orders = await prisma.order.findMany({
+        where: { 
+          userId: req.user.id 
+        },
+        include: {
+          restaurant: {
+            select: {
+              id: true,
+              nome: true,
+              logoUrl: true
+            }
+          },
+          items: {
+            include: {
+              product: true,
+              adicionais: {
+                include: {
+                  adicional: true
+                }
+              }
+            }
+          },
+          address: true
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      });
+
+      res.json(orders);
+    } catch (err) {
+      console.error("[listOrders] Erro ao listar pedidos:", err);
+      res.status(500).json({ 
+        error: "Erro ao listar pedidos",
+        details: process.env.NODE_ENV === 'development' ? err.message : undefined
+      });
+    }
+  },
+
+  getOrder: async (req, res) => {
+    try {
+      if (!req.user?.id) {
+        return res.status(401).json({ error: "Usuário não autenticado" });
+      }
+
+      const { id } = req.params;
+
+      if (!id || isNaN(Number(id))) {
+        return res.status(400).json({ error: "ID do pedido inválido" });
+      }
+
+      const order = await prisma.order.findUnique({
+        where: { 
+          id: Number(id)
+        },
+        include: {
+          restaurant: true,
+          items: {
+            include: {
+              product: true,
+              adicionais: {
+                include: {
+                  adicional: true
+                }
+              }
+            }
+          },
+          address: true
+        }
+      });
+
+      if (!order) {
+        return res.status(404).json({ error: "Pedido não encontrado" });
+      }
+
+      if (order.userId !== req.user.id) {
+        return res.status(403).json({ error: "Sem permissão para acessar este pedido" });
+      }
+
+      res.json(order);
+    } catch (err) {
+      console.error("[getOrder] Erro ao buscar pedido:", err);
+      res.status(500).json({ 
+        error: "Erro ao buscar pedido",
+        details: process.env.NODE_ENV === 'development' ? err.message : undefined
+      });
     }
   }
 };

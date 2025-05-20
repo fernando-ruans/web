@@ -26,14 +26,17 @@ model User {
 model Address {
   id          Int     @id @default(autoincrement())
   userId      Int
-  rua         String
-  numero      String
-  bairro      String
-  cidade      String
-  complemento String?
-  cep         String
+  rua         String  @db.VarChar(255)
+  numero      String  @db.VarChar(20)
+  bairro      String  @db.VarChar(100)
+  cidade      String  @db.VarChar(100)
+  estado      String  @db.Char(2)
+  complemento String? @db.VarChar(255)
+  cep         String  @db.VarChar(9)
   user        User    @relation(fields: [userId], references: [id])
   orders      Order[]
+  
+  @@index([userId])
 }
 
 model Restaurant {

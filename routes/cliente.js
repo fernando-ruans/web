@@ -79,7 +79,7 @@ router.post('/orders', auth(['cliente']), async (req, res, next) => {
   next();
 }, clienteController.createOrder);
 
-router.post('/reviews', async (req, res, next) => {
+router.post('/reviews', auth(['cliente']), async (req, res, next) => {
   const { error } = reviewSchema.validate(req.body);
   if (error) return res.status(400).json({ error: error.details[0].message });
   next();

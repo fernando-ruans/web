@@ -18,7 +18,8 @@ const server = http.createServer(app);
 
 // Configuração do CORS com mais opções
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: true, // Permite todas as origens em desenvolvimento
+  credentials: true, // Importante para cookies/auth
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
