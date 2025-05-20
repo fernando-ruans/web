@@ -1,7 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useWebSocket } from '../context/WebSocketContext';
-import { useAuth } from '../context/AuthContext';
-import useSound from 'use-sound';
+
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import axios from 'axios';
@@ -42,12 +40,6 @@ const statusClasses: Record<Pedido['status'], string> = {
   'entregue': 'bg-gray-100 text-gray-800 transition-colors duration-200',
   'cancelado': 'bg-red-100 text-red-800 transition-colors duration-200',
 };
-
-interface OrderUpdateData {
-  type: string;
-  orderId: number;
-  order: Pedido;
-}
 
 const formatarData = (dataString: string) => {
   try {
@@ -200,16 +192,19 @@ function CardPedido({ pedido, onAtualizarStatus, loadingStatus }: CardPedidoProp
   );
 }
 
-const ResumoCards = ({ pedidos }: { pedidos: Pedido[] }) => {
+const ResumoCards = ({ pedidos = [] }: { pedidos: Pedido[] }) => {
   const contarPorStatus = (status: Pedido['status']) => 
-    pedidos.filter(p => p.status === status).length;
+    Array.isArray(pedidos) ? pedidos.filter(p => p.status === status).length : 0;
 
   const calcularFaturamentoHoje = () => {
+    if (!Array.isArray(pedidos)) return 0;
+    
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
     
     return pedidos
       .filter(p => {
+        if (!p?.createdAt) return false;
         const dataPedido = new Date(p.createdAt);
         dataPedido.setHours(0, 0, 0, 0);
         return dataPedido.getTime() === hoje.getTime() && p.status !== 'cancelado';
@@ -374,34 +369,73 @@ const Filtros = ({
   );
 };
 
-export function LojistaPedidosPage() {
+interface ApiResponse {
+  pedidos?: Pedido[];
+  data?: Pedido[];
+}
+
+export function LojistaPedidosPage() {  
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string>('');
-  const [atualizandoStatus, setAtualizandoStatus] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [filtro, setFiltro] = useState<PeriodoFiltro>('hoje');
   const [filtroStatus, setFiltroStatus] = useState<Pedido['status'] | 'todos'>('todos');
   const [filtroPeriodo, setFiltroPeriodo] = useState('hoje');
   const [termoBusca, setTermoBusca] = useState('');
-  const { socket, connected, sendMessage } = useWebSocket();
-  const { user } = useAuth();
-  const [play] = useSound('/sounds/orderSound.mp3', { volume: 0.5 });
   const [loadingStatus, setLoadingStatus] = useState<number | null>(null);
-  const [periodoFiltro, setPeriodoFiltro] = useState<PeriodoFiltro>('hoje');
-  const [textoFiltro, setTextoFiltro] = useState('');
 
   const buscarPedidos = useCallback(async () => {
     try {
-      const response = await axios.get<Pedido[]>('/api/pedidos', {
-        params: {
-          periodo: periodoFiltro,
-          filtro: textoFiltro
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('Token não encontrado');
+        throw new Error('Não autorizado');
+      }
+      console.log('Token encontrado, fazendo requisição...');
+
+      const response = await axios.get<ApiResponse | Pedido[]>('/api/lojista/orders', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
         }
       });
-      setPedidos(response.data);
-    } catch (error) {
-      console.error('Erro ao buscar pedidos:', error);
+
+      console.log('Resposta da API:', response.data);
+
+      // Verificando a estrutura da resposta e garantindo que pedidos seja um array
+      let pedidosData: Pedido[] = [];
+      if (Array.isArray(response.data)) {
+        pedidosData = response.data;
+      } else if (response.data?.pedidos) {
+        pedidosData = response.data.pedidos;
+      } else if (response.data?.data) {
+        pedidosData = response.data.data;
+      }
+
+      console.log('Pedidos processados:', pedidosData);
+      setPedidos(pedidosData);
+      setError('');
+    } catch (err) {
+      const error = err as any;
+      console.error('Erro detalhado ao buscar pedidos:', error);
+      console.error('Status:', error?.response?.status);
+      console.error('Dados do erro:', error?.response?.data);
+      setError('Erro ao carregar pedidos');
+      setPedidos([]);
+    } finally {
+      setLoading(false);
     }
-  }, [periodoFiltro, textoFiltro]);
+  }, []);
+
+  const atualizarStatusPedido = async (pedidoId: number, novoStatus: Pedido['status']) => {
+    try {
+      await axios.put(`/api/lojista/orders/${pedidoId}/status`, { status: novoStatus });
+      await buscarPedidos(); // Recarrega a lista de pedidos após a atualização
+    } catch (err) {
+      console.error('Erro ao atualizar status:', err);
+      alert('Erro ao atualizar o status do pedido. Por favor, tente novamente.');
+    }
+  };
 
   useEffect(() => {
     buscarPedidos();
@@ -413,43 +447,15 @@ export function LojistaPedidosPage() {
       return false;
     }
 
-    // Filtro por período
-    const dataPedido = new Date(pedido.createdAt);
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
-    const ontem = new Date(hoje);
-    ontem.setDate(ontem.getDate() - 1);
-    const inicioSemana = new Date(hoje);
-    inicioSemana.setDate(hoje.getDate() - hoje.getDay());
-    const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-
-    if (filtroPeriodo === 'hoje') {
-      const pedidoDate = new Date(dataPedido);
-      pedidoDate.setHours(0, 0, 0, 0);
-      if (pedidoDate.getTime() !== hoje.getTime()) return false;
-    } else if (filtroPeriodo === 'ontem') {
-      const pedidoDate = new Date(dataPedido);
-      pedidoDate.setHours(0, 0, 0, 0);
-      if (pedidoDate.getTime() !== ontem.getTime()) return false;
-    } else if (filtroPeriodo === 'semana') {
-      if (dataPedido < inicioSemana) return false;
-    } else if (filtroPeriodo === 'mes') {
-      if (dataPedido < inicioMes) return false;
-    }
-
     // Filtro por termo de busca
     if (termoBusca) {
       const termoLower = termoBusca.toLowerCase();
-      const pedidoTexto = `#${pedido.id} ${pedido.usuario.nome}`.toLowerCase();
+      const pedidoTexto = `#${pedido.id} ${pedido.usuario?.nome || ''}`.toLowerCase();
       if (!pedidoTexto.includes(termoLower)) return false;
     }
 
     return true;
   });
-
-  const atualizarStatusPedido = async (pedidoId: number, novoStatus: Pedido['status']) => {
-    await axios.patch(`/api/pedidos/${pedidoId}/status`, { status: novoStatus });
-  };
 
   const onAtualizarStatus = async (pedidoId: number, novoStatus: Pedido['status']) => {
     try {
@@ -462,34 +468,9 @@ export function LojistaPedidosPage() {
       setLoadingStatus(null);
     }
   };
-
   useEffect(() => {
-    const carregarPedidos = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) throw new Error('Não autorizado');
-
-        const response = await fetch('/api/lojista/orders/active', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (!response.ok) throw new Error('Erro ao carregar pedidos');
-
-        const data = await response.json();
-        setPedidos(data);
-      } catch (err) {
-        console.error('Erro ao carregar pedidos:', err);
-        setError('Erro ao carregar pedidos');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    carregarPedidos();
-  }, []);
+    buscarPedidos();
+  }, [buscarPedidos]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -553,7 +534,7 @@ export function LojistaPedidosPage() {
               <CardPedido 
                 key={pedido.id} 
                 pedido={pedido}
-                onAtualizarStatus={atualizarStatusPedido}
+                onAtualizarStatus={onAtualizarStatus}
                 loadingStatus={loadingStatus}
               />
             ))}
