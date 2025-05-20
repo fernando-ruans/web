@@ -195,26 +195,48 @@ function CardPedido({ pedido, onAtualizarStatus, loadingStatus }: CardPedidoProp
   const [showDetalhes, setShowDetalhes] = useState(false);
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-4 mb-4">
+    <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-200 p-6 mb-4">
       <div className="flex justify-between items-start">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900">Pedido #{pedido.id}</h3>
-          <p className="text-sm text-gray-500">{format(new Date(pedido.createdAt), "dd/MM/yyyy HH:mm", { locale: ptBR })}</p>
-          <p className="text-gray-600 mt-1">Cliente: {pedido.usuario.nome}</p>
-          <p className="text-gray-600">Status: {statusNomes[pedido.status]}</p>
-          <p className="text-gray-900 font-semibold">Total: {formatCurrency(calcularTotal(pedido.items, pedido.taxa_entrega))}</p>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-bold text-gray-900">Pedido #{pedido.id}</h3>
+            <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusClasses[pedido.status]}`}>
+              {statusNomes[pedido.status]}
+            </span>
+          </div>
+          
+          <div className="flex items-center gap-1 text-sm text-gray-500">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>{format(new Date(pedido.createdAt), "dd/MM/yyyy HH:mm", { locale: ptBR })}</span>
+          </div>
+
+          <div className="flex items-center gap-1 text-gray-600">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            <span>{pedido.usuario.nome}</span>
+          </div>
+
+          <p className="text-lg font-bold text-orange-500">
+            {formatCurrency(calcularTotal(pedido.items, pedido.taxa_entrega))}
+          </p>
         </div>
         
-        <div className="flex flex-col items-end gap-2">
+        <div className="flex flex-col items-end gap-3">
           <button
             onClick={() => setShowDetalhes(true)}
-            className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors duration-200"
+            className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 hover:shadow-md flex items-center gap-2"
           >
-            Ver Detalhes
+            <span>Ver Detalhes</span>
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
           </button>
           
           {loadingStatus === pedido.id ? (
-            <div className="flex items-center justify-center">
+            <div className="flex items-center justify-center p-2">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500"></div>
             </div>
           ) : (
