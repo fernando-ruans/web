@@ -209,25 +209,46 @@ module.exports = {  getProfile: async (req, res) => {
       const pedidos = await prisma.order.findMany({
         where: { restaurant: { userId: req.user.id } },
         include: {
-          user: true,
-          orderItems: { include: { product: true } },
-          address: true,
-          review: true
+          user: {
+            select: {
+              id: true,
+              nome: true,
+              email: true
+            }
+          },
+          orderItems: {
+            include: {
+              product: {
+                select: {
+                  id: true,
+                  nome: true,
+                  preco: true
+                }
+              }
+            }
+          }
         },
         orderBy: { data_criacao: 'desc' }
       });
 
-      // Cadastrar o usuário no seu canal WebSocket
-      const io = req.app.get('io');
-      const socketId = req.headers['x-socket-id'];
-      if (socketId) {
-        const socket = io.sockets.sockets.get(socketId);
-        if (socket) {
-          socket.join(`user:${req.user.id}`);
-        }
-      }
+      // Formatar os pedidos para corresponder à interface do frontend
+      const formattedOrders = pedidos.map(order => ({
+        id: order.id,
+        status: order.status.toLowerCase(),
+        createdAt: order.data_criacao,
+        usuario: {
+          id: order.user.id,
+          nome: order.user.nome,
+          email: order.user.email
+        },
+        items: order.orderItems.map(item => ({
+          id: item.id,
+          quantidade: item.quantidade,
+          produto: item.product
+        }))
+      }));
 
-      res.json({ data: pedidos });
+      res.json({ data: formattedOrders });
     } catch (err) {
       console.error('Erro ao listar pedidos:', err);
       res.status(500).json({ error: 'Erro ao listar pedidos' });
@@ -238,7 +259,7 @@ module.exports = {  getProfile: async (req, res) => {
       const { orderId } = req.params;
       const { status } = req.body;
 
-      if (!['Pendente', 'Confirmado', 'Em Preparo', 'Pronto', 'Entregue', 'Cancelado'].includes(status)) {
+      if (!['pendente', 'aceito', 'preparando', 'pronto', 'entregue', 'cancelado'].includes(status)) {
         return res.status(400).json({ error: 'Status inválido' });
       }
 

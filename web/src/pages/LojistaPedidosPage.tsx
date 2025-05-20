@@ -105,15 +105,6 @@ interface CardPedidoProps {
 }
 
 function CardPedido({ pedido, onAtualizarStatus, loadingStatus }: CardPedidoProps) {
-  const proximosStatus: Record<Pedido['status'], Pedido['status'][]> = {
-    'pendente': ['aceito', 'cancelado'],
-    'aceito': ['preparando'],
-    'preparando': ['pronto'],
-    'pronto': ['entregue'],
-    'entregue': [],
-    'cancelado': []
-  };
-
   const statusNomes: Record<Pedido['status'], string> = {
     'pendente': 'Pendente',
     'aceito': 'Aceito',
@@ -123,7 +114,6 @@ function CardPedido({ pedido, onAtualizarStatus, loadingStatus }: CardPedidoProp
     'cancelado': 'Cancelado'
   };
 
-  const proximosStatusDisponiveis = proximosStatus[pedido.status] || [];
   const isLoading = loadingStatus === pedido.id;
 
   return (
@@ -139,26 +129,6 @@ function CardPedido({ pedido, onAtualizarStatus, loadingStatus }: CardPedidoProp
             </div>
             <p className="text-xs text-gray-500 mt-0.5">{formatarData(pedido.createdAt)}</p>
           </div>
-
-          {proximosStatusDisponiveis.length > 0 && (
-            <select
-              className={`form-select text-sm border rounded-lg bg-gray-50 px-3 py-2 focus:ring-2 focus:ring-orange-500 focus:border-transparent cursor-pointer min-w-[140px] ${
-                isLoading ? 'opacity-50 cursor-wait' : ''
-              }`}
-              onChange={(e) => onAtualizarStatus(pedido.id, e.target.value as Pedido['status'])}
-              defaultValue=""
-              disabled={isLoading}
-            >
-              <option value="" disabled>
-                {isLoading ? 'Atualizando...' : 'Atualizar Status'}
-              </option>
-              {proximosStatusDisponiveis.map((status) => (
-                <option key={status} value={status}>
-                  {statusNomes[status]}
-                </option>
-              ))}
-            </select>
-          )}
         </div>
 
         <div className="flex items-center gap-1.5 mt-2 text-xs">
@@ -187,6 +157,21 @@ function CardPedido({ pedido, onAtualizarStatus, loadingStatus }: CardPedidoProp
             R$ {calcularTotal(pedido.items).toFixed(2)}
           </span>
         </div>
+
+        {!isLoading && (
+          <BotoesAcao 
+            pedido={pedido} 
+            onAtualizarStatus={async (id, status) => {
+              await onAtualizarStatus(id, status);
+            }} 
+          />
+        )}
+        
+        {isLoading && (
+          <div className="flex justify-center mt-2">
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-orange-500"></div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -392,15 +377,16 @@ export function LojistaPedidosPage() {
         console.error('Token não encontrado');
         throw new Error('Não autorizado');
       }
-      console.log('Token encontrado, fazendo requisição...');
-
+      console.log('Iniciando busca de pedidos...');
+      
       const response = await axios.get<ApiResponse | Pedido[]>('/api/lojista/orders', {
         headers: {
           'Authorization': `Bearer ${token}`,
         }
       });
 
-      console.log('Resposta da API:', response.data);
+      console.log('Resposta bruta da API:', response);
+      console.log('Dados da resposta:', response.data);
 
       // Verificando a estrutura da resposta e garantindo que pedidos seja um array
       let pedidosData: Pedido[] = [];
@@ -413,13 +399,16 @@ export function LojistaPedidosPage() {
       }
 
       console.log('Pedidos processados:', pedidosData);
+      console.log('Estrutura do primeiro pedido:', pedidosData[0]);
+      
       setPedidos(pedidosData);
-      setError('');
+      setError(null);
     } catch (err) {
       const error = err as any;
       console.error('Erro detalhado ao buscar pedidos:', error);
-      console.error('Status:', error?.response?.status);
+      console.error('Status da resposta:', error?.response?.status);
       console.error('Dados do erro:', error?.response?.data);
+      console.error('Stack trace:', error?.stack);
       setError('Erro ao carregar pedidos');
       setPedidos([]);
     } finally {
@@ -429,11 +418,25 @@ export function LojistaPedidosPage() {
 
   const atualizarStatusPedido = async (pedidoId: number, novoStatus: Pedido['status']) => {
     try {
-      await axios.put(`/api/lojista/orders/${pedidoId}/status`, { status: novoStatus });
+      console.log('Atualizando status do pedido:', pedidoId, 'para:', novoStatus);
+      const response = await axios.put(`/api/lojista/orders/${pedidoId}/status`, { 
+        status: novoStatus 
+      }, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log('Resposta da atualização de status:', response.data);
       await buscarPedidos(); // Recarrega a lista de pedidos após a atualização
     } catch (err) {
       console.error('Erro ao atualizar status:', err);
-      alert('Erro ao atualizar o status do pedido. Por favor, tente novamente.');
+      const error = err as any;
+      console.error('Status da resposta:', error?.response?.status);
+      console.error('Dados do erro:', error?.response?.data);
+      console.error('Stack trace:', error?.stack);
+      setError('Erro ao atualizar o status do pedido. Por favor, tente novamente.');
     }
   };
 
