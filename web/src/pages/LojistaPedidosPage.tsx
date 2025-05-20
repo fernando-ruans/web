@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
-
+import DetalhePedidoModal from '../components/DetalhePedidoModal';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import axios from 'axios';
+import { formatCurrency } from '../utils/format';
 
 type PeriodoFiltro = 'hoje' | 'ontem' | 'semana' | 'mes';
 
@@ -10,6 +11,7 @@ interface Usuario {
   id: number;
   nome: string;
   email: string;
+  telefone: string;
 }
 
 interface Produto {
@@ -32,6 +34,17 @@ interface ItemPedido {
   adicionais?: Adicional[];
 }
 
+interface Endereco {
+  id: number;
+  rua: string;
+  numero: string;
+  complemento?: string;
+  bairro: string;
+  cidade: string;
+  estado: string;
+  cep: string;
+}
+
 interface Pedido {
   id: number;
   status: 'pendente' | 'aceito' | 'preparando' | 'pronto' | 'entregue' | 'cancelado';
@@ -39,6 +52,8 @@ interface Pedido {
   usuario: Usuario;
   items: ItemPedido[];
   taxa_entrega: number;
+  observacao?: string;
+  endereco: Endereco;
 }
 
 const statusClasses: Record<Pedido['status'], string> = {
@@ -90,6 +105,50 @@ const calcularTotal = (items: ItemPedido[], taxa_entrega: number = 0) => {
   return subtotal + taxa_entrega;
 };
 
+const statusNomes: Record<Pedido['status'], string> = {
+  'pendente': 'Pendente',
+  'aceito': 'Aceito',
+  'preparando': 'Em Preparo',
+  'pronto': 'Pronto para Entrega',
+  'entregue': 'Entregue',
+  'cancelado': 'Cancelado'
+};
+
+interface DetalhePedidoModalProps {
+  pedido: Pedido;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const DetalhePedidoModalWrapper: React.FC<DetalhePedidoModalProps> = ({ pedido, isOpen, onClose }) => {
+  return (
+    <DetalhePedidoModal
+      open={isOpen}
+      onClose={onClose}
+      pedido={{
+        id: pedido.id,
+        status: pedido.status,
+        createdAt: pedido.createdAt,
+        usuario: {
+          nome: pedido.usuario?.nome || 'Nome não disponível',
+          telefone: pedido.usuario?.telefone || 'Telefone não disponível'
+        },
+        items: pedido.items?.map(item => ({
+          id: item.id,
+          quantidade: item.quantidade,
+          nome: item.produto?.nome || 'Produto não disponível',
+          preco: item.produto?.preco || 0,
+          adicionais: item.adicionais || []
+        })) || [],
+        taxa_entrega: pedido.taxa_entrega || 0,
+        observacao: pedido.observacao,
+        endereco: pedido.endereco || undefined
+      }}
+      statusNomes={statusNomes}
+    />
+  );
+};
+
 const BotoesAcao = ({ pedido, onAtualizarStatus }: { pedido: Pedido, onAtualizarStatus: (id: number, status: Pedido['status']) => Promise<void> }) => {
   const botoesPorStatus: Record<Pedido['status'], Array<{ status: Pedido['status'], texto: string, cor: string }>> = {
     'pendente': [
@@ -128,110 +187,50 @@ const BotoesAcao = ({ pedido, onAtualizarStatus }: { pedido: Pedido, onAtualizar
 
 interface CardPedidoProps {
   pedido: Pedido;
-  onAtualizarStatus: (pedidoId: number, novoStatus: Pedido['status']) => void;
+  onAtualizarStatus: (pedidoId: number, novoStatus: Pedido['status']) => Promise<void>;
   loadingStatus: number | null;
 }
 
 function CardPedido({ pedido, onAtualizarStatus, loadingStatus }: CardPedidoProps) {
-  const statusNomes: Record<Pedido['status'], string> = {
-    'pendente': 'Pendente',
-    'aceito': 'Aceito',
-    'preparando': 'Em Preparo',
-    'pronto': 'Pronto para Entrega',
-    'entregue': 'Entregue',
-    'cancelado': 'Cancelado'
-  };
-
-  const isLoading = loadingStatus === pedido.id;
+  const [showDetalhes, setShowDetalhes] = useState(false);
 
   return (
-    <div className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow duration-200">
-      <div className="p-3">
-        <div className="flex items-center gap-3">
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <span className="text-lg font-bold">#{pedido.id}</span>
-              <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusClasses[pedido.status]}`}>
-                {statusNomes[pedido.status]}
-              </span>
-            </div>
-            <p className="text-xs text-gray-500 mt-0.5">{formatarData(pedido.createdAt)}</p>
-          </div>
+    <div className="bg-white rounded-xl shadow-lg p-4 mb-4">
+      <div className="flex justify-between items-start">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900">Pedido #{pedido.id}</h3>
+          <p className="text-sm text-gray-500">{format(new Date(pedido.createdAt), "dd/MM/yyyy HH:mm", { locale: ptBR })}</p>
+          <p className="text-gray-600 mt-1">Cliente: {pedido.usuario.nome}</p>
+          <p className="text-gray-600">Status: {statusNomes[pedido.status]}</p>
+          <p className="text-gray-900 font-semibold">Total: {formatCurrency(calcularTotal(pedido.items, pedido.taxa_entrega))}</p>
         </div>
-
-        <div className="flex items-center gap-1.5 mt-2 text-xs">
-          <svg className="w-3.5 h-3.5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" />
-          </svg>
-          <span className="text-gray-600">{pedido.usuario?.nome || 'Cliente não identificado'}</span>
-        </div>
-
-        <div className="mt-2 space-y-1">
-          {pedido.items?.map((item, index) => (
-            <div key={index}>
-              <div className="flex justify-between text-xs">
-                <span className="text-gray-600">
-                  <span className="font-medium">{item.quantidade}x</span> {item.produto?.nome}
-                </span>
-                <span className="text-gray-700 font-medium">
-                  R$ {((item.produto?.preco || 0) * (item.quantidade || 0)).toFixed(2)}
-                </span>
-              </div>
-              {/* Adicionais do item */}
-              {item.adicionais && item.adicionais.length > 0 && (
-                <div className="ml-4 mt-1 space-y-1">
-                  {item.adicionais.map((adicional, addIndex) => (
-                    <div key={addIndex} className="flex justify-between text-xs text-gray-500">
-                      <span>
-                        <span className="font-medium">{adicional.quantidade}x</span> {adicional.nome}
-                      </span>
-                      <span>
-                        R$ {(adicional.preco * adicional.quantidade).toFixed(2)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-2 pt-2 border-t border-gray-100 space-y-1">
-          <div className="flex justify-between text-xs">
-            <span className="text-gray-500">Subtotal</span>
-            <span className="text-gray-700 font-medium">
-              R$ {calcularTotal(pedido.items, 0).toFixed(2)}
-            </span>
-          </div>
-          <div className="flex justify-between text-xs">
-            <span className="text-gray-500">Taxa de entrega</span>
-            <span className="text-gray-700 font-medium">
-              R$ {(pedido.taxa_entrega || 0).toFixed(2)}
-            </span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-xs text-gray-500">Total do pedido</span>
-            <span className="text-sm font-bold text-orange-600">
-              R$ {calcularTotal(pedido.items, pedido.taxa_entrega || 0).toFixed(2)}
-            </span>
-          </div>
-        </div>
-
-        {!isLoading && (
-          <BotoesAcao 
-            pedido={pedido} 
-            onAtualizarStatus={async (id, status) => {
-              await onAtualizarStatus(id, status);
-            }} 
-          />
-        )}
         
-        {isLoading && (
-          <div className="flex justify-center mt-2">
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-orange-500"></div>
-          </div>
-        )}
+        <div className="flex flex-col items-end gap-2">
+          <button
+            onClick={() => setShowDetalhes(true)}
+            className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors duration-200"
+          >
+            Ver Detalhes
+          </button>
+          
+          {loadingStatus === pedido.id ? (
+            <div className="flex items-center justify-center">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500"></div>
+            </div>
+          ) : (
+            <BotoesAcao
+              pedido={pedido}
+              onAtualizarStatus={onAtualizarStatus}
+            />
+          )}
+        </div>
       </div>
+
+      <DetalhePedidoModalWrapper
+        pedido={pedido}
+        isOpen={showDetalhes}
+        onClose={() => setShowDetalhes(false)}
+      />
     </div>
   );
 }
