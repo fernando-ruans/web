@@ -100,10 +100,19 @@ wss.on('connection', (ws, req) => {
                   address: true
                 }
               });
-              
+
+              // Log detalhado para debug
+              console.log('Pedidos encontrados para o lojista:', pedidos);
+
+              // Padronizar campo de data
+              const pedidosCorrigidos = pedidos.map(p => ({
+                ...p,
+                data_criacao: p.data_criacao || p.createdAt || '',
+              }));
+
               ws.send(JSON.stringify({
                 type: 'pedidos',
-                data: pedidos
+                data: pedidosCorrigidos
               }));
             }
           }

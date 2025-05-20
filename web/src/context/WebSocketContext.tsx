@@ -59,13 +59,13 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const websocket = new WebSocket(`${apiUrl}?token=${token}`);
 
       websocket.onopen = () => {
-        console.log('WebSocket conectado');
+        console.log('WebSocket conectado! Estado connected:', true);
         setConnected(true);
         websocket.send(JSON.stringify({ type: 'identify', data: { token } }));
       };
 
       websocket.onclose = () => {
-        console.log('WebSocket desconectado');
+        console.log('WebSocket desconectado! Estado connected:', false);
         setConnected(false);
         // Tentar reconectar após 5 segundos
         setTimeout(connect, 5000);
@@ -82,14 +82,20 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
           switch (message.type) {
             case 'pedidos':
-              setPedidos(message.data);
+              // Compatibilizar campos de data
+              const pedidosCorrigidos = (message.data || []).map((pedido: any) => ({
+                ...pedido,
+                data_criacao: pedido.data_criacao || pedido.createdAt || '',
+              }));
+              setPedidos(pedidosCorrigidos);
+              console.log('Pedidos processados:', pedidosCorrigidos);
               break;
             case 'order-update':
               if (message.data.type === 'status-update') {
                 setPedidos(prevPedidos => 
                   prevPedidos.map(pedido => 
                     pedido.id === message.data.orderId 
-                      ? { ...pedido, ...message.data.order }
+                      ? { ...pedido, ...message.data.order } 
                       : pedido
                   )
                 );
