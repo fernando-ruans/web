@@ -1,9 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useWebSocket } from '../context/WebSocketContext';
 import { useAuth } from '../context/AuthContext';
 import useSound from 'use-sound';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import axios from 'axios';
+
+type PeriodoFiltro = 'hoje' | 'ontem' | 'semana' | 'mes';
 
 interface Usuario {
   id: number;
@@ -32,12 +35,12 @@ interface Pedido {
 }
 
 const statusClasses: Record<Pedido['status'], string> = {
-  'pendente': 'bg-yellow-100 text-yellow-800',
-  'aceito': 'bg-blue-100 text-blue-800',
-  'preparando': 'bg-orange-100 text-orange-800',
-  'pronto': 'bg-green-100 text-green-800',
-  'entregue': 'bg-purple-100 text-purple-800',
-  'cancelado': 'bg-red-100 text-red-800'
+  'pendente': 'bg-yellow-100 text-yellow-800 transition-colors duration-200',
+  'aceito': 'bg-blue-100 text-blue-800 transition-colors duration-200',
+  'preparando': 'bg-purple-100 text-purple-800 transition-colors duration-200',
+  'pronto': 'bg-green-100 text-green-800 transition-colors duration-200',
+  'entregue': 'bg-gray-100 text-gray-800 transition-colors duration-200',
+  'cancelado': 'bg-red-100 text-red-800 transition-colors duration-200',
 };
 
 interface OrderUpdateData {
@@ -103,76 +106,99 @@ const BotoesAcao = ({ pedido, onAtualizarStatus }: { pedido: Pedido, onAtualizar
   );
 };
 
-const CardPedido = ({ pedido, onAtualizarStatus }: { pedido: Pedido, onAtualizarStatus: (id: number, status: Pedido['status']) => Promise<void> }) => {
+interface CardPedidoProps {
+  pedido: Pedido;
+  onAtualizarStatus: (pedidoId: number, novoStatus: Pedido['status']) => void;
+  loadingStatus: number | null;
+}
+
+function CardPedido({ pedido, onAtualizarStatus, loadingStatus }: CardPedidoProps) {
+  const proximosStatus: Record<Pedido['status'], Pedido['status'][]> = {
+    'pendente': ['aceito', 'cancelado'],
+    'aceito': ['preparando'],
+    'preparando': ['pronto'],
+    'pronto': ['entregue'],
+    'entregue': [],
+    'cancelado': []
+  };
+
+  const statusNomes: Record<Pedido['status'], string> = {
+    'pendente': 'Pendente',
+    'aceito': 'Aceito',
+    'preparando': 'Em Preparo',
+    'pronto': 'Pronto para Entrega',
+    'entregue': 'Entregue',
+    'cancelado': 'Cancelado'
+  };
+
+  const proximosStatusDisponiveis = proximosStatus[pedido.status] || [];
+  const isLoading = loadingStatus === pedido.id;
+
   return (
-    <div className="bg-white rounded-xl shadow-lg overflow-hidden transition-all duration-200 hover:shadow-xl">
-      <div className="p-6">
-        <div className="flex justify-between items-start mb-4">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <h3 className="text-xl font-bold">Pedido #{pedido.id}</h3>
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusClasses[pedido.status]}`}>
-                {pedido.status?.charAt(0).toUpperCase() + pedido.status?.slice(1)}
+    <div className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow duration-200">
+      <div className="p-3">
+        <div className="flex items-center gap-3">
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-bold">#{pedido.id}</span>
+              <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusClasses[pedido.status]}`}>
+                {statusNomes[pedido.status]}
               </span>
             </div>
-            <p className="text-gray-500">{formatarData(pedido.createdAt)}</p>
+            <p className="text-xs text-gray-500 mt-0.5">{formatarData(pedido.createdAt)}</p>
           </div>
+
+          {proximosStatusDisponiveis.length > 0 && (
+            <select
+              className={`form-select text-sm border rounded-lg bg-gray-50 px-3 py-2 focus:ring-2 focus:ring-orange-500 focus:border-transparent cursor-pointer min-w-[140px] ${
+                isLoading ? 'opacity-50 cursor-wait' : ''
+              }`}
+              onChange={(e) => onAtualizarStatus(pedido.id, e.target.value as Pedido['status'])}
+              defaultValue=""
+              disabled={isLoading}
+            >
+              <option value="" disabled>
+                {isLoading ? 'Atualizando...' : 'Atualizar Status'}
+              </option>
+              {proximosStatusDisponiveis.map((status) => (
+                <option key={status} value={status}>
+                  {statusNomes[status]}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
-        <div className="space-y-6">
-          <div className="bg-gray-50 rounded-lg p-4">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <svg className="w-5 h-5 text-orange-600" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" />
-                </svg>
-              </div>
-              <div>
-                <h4 className="text-sm font-medium text-gray-600">Cliente</h4>
-                <p className="text-gray-900 font-medium">{pedido.usuario?.nome || 'Cliente não identificado'}</p>
-              </div>
-            </div>
-          </div>
+        <div className="flex items-center gap-1.5 mt-2 text-xs">
+          <svg className="w-3.5 h-3.5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" />
+          </svg>
+          <span className="text-gray-600">{pedido.usuario?.nome || 'Cliente não identificado'}</span>
+        </div>
 
-          <div>
-            <h4 className="font-medium text-gray-700 mb-3">Itens do Pedido</h4>
-            <div className="bg-gray-50 rounded-lg divide-y divide-gray-200">
-              {pedido.items?.map((item, index) => (
-                <div key={index} className="flex justify-between items-center p-4">
-                  <div className="flex items-center gap-3">
-                    <span className="bg-orange-100 text-orange-600 px-2 py-1 rounded text-sm font-medium">
-                      {item.quantidade}x
-                    </span>
-                    <span className="text-gray-900">{item.produto?.nome}</span>
-                  </div>
-                  <span className="text-gray-700 font-medium">
-                    R$ {((item.produto?.preco || 0) * (item.quantidade || 0)).toFixed(2)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="bg-orange-50 rounded-lg p-4">
-            <div className="flex justify-between items-center">
-              <span className="text-gray-700 font-medium">Total</span>
-              <span className="text-2xl font-bold text-orange-600">
-                R$ {calcularTotal(pedido.items).toFixed(2)}
+        <div className="mt-2 space-y-1">
+          {pedido.items?.map((item, index) => (
+            <div key={index} className="flex justify-between text-xs">
+              <span className="text-gray-600">
+                <span className="font-medium">{item.quantidade}x</span> {item.produto?.nome}
+              </span>
+              <span className="text-gray-700 font-medium">
+                R$ {((item.produto?.preco || 0) * (item.quantidade || 0)).toFixed(2)}
               </span>
             </div>
-          </div>
+          ))}
+        </div>
 
-          <div className="flex gap-3 pt-2">
-            <BotoesAcao 
-              pedido={pedido} 
-              onAtualizarStatus={onAtualizarStatus} 
-            />
-          </div>
+        <div className="mt-2 pt-2 border-t border-gray-100 flex justify-between items-center">
+          <span className="text-xs text-gray-500">Total do pedido</span>
+          <span className="text-sm font-bold text-orange-600">
+            R$ {calcularTotal(pedido.items).toFixed(2)}
+          </span>
         </div>
       </div>
     </div>
   );
-};
+}
 
 const ResumoCards = ({ pedidos }: { pedidos: Pedido[] }) => {
   const contarPorStatus = (status: Pedido['status']) => 
@@ -319,7 +345,7 @@ const Filtros = ({
               xmlns="http://www.w3.org/2000/svg"
             >
               <path
-                d="M19 19L14.65 14.65M17 9C17 13.4183 13.4183 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z"
+                d="M19 19L14.65 14.65M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z"
                 stroke="currentColor"
                 strokeWidth="2"
                 strokeLinecap="round"
@@ -359,6 +385,27 @@ export function LojistaPedidosPage() {
   const { socket, connected, sendMessage } = useWebSocket();
   const { user } = useAuth();
   const [play] = useSound('/sounds/orderSound.mp3', { volume: 0.5 });
+  const [loadingStatus, setLoadingStatus] = useState<number | null>(null);
+  const [periodoFiltro, setPeriodoFiltro] = useState<PeriodoFiltro>('hoje');
+  const [textoFiltro, setTextoFiltro] = useState('');
+
+  const buscarPedidos = useCallback(async () => {
+    try {
+      const response = await axios.get<Pedido[]>('/api/pedidos', {
+        params: {
+          periodo: periodoFiltro,
+          filtro: textoFiltro
+        }
+      });
+      setPedidos(response.data);
+    } catch (error) {
+      console.error('Erro ao buscar pedidos:', error);
+    }
+  }, [periodoFiltro, textoFiltro]);
+
+  useEffect(() => {
+    buscarPedidos();
+  }, [buscarPedidos]);
 
   const pedidosFiltrados = pedidos.filter(pedido => {
     // Filtro por status
@@ -401,39 +448,18 @@ export function LojistaPedidosPage() {
   });
 
   const atualizarStatusPedido = async (pedidoId: number, novoStatus: Pedido['status']) => {
-    setAtualizandoStatus(pedidoId);
+    await axios.patch(`/api/pedidos/${pedidoId}/status`, { status: novoStatus });
+  };
+
+  const onAtualizarStatus = async (pedidoId: number, novoStatus: Pedido['status']) => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('Não autorizado');
-
-      const response = await fetch(`/api/lojista/orders/${pedidoId}/status`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ status: novoStatus })
-      });
-
-      if (!response.ok) throw new Error('Erro ao atualizar status');
-
-      // Atualiza o estado local
-      setPedidos(prev => prev.map(p => 
-        p.id === pedidoId ? { ...p, status: novoStatus } : p
-      ));
-
-      // Notifica via WebSocket
-      if (socket && connected) {
-        sendMessage('order-status-update', {
-          orderId: pedidoId,
-          status: novoStatus
-        });
-      }
-    } catch (err) {
-      console.error('Erro ao atualizar status:', err);
-      setError('Erro ao atualizar status do pedido');
+      setLoadingStatus(pedidoId);
+      await atualizarStatusPedido(pedidoId, novoStatus);
+      await buscarPedidos();
+    } catch (error) {
+      console.error('Erro ao atualizar status:', error);
     } finally {
-      setAtualizandoStatus(null);
+      setLoadingStatus(null);
     }
   };
 
@@ -528,6 +554,7 @@ export function LojistaPedidosPage() {
                 key={pedido.id} 
                 pedido={pedido}
                 onAtualizarStatus={atualizarStatusPedido}
+                loadingStatus={loadingStatus}
               />
             ))}
           </div>
