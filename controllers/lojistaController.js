@@ -216,6 +216,11 @@ module.exports = {  getProfile: async (req, res) => {
               email: true
             }
           },
+          restaurant: {
+            select: {
+              taxa_entrega: true
+            }
+          },
           orderItems: {
             include: {
               product: {
@@ -223,6 +228,11 @@ module.exports = {  getProfile: async (req, res) => {
                   id: true,
                   nome: true,
                   preco: true
+                }
+              },
+              adicionais: {
+                include: {
+                  adicional: true
                 }
               }
             }
@@ -236,6 +246,7 @@ module.exports = {  getProfile: async (req, res) => {
         id: order.id,
         status: order.status.toLowerCase(),
         createdAt: order.data_criacao,
+        taxa_entrega: order.restaurant?.taxa_entrega || 0,
         usuario: {
           id: order.user.id,
           nome: order.user.nome,
@@ -244,7 +255,13 @@ module.exports = {  getProfile: async (req, res) => {
         items: order.orderItems.map(item => ({
           id: item.id,
           quantidade: item.quantidade,
-          produto: item.product
+          produto: item.product,
+          adicionais: item.adicionais.map(a => ({
+            id: a.adicional.id,
+            nome: a.adicional.nome,
+            preco: a.adicional.preco,
+            quantidade: a.quantidade
+          }))
         }))
       }));
 

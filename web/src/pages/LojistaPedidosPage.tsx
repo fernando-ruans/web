@@ -18,10 +18,18 @@ interface Produto {
   preco: number;
 }
 
+interface Adicional {
+  id: number;
+  nome: string;
+  preco: number;
+  quantidade: number;
+}
+
 interface ItemPedido {
   id: number;
   quantidade: number;
   produto: Produto;
+  adicionais?: Adicional[];
 }
 
 interface Pedido {
@@ -30,6 +38,7 @@ interface Pedido {
   createdAt: string;
   usuario: Usuario;
   items: ItemPedido[];
+  taxa_entrega: number;
 }
 
 const statusClasses: Record<Pedido['status'], string> = {
@@ -54,12 +63,31 @@ const formatarData = (dataString: string) => {
   }
 };
 
-const calcularTotal = (items: ItemPedido[]) => {
+const calcularTotal = (items: ItemPedido[], taxa_entrega: number = 0) => {
   if (!items || !Array.isArray(items)) return 0;
-  return items.reduce((acc, item) => {
-    if (!item?.produto?.preco || !item?.quantidade) return acc;
-    return acc + (item.produto.preco * item.quantidade);
+
+  // Calcula o subtotal dos produtos e seus adicionais
+  const subtotal = items.reduce((acc, item) => {
+    let itemTotal = 0;
+    
+    // Valor do produto
+    if (item?.produto?.preco && item?.quantidade) {
+      itemTotal += item.produto.preco * item.quantidade;
+    }
+
+    // Valor dos adicionais
+    if (item?.adicionais && Array.isArray(item.adicionais)) {
+      const adicionaisTotal = item.adicionais.reduce((addAcc, adicional) => {
+        return addAcc + (adicional.preco * adicional.quantidade);
+      }, 0);
+      itemTotal += adicionaisTotal;
+    }
+
+    return acc + itemTotal;
   }, 0);
+
+  // Retorna o subtotal + taxa de entrega
+  return subtotal + taxa_entrega;
 };
 
 const BotoesAcao = ({ pedido, onAtualizarStatus }: { pedido: Pedido, onAtualizarStatus: (id: number, status: Pedido['status']) => Promise<void> }) => {
@@ -140,22 +168,53 @@ function CardPedido({ pedido, onAtualizarStatus, loadingStatus }: CardPedidoProp
 
         <div className="mt-2 space-y-1">
           {pedido.items?.map((item, index) => (
-            <div key={index} className="flex justify-between text-xs">
-              <span className="text-gray-600">
-                <span className="font-medium">{item.quantidade}x</span> {item.produto?.nome}
-              </span>
-              <span className="text-gray-700 font-medium">
-                R$ {((item.produto?.preco || 0) * (item.quantidade || 0)).toFixed(2)}
-              </span>
+            <div key={index}>
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-600">
+                  <span className="font-medium">{item.quantidade}x</span> {item.produto?.nome}
+                </span>
+                <span className="text-gray-700 font-medium">
+                  R$ {((item.produto?.preco || 0) * (item.quantidade || 0)).toFixed(2)}
+                </span>
+              </div>
+              {/* Adicionais do item */}
+              {item.adicionais && item.adicionais.length > 0 && (
+                <div className="ml-4 mt-1 space-y-1">
+                  {item.adicionais.map((adicional, addIndex) => (
+                    <div key={addIndex} className="flex justify-between text-xs text-gray-500">
+                      <span>
+                        <span className="font-medium">{adicional.quantidade}x</span> {adicional.nome}
+                      </span>
+                      <span>
+                        R$ {(adicional.preco * adicional.quantidade).toFixed(2)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>
 
-        <div className="mt-2 pt-2 border-t border-gray-100 flex justify-between items-center">
-          <span className="text-xs text-gray-500">Total do pedido</span>
-          <span className="text-sm font-bold text-orange-600">
-            R$ {calcularTotal(pedido.items).toFixed(2)}
-          </span>
+        <div className="mt-2 pt-2 border-t border-gray-100 space-y-1">
+          <div className="flex justify-between text-xs">
+            <span className="text-gray-500">Subtotal</span>
+            <span className="text-gray-700 font-medium">
+              R$ {calcularTotal(pedido.items, 0).toFixed(2)}
+            </span>
+          </div>
+          <div className="flex justify-between text-xs">
+            <span className="text-gray-500">Taxa de entrega</span>
+            <span className="text-gray-700 font-medium">
+              R$ {(pedido.taxa_entrega || 0).toFixed(2)}
+            </span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-gray-500">Total do pedido</span>
+            <span className="text-sm font-bold text-orange-600">
+              R$ {calcularTotal(pedido.items, pedido.taxa_entrega || 0).toFixed(2)}
+            </span>
+          </div>
         </div>
 
         {!isLoading && (
@@ -194,7 +253,7 @@ const ResumoCards = ({ pedidos = [] }: { pedidos: Pedido[] }) => {
         dataPedido.setHours(0, 0, 0, 0);
         return dataPedido.getTime() === hoje.getTime() && p.status !== 'cancelado';
       })
-      .reduce((total, pedido) => total + calcularTotal(pedido.items), 0);
+      .reduce((total, pedido) => total + calcularTotal(pedido.items, pedido.taxa_entrega), 0);
   };
 
   const cards = [
@@ -397,6 +456,16 @@ export function LojistaPedidosPage() {
       } else if (response.data?.data) {
         pedidosData = response.data.data;
       }
+
+      // Garantir que todos os pedidos tenham os campos necessários
+      pedidosData = pedidosData.map(pedido => ({
+        ...pedido,
+        taxa_entrega: pedido.taxa_entrega || 0,
+        items: pedido.items?.map(item => ({
+          ...item,
+          adicionais: item.adicionais || []
+        })) || []
+      }));
 
       console.log('Pedidos processados:', pedidosData);
       console.log('Estrutura do primeiro pedido:', pedidosData[0]);
