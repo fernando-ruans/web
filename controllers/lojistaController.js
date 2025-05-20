@@ -1,6 +1,19 @@
 // Exemplo de controller do lojista
 const prisma = require('../prisma/prismaClient');
 
+// Função para formatar CEP padrão: 00000-000
+const formatarCEP = (cep) => {
+  if (!cep) return '';
+  
+  const cepStr = String(cep);
+  const cepNumeros = cepStr.replace(/\D/g, '');
+  
+  if (cepNumeros.length < 8) return '';
+  
+  const cepOito = cepNumeros.substring(0, 8);
+  return cepOito.replace(/(\d{5})(\d{3})/, '$1-$2');
+};
+
 // Função utilitária para emitir atualizações via WebSocket
 const emitOrderUpdate = (io, orderId, userId, type, data) => {
   // Emite para o canal do usuário específico
@@ -1127,6 +1140,160 @@ module.exports = {  getProfile: async (req, res) => {
     } catch (err) {
       console.error("[listAddresses] Erro ao listar endereços do lojista:", err);
       res.status(500).json({ error: "Erro ao listar endereços" });
+    }
+  },
+
+  createAddress: async (req, res) => {
+    try {
+      if (!req.user?.id) {
+        return res.status(401).json({ error: "Usuário não autenticado" });
+      }
+
+      const { rua, numero, bairro, cidade, estado, complemento, cep } = req.body;
+      
+      const requiredFields = ['rua', 'numero', 'bairro', 'cidade', 'estado', 'cep'];
+      const missingFields = requiredFields.filter(field => !req.body[field]?.trim());
+      
+      if (missingFields.length > 0) {
+        return res.status(400).json({ 
+          error: "Campos obrigatórios faltando",
+          fields: missingFields
+        });
+      }
+
+      // Limpa o CEP recebido
+      const cepNumeros = cep ? cep.replace(/\D/g, '') : '';
+      
+      // Valida se tem 8 dígitos
+      if (cepNumeros.length !== 8) {
+        return res.status(400).json({ error: "CEP inválido. Deve conter 8 dígitos numéricos." });
+      }
+      
+      // Formata o CEP
+      const cepFormatado = formatarCEP(cep);
+      if (!cepFormatado.match(/^\d{5}-\d{3}$/)) {
+        return res.status(400).json({ error: "Erro ao formatar CEP." });
+      }
+
+      const endereco = await prisma.address.create({
+        data: {
+          userId: req.user.id,
+          rua: rua.trim(),
+          numero: numero.trim(),
+          bairro: bairro.trim(),
+          cidade: cidade.trim(),
+          estado: estado.trim(),
+          complemento: complemento?.trim() || null,
+          cep: cepFormatado
+        }
+      });
+      
+      console.log('Novo endereço do lojista criado:', endereco);
+      res.status(201).json(endereco);
+    } catch (err) {
+      console.error("[createAddress] Erro ao cadastrar endereço do lojista:", err);
+      res.status(500).json({ error: "Erro ao cadastrar endereço" });
+    }
+  },
+
+  updateAddress: async (req, res) => {
+    try {
+      if (!req.user?.id) {
+        return res.status(401).json({ error: "Usuário não autenticado" });
+      }
+
+      const { id } = req.params;
+      const { rua, numero, bairro, cidade, estado, complemento, cep } = req.body;
+
+      // Verificar se o endereço existe e pertence ao usuário
+      const endereco = await prisma.address.findUnique({
+        where: { id: Number(id) }
+      });
+
+      if (!endereco) {
+        return res.status(404).json({ error: "Endereço não encontrado" });
+      }
+
+      if (endereco.userId !== req.user.id) {
+        return res.status(403).json({ error: "Sem permissão para editar este endereço" });
+      }
+
+      // Validações dos campos
+      const requiredFields = ['rua', 'numero', 'bairro', 'cidade', 'estado', 'cep'];
+      const missingFields = requiredFields.filter(field => !req.body[field]?.trim());
+      
+      if (missingFields.length > 0) {
+        return res.status(400).json({ 
+          error: "Campos obrigatórios faltando",
+          fields: missingFields
+        });
+      }
+
+      // Validação do CEP
+      const cepNumeros = cep ? cep.replace(/\D/g, '') : '';
+      if (cepNumeros.length !== 8) {
+        return res.status(400).json({ error: "CEP inválido. Deve conter 8 dígitos numéricos." });
+      }
+      
+      // Formata o CEP
+      const cepFormatado = formatarCEP(cep);
+      if (!cepFormatado.match(/^\d{5}-\d{3}$/)) {
+        return res.status(400).json({ error: "Erro ao formatar CEP." });
+      }
+
+      // Atualiza o endereço
+      const updatedAddress = await prisma.address.update({
+        where: { id: Number(id) },
+        data: {
+          rua: rua.trim(),
+          numero: numero.trim(),
+          bairro: bairro.trim(),
+          cidade: cidade.trim(),
+          estado: estado.trim(),
+          complemento: complemento?.trim() || null,
+          cep: cepFormatado
+        }
+      });
+      
+      console.log('Endereço do lojista atualizado:', updatedAddress);
+      res.json(updatedAddress);
+    } catch (err) {
+      console.error("[updateAddress] Erro ao atualizar endereço do lojista:", err);
+      res.status(500).json({ error: "Erro ao atualizar endereço" });
+    }
+  },
+
+  deleteAddress: async (req, res) => {
+    try {
+      if (!req.user?.id) {
+        return res.status(401).json({ error: "Usuário não autenticado" });
+      }
+
+      const { id } = req.params;
+
+      // Verificar se o endereço existe e pertence ao usuário
+      const endereco = await prisma.address.findUnique({
+        where: { id: Number(id) }
+      });
+
+      if (!endereco) {
+        return res.status(404).json({ error: "Endereço não encontrado" });
+      }
+
+      if (endereco.userId !== req.user.id) {
+        return res.status(403).json({ error: "Sem permissão para excluir este endereço" });
+      }
+
+      // Exclui o endereço
+      await prisma.address.delete({
+        where: { id: Number(id) }
+      });
+      
+      console.log(`Endereço do lojista id: ${id} excluído com sucesso`);
+      res.json({ msg: "Endereço excluído com sucesso" });
+    } catch (err) {
+      console.error("[deleteAddress] Erro ao excluir endereço do lojista:", err);
+      res.status(500).json({ error: "Erro ao excluir endereço" });
     }
   },
 };
