@@ -809,10 +809,10 @@ module.exports = {
             select: {
               id: true,
               nome: true,
-              logoUrl: true
+              imagem: true // usando imagem ao invés de logoUrl
             }
           },
-          items: {
+          orderItems: { // usando orderItems ao invés de items
             include: {
               product: true,
               adicionais: {
@@ -825,11 +825,31 @@ module.exports = {
           address: true
         },
         orderBy: {
-          createdAt: 'desc'
+          data_criacao: 'desc' // usando data_criacao ao invés de createdAt
         }
       });
 
-      res.json(orders);
+      // Formatar a resposta para garantir compatibilidade
+      const formattedOrders = orders.map(order => ({
+        id: order.id,
+        status: order.status,
+        total: order.total,
+        data_criacao: order.data_criacao,
+        restaurant: {
+          nome: order.restaurant?.nome,
+          imagem: order.restaurant?.imagem
+        },
+        items: order.orderItems.map(item => ({
+          quantidade: item.quantidade,
+          product: item.product,
+          adicionais: item.adicionais.map(a => ({
+            quantidade: a.quantidade,
+            adicional: a.adicional
+          }))
+        }))
+      }));
+
+      res.json({ data: formattedOrders });
     } catch (err) {
       console.error("[listOrders] Erro ao listar pedidos:", err);
       res.status(500).json({ 
