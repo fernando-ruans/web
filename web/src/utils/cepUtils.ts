@@ -1,11 +1,12 @@
 interface EnderecoViaCEP {
-  cep: string;
+  cep?: string;
   logradouro: string;
-  complemento: string;
+  complemento?: string;
   bairro: string;
   localidade: string;
   uf: string;
   erro?: boolean;
+  numero?: string;
 }
 
 export async function buscarCEP(cep: string): Promise<EnderecoViaCEP | null> {
@@ -34,6 +35,8 @@ export async function buscarCEP(cep: string): Promise<EnderecoViaCEP | null> {
 export function formatarEndereco(endereco: EnderecoViaCEP): string {
   const partes = [
     endereco.logradouro,
+    endereco.numero,
+    endereco.complemento,
     endereco.bairro,
     `${endereco.localidade} - ${endereco.uf}`,
     endereco.cep

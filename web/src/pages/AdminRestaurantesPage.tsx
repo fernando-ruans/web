@@ -8,7 +8,6 @@ import { buscarCEP, formatarEndereco } from '../utils/cepUtils';
 export default function AdminRestaurantesPage() {
   const [showForm, setShowForm] = useState(false);
   const [nome, setNome] = useState('');
-  const [cnpj, setCnpj] = useState('');
   const [cep, setCep] = useState('');
   const [telefone, setTelefone] = useState('');
   const [endereco, setEndereco] = useState('');
@@ -99,11 +98,11 @@ export default function AdminRestaurantesPage() {
     const res = await fetch('/api/admin/restaurants', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
-      body: JSON.stringify({ nome, cnpj, cep, telefone, endereco, taxa_entrega, tempo_entrega, banner, imagem })
+      body: JSON.stringify({ nome, cep, telefone, endereco, taxa_entrega, tempo_entrega, banner, imagem })
     });
     if (res.ok) {
       setMsg('Restaurante cadastrado com sucesso!');
-      setNome(''); setCnpj(''); setCep(''); setTelefone(''); setEndereco(''); setTaxaEntrega(''); setTempoEntrega(''); setBanner(''); setImagem('');
+      setNome(''); setCep(''); setTelefone(''); setEndereco(''); setTaxaEntrega(''); setTempoEntrega(''); setBanner(''); setImagem('');
       setShowForm(false);
       fetchRestaurantes();
     } else {
@@ -173,7 +172,6 @@ export default function AdminRestaurantesPage() {
   function openEditForm(restaurante: any) {
     setEditId(restaurante.id);
     setNome(restaurante.nome);
-    setCnpj(restaurante.cnpj);
     setCep(restaurante.cep || '');
     setTelefone(restaurante.telefone || '');
     setEndereco(restaurante.endereco || '');
@@ -195,11 +193,11 @@ export default function AdminRestaurantesPage() {
     const res = await fetch(`/api/admin/restaurants/${editId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
-      body: JSON.stringify({ nome, cnpj, cep, telefone, endereco, taxa_entrega, tempo_entrega, banner, imagem })
+      body: JSON.stringify({ nome, cep, telefone, endereco, taxa_entrega, tempo_entrega, banner, imagem })
     });
     if (res.ok) {
       setMsg('Restaurante atualizado com sucesso!');
-      setNome(''); setCnpj(''); setCep(''); setTelefone(''); setEndereco(''); setTaxaEntrega(''); setTempoEntrega(''); setBanner(''); setImagem('');
+      setNome(''); setCep(''); setTelefone(''); setEndereco(''); setTaxaEntrega(''); setTempoEntrega(''); setBanner(''); setImagem('');
       setEditId(null); setEditMode(false); setShowForm(false);
       fetchRestaurantes();
     } else {
@@ -268,7 +266,7 @@ export default function AdminRestaurantesPage() {
           <input
             type="text"
             className={theme.input + ' w-full'}
-            placeholder="Pesquisar por nome, cidade ou CNPJ..."
+            placeholder="Pesquisar por nome ou cidade..."
             value={filtro}
             onChange={e => setFiltro(e.target.value)}
           />
@@ -313,16 +311,15 @@ export default function AdminRestaurantesPage() {
                 {/* Conteúdo do card */}
                 <div className="flex flex-col items-center gap-1 pt-12 pb-4 px-4 w-full">
                   <div className="text-lg font-bold text-orange-700 flex items-center gap-2 mb-1 mt-2"><FaStore size={18} /> {r.nome}</div>
-                  <div className="text-gray-600 text-sm mb-1 flex items-center gap-1"><FaTimesCircle size={14} color="#fb923c" /> {r.cidade}</div>
-                  <span className="text-xs px-2 py-1 rounded-full font-bold mb-2" style={{ background: r.status === 'aprovado' ? '#dcfce7' : '#fef3c7', color: r.status === 'aprovado' ? '#22c55e' : '#f59e42' }}>
+                  <div className="text-gray-600 text-sm mb-1 flex items-center gap-1"><FaTimesCircle size={14} color="#fb923c" /> {r.cidade}</div>                  <span className="text-xs px-2 py-1 rounded-full font-bold mb-2" style={{ background: r.status === 'aprovado' ? '#dcfce7' : '#fef3c7', color: r.status === 'aprovado' ? '#22c55e' : '#f59e42' }}>
                     {r.status === 'aprovado' ? <FaCheckCircle size={12} color="#22c55e" /> : <FaTimesCircle size={12} color="#f59e42" />} {r.status}
                   </span>
                   <div className="flex flex-wrap gap-2 w-full justify-center text-xs text-gray-500 mb-2">
-                    <span>Entrega: R$ {Number(r.taxa_entrega).toFixed(2)}</span>
+                    <span>{r.endereco || r.cidade}</span>
+                    <span>|</span>
+                    <span>Taxa: R$ {r.taxa_entrega}</span>
                     <span>|</span>
                     <span>Tempo: {r.tempo_entrega} min</span>
-                    <span>|</span>
-                    <span>CNPJ: {r.cnpj}</span>
                   </div>
                   {/* Botões de ação */}
                   <div className="flex flex-col gap-2 w-full mt-2">

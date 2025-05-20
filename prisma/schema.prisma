@@ -14,7 +14,6 @@ model User {
   senha_hash  String
   tipo        String
   avatarUrl   String?
-  cpf         String?
   endereco    String?
   telefone    String?
   createdAt   DateTime     @default(now())
@@ -40,7 +39,6 @@ model Restaurant {
   id            Int        @id @default(autoincrement())
   userId        Int
   nome          String
-  cnpj          String
   taxa_entrega  Float
   tempo_entrega Int
   status        String

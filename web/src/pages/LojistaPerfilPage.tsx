@@ -9,7 +9,6 @@ import { buscarCEP, formatarEndereco } from '../utils/cepUtils';
 interface Restaurant {
   id: number;
   nome: string;
-  cnpj: string;
   cep: string;
   telefone: string;
   endereco: string;
@@ -55,14 +54,18 @@ export default function LojistaPerfilPage() {
 
     validateAccess();
   }, [user, navigate, loading]);
-
   const [editMode, setEditMode] = useState(false);
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [nome, setNome] = useState('');
-  const [cnpj, setCnpj] = useState('');
   const [cep, setCep] = useState('');
   const [telefone, setTelefone] = useState('');
   const [endereco, setEndereco] = useState('');
+  const [rua, setRua] = useState('');
+  const [numero, setNumero] = useState('');
+  const [complemento, setComplemento] = useState('');
+  const [bairro, setBairro] = useState('');
+  const [cidade, setCidade] = useState('');
+  const [estado, setEstado] = useState('');
   const [loadingCep, setLoadingCep] = useState(false);
   const [taxaEntrega, setTaxaEntrega] = useState('');
   const [tempoEntrega, setTempoEntrega] = useState('');
@@ -80,20 +83,21 @@ export default function LojistaPerfilPage() {
         setError('Token de autenticação não encontrado');
         return;
       }
-        const res = await fetch('/api/lojista/restaurants', {
+      
+      const res = await fetch('/api/lojista/restaurants', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         credentials: 'include'
       });
+      
       if (res.ok) {
         const data = await res.json();
         if (data && data.length > 0) {
           const rest = data[0]; // Pega o primeiro restaurante
           setRestaurant(rest);
           setNome(rest.nome);
-          setCnpj(rest.cnpj);
           setCep(rest.cep || '');
           setTelefone(rest.telefone || '');
           setEndereco(rest.endereco || '');
@@ -107,7 +111,6 @@ export default function LojistaPerfilPage() {
       setError('Erro ao carregar dados do restaurante');
     }
   };
-
   const handleCepBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
     const cepValue = e.target.value;
     if (cepValue.length === 8 || cepValue.length === 9) {
@@ -115,7 +118,18 @@ export default function LojistaPerfilPage() {
       try {
         const enderecoCep = await buscarCEP(cepValue);
         if (enderecoCep) {
-          setEndereco(formatarEndereco(enderecoCep));
+          setRua(enderecoCep.logradouro || '');
+          setBairro(enderecoCep.bairro || '');
+          setCidade(enderecoCep.localidade || '');
+          setEstado(enderecoCep.uf || '');
+          setEndereco(formatarEndereco({
+            logradouro: enderecoCep.logradouro,
+            bairro: enderecoCep.bairro,
+            localidade: enderecoCep.localidade,
+            uf: enderecoCep.uf,
+            numero: numero,
+            complemento: complemento
+          }));
         }
       } finally {
         setLoadingCep(false);
@@ -130,7 +144,6 @@ export default function LojistaPerfilPage() {
     try {
       const payload = {
         nome,
-        cnpj,
         cep,
         telefone,
         endereco,
@@ -168,17 +181,41 @@ export default function LojistaPerfilPage() {
     } catch (err) {
       setError('Erro ao atualizar dados do restaurante.');
     }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  };  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    try {      const res = await fetch(`/api/lojista/profile`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
-        body: JSON.stringify({ nome, telefone, endereco })
+    try {      
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Token de autenticação não encontrado');
+        return;
+      }
+        // Formata o endereço completo
+      const enderecoCompleto = formatarEndereco({
+        logradouro: rua,
+        numero,
+        complemento,
+        bairro,
+        localidade: cidade,
+        uf: estado,
+        cep
       });
-        if (res.ok) {
+
+      const res = await fetch(`/api/lojista/profile`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          nome,
+          telefone,
+          endereco: enderecoCompleto
+        })
+      });
+      
+      if (res.ok) {
         const data = await res.json();
         if (data.msg && data.user) {
           setMsg(data.msg);
@@ -295,20 +332,6 @@ export default function LojistaPerfilPage() {
                             placeholder="Nome do restaurante"
                             value={nome}
                             onChange={(e) => setNome(e.target.value)}
-                            required
-                          />
-                        </div>
-                      </div>
-
-                      <div className="bg-orange-50 p-4 rounded-xl flex items-start gap-3">
-                        <FaIdCard size={20} color="#f97316" />
-                        <div className="flex-1">
-                          <p className="text-sm text-gray-600">CNPJ</p>
-                          <input
-                            className="w-full bg-transparent text-lg font-semibold text-gray-900 focus:outline-none"
-                            placeholder="CNPJ"
-                            value={cnpj}
-                            onChange={(e) => setCnpj(e.target.value)}
                             required
                           />
                         </div>
@@ -456,14 +479,6 @@ export default function LojistaPerfilPage() {
                         <div>
                           <p className="text-sm text-gray-600">Nome do Restaurante</p>
                           <p className="text-lg font-semibold text-gray-900">{nome}</p>
-                        </div>
-                      </div>
-
-                      <div className="bg-orange-50 p-4 rounded-xl flex items-start gap-3">
-                        <FaIdCard size={20} color="#f97316" />
-                        <div>
-                          <p className="text-sm text-gray-600">CNPJ</p>
-                          <p className="text-lg font-semibold text-gray-900">{cnpj}</p>
                         </div>
                       </div>
 

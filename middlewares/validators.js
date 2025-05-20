@@ -14,10 +14,16 @@ exports.login = Joi.object({
 
 exports.restaurant = Joi.object({
   nome: Joi.string().required(),
-  cnpj: Joi.string().required(),
   cidade: Joi.string().required(),
   taxa_entrega: Joi.number().required(),
   tempo_entrega: Joi.number().required(),
   status: Joi.string().optional(),
   imagem: Joi.string().optional()
+});
+
+exports.lojistaProfile = Joi.object({
+  nome: Joi.string().min(2).max(100).optional(),
+  avatarUrl: Joi.string().optional(),
+  telefone: Joi.string().optional(),
+  endereco: Joi.string().optional()
 });

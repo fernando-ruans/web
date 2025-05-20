@@ -1,5 +1,5 @@
 // Exemplo de controller do cliente
-module.exports = {
+module.exports = {  
   getProfile: async (req, res) => {
     try {
       const prisma = require('../prisma/prismaClient');
@@ -11,7 +11,6 @@ module.exports = {
           email: true,
           tipo: true,
           telefone: true,
-          cpf: true,
           endereco: true,
           avatarUrl: true
         }
@@ -20,15 +19,14 @@ module.exports = {
     } catch (err) {
       res.status(500).json({ error: 'Erro ao buscar perfil' });
     }
-  },
-  updateProfile: async (req, res) => {
+  },  updateProfile: async (req, res) => {
     try {
       const prisma = require('../prisma/prismaClient');
       const { 
         nome, 
         avatarUrl, 
-        telefone, 
-        cpf, 
+        telefone,
+        endereco,
         rua, 
         numero, 
         complemento, 
@@ -38,28 +36,23 @@ module.exports = {
         cep 
       } = req.body;
 
-      // Formatar o endereço completo como string para o campo endereco do usuário
-      let endereco = null;
+      // Se recebeu campos individuais, formatar o endereço
+      let enderecoFormatado = endereco; // Usar o endereço já formatado se foi enviado
       if (rua && numero && bairro && cidade && estado) {
-        endereco = `${rua}, ${numero}`;
-        if (complemento) endereco += ` - ${complemento}`;
-        endereco += `, ${bairro}, ${cidade}/${estado}`;
-        if (cep) endereco += ` - CEP: ${cep}`;
-      }
-
-      // Atualizar o usuário
+        enderecoFormatado = `${rua}, ${numero}`;
+        if (complemento) enderecoFormatado += ` - ${complemento}`;
+        enderecoFormatado += `, ${bairro}, ${cidade}/${estado}`;
+        if (cep) enderecoFormatado += ` - CEP: ${cep}`;
+      }      // Atualizar o usuário
       await prisma.user.update({
         where: { id: req.user.id },
         data: {
           ...(nome && { nome }),
           ...(avatarUrl && { avatarUrl }),
           ...(telefone && { telefone }),
-          ...(cpf && { cpf }),
-          ...(endereco && { endereco })
+          ...(enderecoFormatado && { endereco: enderecoFormatado })
         }
-      });
-
-      // Se tiver informações de endereço, criar ou atualizar na tabela Address
+      });      // Se tiver informações de endereço, criar ou atualizar na tabela Address
       if (rua && numero && bairro && cidade && estado) {
         // Verificar se já existe um endereço principal
         const enderecoPrincipal = await prisma.address.findFirst({
@@ -67,7 +60,7 @@ module.exports = {
         });
 
         if (enderecoPrincipal) {
-          // Atualizar endereço existente
+          // Atualizar endereço existente com campos individuais
           await prisma.address.update({
             where: { id: enderecoPrincipal.id },
             data: {
@@ -79,23 +72,22 @@ module.exports = {
               cep
             }
           });
-        } else {
-          // Criar novo endereço
-          await prisma.address.create({
-            data: {
-              userId: req.user.id,
-              rua,
-              numero,
-              bairro,
-              cidade,
-              complemento,
-              cep
-            }
-          });
+        } else {          // Criar novo endereço apenas se tiver os campos individuais
+          if (rua && numero && bairro && cidade && estado) {
+            await prisma.address.create({
+              data: {
+                userId: req.user.id,
+                rua,
+                numero,
+                bairro,
+                cidade,
+                complemento,
+                cep
+              }
+            });
+          }
         }
-      }
-
-      // Retorne o perfil atualizado
+      }      // Retorne o perfil atualizado
       const user = await prisma.user.findUnique({
         where: { id: req.user.id },
         select: {
@@ -105,9 +97,7 @@ module.exports = {
           tipo: true,
           avatarUrl: true,
           telefone: true,
-          cpf: true,
-          endereco: true,
-          addresses: true
+          endereco: true
         }
       });
       res.json({ msg: 'Perfil atualizado!', user });
@@ -152,7 +142,8 @@ module.exports = {
 
       // Buscar restaurantes com paginação
       const skip = (Number(page) - 1) * Number(limit);
-      const take = Number(limit);      const [total, restaurants] = await prisma.$transaction([
+      const take = Number(limit);      
+      const [total, restaurants] = await prisma.$transaction([
         prisma.restaurant.count({ 
           where: {
             ...where,
@@ -187,7 +178,8 @@ module.exports = {
             }
           }
         })
-      ]);      // Calcular médias e informações adicionais
+      ]);      
+      // Calcular médias e informações adicionais
       const restaurantsWithStats = restaurants.map(restaurant => {
         // Obter todos os produtos de todas as categorias
         const allProducts = restaurant.categories.flatMap(cat => cat.products || []);
@@ -305,7 +297,8 @@ module.exports = {
         id: cat.id,
         nome: cat.nome,
         produtos: cat.products
-      }));      res.json({ 
+      }));      
+      res.json({ 
         data: cardapio, 
         restaurant: {
           id: restaurante.id,
@@ -325,7 +318,8 @@ module.exports = {
       console.error('Erro ao buscar cardápio:', err);
       res.status(500).json({ error: 'Erro ao buscar cardápio' });
     }
-  },  createOrder: async (req, res) => {
+  },  
+  createOrder: async (req, res) => {
     try {
       const prisma = require('../prisma/prismaClient');
       const { restaurantId, addressId, items, observacao } = req.body;
@@ -364,10 +358,12 @@ module.exports = {
             subtotal += adicionalDb.preco * adicional.quantidade;
           }
         }
-      }      // Criar pedido
+      }      
+      // Criar pedido
       const order = await prisma.order.create({
         data: {
-          userId: req.user.id,          restaurantId,
+          userId: req.user.id,          
+          restaurantId,
           addressId,
           status: 'Pendente',
           total: subtotal + taxa_entrega,

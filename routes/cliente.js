@@ -20,7 +20,6 @@ const updateProfileSchema = Joi.object({
   email: Joi.string().email().optional(),
   avatarUrl: Joi.string().optional(),
   telefone: Joi.string().optional(),
-  cpf: Joi.string().optional(),
   rua: Joi.string().optional(),
   numero: Joi.string().optional(),
   complemento: Joi.string().optional(),
@@ -29,6 +28,7 @@ const updateProfileSchema = Joi.object({
   estado: Joi.string().optional(),
   cep: Joi.string().optional(),
   senha: Joi.string().min(6).optional(),
+  endereco: Joi.string().optional(),
 });
 
 router.put('/profile', auth(['cliente']), async (req, res, next) => {

@@ -23,8 +23,14 @@ const upload = multer({ storage });
 
 router.use(auth(['lojista']));
 
+const validators = require('../middlewares/validators');
+
 router.get('/profile', lojistaController.getProfile);
-router.put('/profile', lojistaController.updateProfile);
+router.put('/profile', async (req, res, next) => {
+  const { error } = validators.lojistaProfile.validate(req.body);
+  if (error) return res.status(400).json({ error: error.details[0].message });
+  next();
+}, lojistaController.updateProfile);
 router.post('/restaurants', lojistaController.createRestaurant);
 router.get('/restaurants', lojistaController.listRestaurants);
 router.put('/restaurants/:id', lojistaController.updateRestaurant);

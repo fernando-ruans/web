@@ -39,7 +39,7 @@ module.exports = {
   },
   createRestaurant: async (req, res) => {
     try {
-      const { nome, cnpj, cep, telefone, endereco, taxa_entrega, tempo_entrega, imagem, banner } = req.body;
+      const { nome, cep, telefone, endereco, taxa_entrega, tempo_entrega, imagem, banner } = req.body;
       if (!nome || !endereco || !taxa_entrega || !tempo_entrega) {
         return res.status(400).json({ error: 'Dados obrigatórios faltando' });
       }
@@ -47,7 +47,6 @@ module.exports = {
         data: {
           userId: req.user.id,
           nome,
-          cnpj,
           cep,
           telefone,
           endereco,
@@ -84,13 +83,12 @@ module.exports = {
   updateRestaurant: async (req, res) => {
     try {
       const { id } = req.params;
-      const { nome, cnpj, cep, telefone, endereco, taxa_entrega, tempo_entrega, imagem, banner } = req.body;
+      const { nome, cep, telefone, endereco, taxa_entrega, tempo_entrega, imagem, banner } = req.body;
       
       const restaurante = await prisma.restaurant.update({
         where: { id: Number(id) },
         data: {
           nome,
-          cnpj,
           cep,
           telefone,
           endereco,

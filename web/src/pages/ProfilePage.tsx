@@ -14,7 +14,6 @@ export default function ProfilePage() {
   const [error, setError] = useState('');
   const [avatarUrl, setAvatarUrl] = useState(user.avatarUrl || '');
   const [telefone, setTelefone] = useState(user.telefone || '');
-  const [cpf, setCpf] = useState(user.cpf || '');
   const [cep, setCep] = useState(user.cep || '');
   const [rua, setRua] = useState('');
   const [numero, setNumero] = useState('');
@@ -53,31 +52,28 @@ export default function ProfilePage() {
     e.preventDefault();
     setMsg('');
     setError('');
-    try {
-      let endpoint = '/api/cliente/profile';
-      if (user.tipo === 'lojista') endpoint = '/api/lojista/profile';
-      if (user.tipo === 'admin') endpoint = '/api/admin/profile';
-      
-      const enderecoCompleto = {
-        rua,
-        numero,
-        complemento,
-        bairro,
-        cidade,
-        estado,
-        cep
-      };
+    try {      let endpoint = `/api/${user.tipo}/profile`;
+        // Formata o endereço completo
+      let endereco = null;
+      if (rua && numero && bairro && cidade && estado) {
+        endereco = `${rua}, ${numero}`;
+        if (complemento) endereco += ` - ${complemento}`;
+        endereco += `, ${bairro}, ${cidade}/${estado}`;
+        if (cep) endereco += ` - CEP: ${cep}`;
+      }
 
       const res = await fetch(endpoint, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
+        headers: { 
+          'Content-Type': 'application/json', 
+          Authorization: `Bearer ${localStorage.getItem('token')}` 
+        },
         body: JSON.stringify({ 
           nome, 
           email, 
           avatarUrl, 
-          telefone, 
-          cpf,
-          ...enderecoCompleto
+          telefone,
+          endereco
         })
       });
       
@@ -157,16 +153,6 @@ export default function ProfilePage() {
                   />
                 </div>
                 
-                <div>
-                  <label className="text-sm font-medium text-gray-600 mb-1 block">CPF</label>
-                  <input
-                    className={theme.input + ' w-full'}
-                    value={cpf}
-                    onChange={e => setCpf(e.target.value)}
-                    placeholder="CPF"
-                  />
-                </div>
-
                 <div className="md:col-span-2">
                   <label className="text-sm font-medium text-gray-600 mb-1 block">CEP</label>
                   <div className="relative">
@@ -282,16 +268,6 @@ export default function ProfilePage() {
                   </div>
                 )}
                 
-                {user.cpf && (
-                  <div className="text-gray-500 text-sm flex items-start gap-2 p-4 bg-gray-50 rounded-xl">
-                    <FaIdCard size={16} color="#f97316" />
-                    <div>
-                      <div className="font-semibold text-gray-600 mb-0.5">CPF</div>
-                      <div>{user.cpf}</div>
-                    </div>
-                  </div>
-                )}
-
                 {cep && (
                   <div className="text-gray-500 text-sm flex items-start gap-2 p-4 bg-gray-50 rounded-xl md:col-span-2">
                     <FaMapMarkerAlt size={16} color="#f97316" />

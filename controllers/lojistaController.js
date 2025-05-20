@@ -64,14 +64,13 @@ module.exports = {  getProfile: async (req, res) => {
   },
   updateProfile: async (req, res) => {
     try {
-      const { nome, avatarUrl, telefone, cpf, endereco } = req.body;
+      const { nome, avatarUrl, telefone, endereco } = req.body;
       
       // Prepara o objeto com os campos que foram enviados
       const data = {
         ...(nome && { nome }),
         ...(avatarUrl && { avatarUrl }),
         ...(telefone && { telefone }),
-        ...(cpf && { cpf }),
         ...(endereco && { endereco })
       };
 
@@ -104,7 +103,7 @@ module.exports = {  getProfile: async (req, res) => {
 
   createRestaurant: async (req, res) => {
     try {
-      const { nome, cnpj, cep, telefone, endereco, taxa_entrega, tempo_entrega, status, imagem, banner } = req.body;
+      const { nome, cep, telefone, endereco, taxa_entrega, tempo_entrega, status, imagem, banner } = req.body;
       if (!nome || !endereco || !taxa_entrega || !tempo_entrega) {
         return res.status(400).json({ error: 'Dados obrigatórios faltando' });
       }
@@ -112,7 +111,6 @@ module.exports = {  getProfile: async (req, res) => {
         data: {
           userId: req.user.id,
           nome,
-          cnpj,
           cep,
           telefone,
           endereco,
@@ -143,7 +141,7 @@ module.exports = {  getProfile: async (req, res) => {
   updateRestaurant: async (req, res) => {
     try {
       const { id } = req.params;
-      const { nome, cnpj, cep, telefone, endereco, taxa_entrega, tempo_entrega, imagem, banner } = req.body;
+      const { nome, cep, telefone, endereco, taxa_entrega, tempo_entrega, imagem, banner } = req.body;
       
       // Valida e converte os campos numéricos
       const taxaEntregaNum = taxa_entrega ? Number(taxa_entrega) : undefined;
@@ -152,7 +150,6 @@ module.exports = {  getProfile: async (req, res) => {
       // Prepara o objeto de dados com campos opcionais
       const data = {
         ...(nome && { nome }),
-        ...(cnpj && { cnpj }),
         ...(cep && { cep }),
         ...(telefone && { telefone }),
         ...(endereco && { endereco }),
