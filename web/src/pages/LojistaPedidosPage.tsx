@@ -458,7 +458,43 @@ export function LojistaPedidosPage() {
       if (!pedidoTexto.includes(termoLower)) return false;
     }
 
-    return true;
+    // Filtro por período
+    const dataPedido = new Date(pedido.createdAt);
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    
+    switch (filtroPeriodo) {
+      case 'hoje':
+        const inicioDia = new Date();
+        inicioDia.setHours(0, 0, 0, 0);
+        const fimDia = new Date();
+        fimDia.setHours(23, 59, 59, 999);
+        return dataPedido >= inicioDia && dataPedido <= fimDia;
+      
+      case 'ontem':
+        const inicioOntem = new Date();
+        inicioOntem.setDate(hoje.getDate() - 1);
+        inicioOntem.setHours(0, 0, 0, 0);
+        const fimOntem = new Date();
+        fimOntem.setDate(hoje.getDate() - 1);
+        fimOntem.setHours(23, 59, 59, 999);
+        return dataPedido >= inicioOntem && dataPedido <= fimOntem;
+      
+      case 'semana':
+        const inicioSemana = new Date();
+        inicioSemana.setDate(hoje.getDate() - 7);
+        inicioSemana.setHours(0, 0, 0, 0);
+        return dataPedido >= inicioSemana;
+      
+      case 'mes':
+        const inicioMes = new Date();
+        inicioMes.setMonth(hoje.getMonth() - 1);
+        inicioMes.setHours(0, 0, 0, 0);
+        return dataPedido >= inicioMes;
+      
+      default:
+        return true;
+    }
   });
 
   const onAtualizarStatus = async (pedidoId: number, novoStatus: Pedido['status']) => {
