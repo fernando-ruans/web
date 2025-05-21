@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import theme from '../theme';
-import { FaSpinner, FaMapMarkerAlt, FaPhoneAlt, FaBuilding, FaHashtag, FaHome, FaBarcode } from 'react-icons/fa';
+import { FaSpinner, FaMapMarkerAlt, FaPhoneAlt, FaBuilding, FaHashtag, FaHome, FaBarcode, FaShoppingCart } from 'react-icons/fa';
 
 interface Address {
   id: number;
@@ -192,225 +192,235 @@ export default function CarrinhoPage() {
   const total = subtotal + taxaEntrega;
 
   return (
-    <div className="min-h-screen pb-24 sm:pb-32 max-w-2xl mx-auto p-4">
-      <h1 className="text-2xl font-bold text-orange-500 mb-6">Seu Carrinho</h1>
+    <div className={`${theme.bg} pb-24 sm:pb-32 min-h-screen flex flex-col items-center justify-start`}>  
+      <div className="w-full max-w-2xl mx-auto p-4">
+        <h1 className={`${theme.title} text-center mb-8`}>Seu Carrinho</h1>
 
-      {error && (
-        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
-          {error}
-        </div>
-      )}
+        {error && (
+          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-center">
+            {error}
+          </div>
+        )}
 
-      {items.length === 0 ? (
-        <div className="text-gray-500 text-center">Seu carrinho está vazio.</div>
-      ) : (
-        <>
-          <ul className="divide-y divide-orange-100 mb-6">
-            {items.map(item => (
-              <li key={item.id} className="py-4">
-                <div className="flex justify-between items-start">
-                  <div className="flex gap-4">
-                    {item.imagem && (
-                      <img
-                        src={item.imagem}
-                        alt={item.nome}
-                        className="w-20 h-20 object-cover rounded"
-                      />
-                    )}
-                    <div>
-                      <h3 className="font-bold text-lg">{item.nome}</h3>
-                      <div className="text-orange-600">
-                        Quantidade: {item.quantidade} × R$ {item.preco.toFixed(2)}
+        {items.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-24">
+            <div style={{ marginBottom: 24, opacity: 0.8 }}>
+              <FaShoppingCart size={96} color="#f97316" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-700 mb-2">Seu carrinho está vazio</h2>
+            <p className="text-gray-500 mb-6">Adicione produtos deliciosos e faça seu pedido!</p>
+            <button
+              className={`${theme.primary} px-6 py-3 rounded-lg font-bold text-lg shadow-md`}
+              onClick={() => navigate('/restaurantes')}
+            >Explorar Restaurantes</button>
+          </div>
+        ) : (
+          <>
+            <ul className="divide-y divide-orange-100 mb-8">
+              {items.map(item => (
+                <li key={item.id} className="py-4">
+                  <div className="flex flex-col sm:flex-row justify-between items-center sm:items-start gap-4 bg-white/90 rounded-xl shadow-lg p-4">
+                    <div className="flex gap-4 items-center w-full sm:w-auto">
+                      {item.imagem && (
+                        <img
+                          src={item.imagem}
+                          alt={item.nome}
+                          className="w-20 h-20 object-cover rounded-lg shadow"
+                        />
+                      )}
+                      <div>
+                        <h3 className="font-bold text-lg text-gray-900 mb-1">{item.nome}</h3>
+                        <div className="text-orange-600 font-semibold mb-1">
+                          Quantidade: {item.quantidade} × R$ {item.preco.toFixed(2)}
+                        </div>
+                        {item.adicionais && item.adicionais.length > 0 && (
+                          <div className="mt-1">
+                            <div className="text-xs font-semibold text-gray-600">Adicionais:</div>
+                            <ul className="text-xs text-gray-500">
+                              {item.adicionais.map((adicional, index) => (
+                                <li key={index}>
+                                  {adicional.nome} ({adicional.quantidade}x) - R$ {(adicional.preco * adicional.quantidade).toFixed(2)}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
                       </div>
-                      {item.adicionais && item.adicionais.length > 0 && (
-                        <div className="mt-2">
-                          <div className="text-sm font-semibold text-gray-600">Adicionais:</div>
-                          <ul className="text-sm text-gray-500">
-                            {item.adicionais.map((adicional, index) => (
-                              <li key={index}>
-                                {adicional.nome} ({adicional.quantidade}x) - R$ {(adicional.preco * adicional.quantidade).toFixed(2)}
-                              </li>
-                            ))}
-                          </ul>
+                    </div>
+                    <div className="flex flex-col items-end gap-2 w-full sm:w-auto">
+                      <div className="font-bold text-green-600 text-lg">
+                        R$ {(
+                          item.preco * item.quantidade +
+                          (item.adicionais?.reduce((total, a) => total + (a.preco * a.quantidade), 0) || 0)
+                        ).toFixed(2)}
+                      </div>
+                      <button
+                        onClick={() => removeItem(item.id)}
+                        className="text-red-500 hover:text-white hover:bg-red-500 border border-red-200 px-3 py-1 rounded-lg font-semibold transition-colors"
+                      >Remover</button>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+
+            <div className="bg-white/90 rounded-xl shadow-lg p-6 mb-8">
+              <h2 className="text-lg font-bold text-gray-700 mb-4 flex items-center gap-2">
+                <FaMapMarkerAlt color="#f97316" /> Endereço de Entrega
+              </h2>
+              {addresses.length === 0 ? (
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-orange-100">
+                  <h3 className="font-bold text-lg text-orange-600 mb-6 flex items-center gap-2">                  <div className="text-orange-500">
+                      <FaMapMarkerAlt />
+                    </div>
+                    Cadastrar novo endereço
+                  </h3>
+                  <form onSubmit={handleNovoEndereco} className="space-y-4">
+                    <div className="relative">
+                      <div className="flex items-center mb-2">                        <div className="text-orange-400 mr-2">
+                            <FaBarcode />
+                          </div>
+                        <label className="text-sm font-semibold text-gray-600">CEP</label>
+                      </div>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={novoCep}
+                          onChange={(e) => setNovoCep(e.target.value.replace(/\D/g, ''))}
+                          onBlur={handleCepBlur}
+                          placeholder="00000-000"
+                          className="w-full pl-10 pr-4 py-2 border rounded-lg focus:border-orange-300 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
+                          maxLength={8}
+                          required
+                        />
+                        <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                          <span className="text-gray-400">#</span>
+                        </div>
+                      </div>
+                      {loadingCep && (
+                        <div className="flex items-center gap-2 text-sm text-orange-500 mt-1">                        <div className="animate-spin">
+                            <FaSpinner size={14} />
+                          </div>
+                          <span>Buscando endereço...</span>
                         </div>
                       )}
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-bold text-green-600 mb-2">
-                      R$ {(
-                        item.preco * item.quantidade + 
-                        (item.adicionais?.reduce((total, a) => total + (a.preco * a.quantidade), 0) || 0)
-                      ).toFixed(2)}
-                    </div>
-                    <button
-                      onClick={() => removeItem(item.id)}
-                      className="text-red-500 hover:text-red-600"
-                    >
-                      Remover
-                    </button>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
 
-          <div className="bg-gray-50 p-4 rounded-lg mb-6">
-            <h2 className="text-lg font-bold text-gray-700 mb-4">Endereço de Entrega</h2>
-              {addresses.length === 0 ? (              <div className="bg-white p-6 rounded-xl shadow-sm border border-orange-100">
-                <h3 className="font-bold text-lg text-orange-600 mb-6 flex items-center gap-2">                  <div className="text-orange-500">
-                    <FaMapMarkerAlt />
-                  </div>
-                  Cadastrar novo endereço
-                </h3>
-                <form onSubmit={handleNovoEndereco} className="space-y-4">
-                  <div className="relative">
-                    <div className="flex items-center mb-2">                        <div className="text-orange-400 mr-2">
-                          <FaBarcode />
-                        </div>
-                      <label className="text-sm font-semibold text-gray-600">CEP</label>
-                    </div>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={novoCep}
-                        onChange={(e) => setNovoCep(e.target.value.replace(/\D/g, ''))}
-                        onBlur={handleCepBlur}
-                        placeholder="00000-000"
-                        className="w-full pl-10 pr-4 py-2 border rounded-lg focus:border-orange-300 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
-                        maxLength={8}
-                        required
-                      />
-                      <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                        <span className="text-gray-400">#</span>
-                      </div>
-                    </div>
-                    {loadingCep && (
-                      <div className="flex items-center gap-2 text-sm text-orange-500 mt-1">                        <div className="animate-spin">
-                          <FaSpinner size={14} />
-                        </div>
-                        <span>Buscando endereço...</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <div className="flex items-center mb-2">                      <div className="text-orange-400 mr-2">
-                        <FaHome />
-                      </div>
-                      <label className="text-sm font-semibold text-gray-600">Logradouro</label>
-                    </div>
-                    <input
-                      type="text"
-                      value={novoEndereco.rua}
-                      onChange={(e) => setNovoEndereco({...novoEndereco, rua: e.target.value})}
-                      placeholder="Nome da rua"
-                      className="w-full px-4 py-2 border rounded-lg focus:border-orange-300 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
-                      required
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <div className="flex items-center mb-2">                        <div className="text-orange-400 mr-2">
-                          <FaHashtag />
-                        </div>
-                        <label className="text-sm font-semibold text-gray-600">Número</label>
-                      </div>
-                      <input
-                        type="text"
-                        value={novoEndereco.numero}
-                        onChange={(e) => setNovoEndereco({...novoEndereco, numero: e.target.value})}
-                        placeholder="123"
-                        className="w-full px-4 py-2 border rounded-lg focus:border-orange-300 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <div className="flex items-center mb-2">                        <div className="text-orange-400 mr-2">
+                      <div className="flex items-center mb-2">                      <div className="text-orange-400 mr-2">
                           <FaHome />
                         </div>
-                        <label className="text-sm font-semibold text-gray-600">Complemento</label>
+                        <label className="text-sm font-semibold text-gray-600">Logradouro</label>
                       </div>
                       <input
                         type="text"
-                        value={novoEndereco.complemento}
-                        onChange={(e) => setNovoEndereco({...novoEndereco, complemento: e.target.value})}
-                        placeholder="Apto 101"
-                        className="w-full px-4 py-2 border rounded-lg focus:border-orange-300 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <div className="flex items-center mb-2">                        <div className="text-orange-400 mr-2">
-                          <FaMapMarkerAlt />
-                        </div>
-                        <label className="text-sm font-semibold text-gray-600">Bairro</label>
-                      </div>
-                      <input
-                        type="text"
-                        value={novoEndereco.bairro}
-                        onChange={(e) => setNovoEndereco({...novoEndereco, bairro: e.target.value})}
-                        placeholder="Seu bairro"
+                        value={novoEndereco.rua}
+                        onChange={(e) => setNovoEndereco({...novoEndereco, rua: e.target.value})}
+                        placeholder="Nome da rua"
                         className="w-full px-4 py-2 border rounded-lg focus:border-orange-300 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
                         required
                       />
                     </div>
-                    <div>
-                      <div className="flex items-center mb-2">                        <div className="text-orange-400 mr-2">
-                          <FaBuilding />
-                        </div>
-                        <label className="text-sm font-semibold text-gray-600">Cidade</label>
-                      </div>
-                      <input
-                        type="text"
-                        value={novoEndereco.cidade}
-                        onChange={(e) => setNovoEndereco({...novoEndereco, cidade: e.target.value})}
-                        placeholder="Sua cidade"
-                        className="w-full px-4 py-2 border rounded-lg focus:border-orange-300 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
-                        required
-                      />
-                    </div>
-                  </div>
 
-                  <button 
-                    type="submit"
-                    className={`${theme.primary} w-full py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition-colors mt-6`}
-                    disabled={loadingNovoEndereco}
-                  >
-                    {loadingNovoEndereco ? (
-                      <>                        <div className="animate-spin">
-                          <FaSpinner />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <div className="flex items-center mb-2">                        <div className="text-orange-400 mr-2">
+                            <FaHashtag />
+                          </div>
+                          <label className="text-sm font-semibold text-gray-600">Número</label>
                         </div>
-                        <span>Salvando endereço...</span>
-                      </>
-                    ) : (
-                      <>                        <div>
-                          <FaMapMarkerAlt />
-                        </div>
-                        <span>Salvar endereço</span>
-                      </>
-                    )}
-                  </button>
-                </form>
-              </div>
-            ) : (              <div className="space-y-3">
-                {addresses.map(address => (
-                  <div 
-                    key={address.id}
-                    className={`p-4 rounded-lg border-2 transition-colors cursor-pointer ${
-                      selectedAddressId === address.id 
-                        ? 'border-orange-400 bg-orange-50' 
-                        : 'border-gray-200 hover:border-orange-200'
-                    }`}
-                    onClick={() => setSelectedAddressId(address.id)}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className={`mt-1 ${selectedAddressId === address.id ? 'text-orange-500' : 'text-gray-400'}`}>
-                        <FaMapMarkerAlt size={20} />
+                        <input
+                          type="text"
+                          value={novoEndereco.numero}
+                          onChange={(e) => setNovoEndereco({...novoEndereco, numero: e.target.value})}
+                          placeholder="123"
+                          className="w-full px-4 py-2 border rounded-lg focus:border-orange-300 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
+                          required
+                        />
                       </div>
+                      <div>
+                        <div className="flex items-center mb-2">                        <div className="text-orange-400 mr-2">
+                            <FaHome />
+                          </div>
+                          <label className="text-sm font-semibold text-gray-600">Complemento</label>
+                        </div>
+                        <input
+                          type="text"
+                          value={novoEndereco.complemento}
+                          onChange={(e) => setNovoEndereco({...novoEndereco, complemento: e.target.value})}
+                          placeholder="Apto 101"
+                          className="w-full px-4 py-2 border rounded-lg focus:border-orange-300 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <div className="flex items-center mb-2">                        <div className="text-orange-400 mr-2">
+                            <FaMapMarkerAlt />
+                          </div>
+                          <label className="text-sm font-semibold text-gray-600">Bairro</label>
+                        </div>
+                        <input
+                          type="text"
+                          value={novoEndereco.bairro}
+                          onChange={(e) => setNovoEndereco({...novoEndereco, bairro: e.target.value})}
+                          placeholder="Seu bairro"
+                          className="w-full px-4 py-2 border rounded-lg focus:border-orange-300 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <div className="flex items-center mb-2">                        <div className="text-orange-400 mr-2">
+                            <FaBuilding />
+                          </div>
+                          <label className="text-sm font-semibold text-gray-600">Cidade</label>
+                        </div>
+                        <input
+                          type="text"
+                          value={novoEndereco.cidade}
+                          onChange={(e) => setNovoEndereco({...novoEndereco, cidade: e.target.value})}
+                          placeholder="Sua cidade"
+                          className="w-full px-4 py-2 border rounded-lg focus:border-orange-300 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <button 
+                      type="submit"
+                      className={`${theme.primary} w-full py-3 rounded-lg font-bold flex items-center justify-center gap-2 transition-colors mt-6`}
+                      disabled={loadingNovoEndereco}
+                    >
+                      {loadingNovoEndereco ? (
+                        <>                        <div className="animate-spin">
+                            <FaSpinner />
+                          </div>
+                          <span>Salvando endereço...</span>
+                        </>
+                      ) : (
+                        <>                        <div>
+                            <FaMapMarkerAlt />
+                          </div>
+                          <span>Salvar endereço</span>
+                        </>
+                      )}
+                    </button>
+                  </form>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {addresses.map(address => (
+                    <div 
+                      key={address.id}
+                      className={`p-4 rounded-lg border-2 transition-colors cursor-pointer flex items-center gap-3 ${
+                        selectedAddressId === address.id 
+                          ? 'border-orange-400 bg-orange-50' 
+                          : 'border-gray-200 hover:border-orange-200'
+                      }`}
+                      onClick={() => setSelectedAddressId(address.id)}
+                    >
+                      <FaMapMarkerAlt size={20} color={selectedAddressId === address.id ? '#f97316' : '#9ca3af'} />
                       <div className="flex-1">
                         <p className="font-semibold text-gray-800">{address.rua}, {address.numero}</p>
                         {address.complemento && (
@@ -431,55 +441,55 @@ export default function CarrinhoPage() {
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="bg-gray-50 p-4 rounded-lg mb-6">
-            <h2 className="text-lg font-bold text-gray-700 mb-4">Observações</h2>
-            <textarea
-              value={observacao}
-              onChange={(e) => setObservacao(e.target.value)}
-              placeholder="Alguma observação para o restaurante?"
-              className="w-full p-2 border rounded focus:border-orange-300 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
-              rows={3}
-            />
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-gray-600">Subtotal:</span>
-              <span className="font-bold">R$ {subtotal.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-gray-600">Taxa de entrega:</span>
-              <span className="font-bold">R$ {taxaEntrega.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between items-center pt-2 border-t border-gray-100">
-              <span className="font-bold text-lg">Total:</span>
-              <span className="font-bold text-green-600 text-xl">R$ {total.toFixed(2)}</span>
-            </div>
-            
-            <button
-              className={`${theme.primary} w-full font-bold py-3 rounded mt-4 flex items-center justify-center gap-2 disabled:opacity-50`}
-              onClick={finalizarPedido}
-              disabled={loading || addresses.length === 0}
-            >                      {loading ? (
-                <>
-                  <div className="animate-spin">
-                    <FaSpinner size={18} />
-                  </div>
-                  Processando...
-                </>
-              ) : (
-                'Finalizar Pedido'
+                  ))}
+                </div>
               )}
-            </button>
-          </div>
-        </>
-      )}
+            </div>
+
+            <div className="bg-white/90 rounded-xl shadow-lg p-6 mb-8">
+              <h2 className="text-lg font-bold text-gray-700 mb-4">Observações</h2>
+              <textarea
+                value={observacao}
+                onChange={(e) => setObservacao(e.target.value)}
+                placeholder="Alguma observação para o restaurante?"
+                className="w-full p-3 border rounded-lg focus:border-orange-300 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
+                rows={3}
+              />
+            </div>
+
+            <div className="bg-gradient-to-r from-orange-100 via-yellow-50 to-orange-100 rounded-xl shadow-lg p-6 mb-8">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-gray-600">Subtotal:</span>
+                <span className="font-bold">R$ {subtotal.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-gray-600">Taxa de entrega:</span>
+                <span className="font-bold">R$ {taxaEntrega.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+                <span className="font-bold text-lg">Total:</span>
+                <span className="font-bold text-green-600 text-2xl">R$ {total.toFixed(2)}</span>
+              </div>
+              <button
+                className={`${theme.primary} w-full font-bold py-4 rounded-lg mt-6 flex items-center justify-center gap-2 text-lg shadow-md disabled:opacity-50`}
+                onClick={finalizarPedido}
+                disabled={loading || addresses.length === 0}
+              >
+                {loading ? (
+                  <>
+                    <div className="animate-spin">
+                      <FaSpinner size={20} />
+                    </div>
+                    Processando...
+                  </>
+                ) : (
+                  'Finalizar Pedido'
+                )}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
