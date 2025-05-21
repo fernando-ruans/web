@@ -296,9 +296,11 @@ function CardPedido({ pedido, onAtualizarStatus, loadingStatus }: CardPedidoProp
   );
 }
 
-const ResumoCards = ({ pedidos = [], filtroPeriodo }: { pedidos: Pedido[], filtroPeriodo: string }) => {
+const ResumoCards = ({ pedidos = [], filtroPeriodo, pedidosFiltrados }: { pedidos: Pedido[], filtroPeriodo: string, pedidosFiltrados?: Pedido[] }) => {
+  // Usa pedidosFiltrados se vier, senão usa todos
+  const pedidosParaContar = pedidosFiltrados && pedidosFiltrados.length > 0 ? pedidosFiltrados : pedidos;
   const contarPorStatus = (status: Pedido['status']) => 
-    Array.isArray(pedidos) ? pedidos.filter(p => p.status === status).length : 0;
+    Array.isArray(pedidosParaContar) ? pedidosParaContar.filter(p => (p.status || '').toLowerCase() === status.toLowerCase()).length : 0;
 
   const calcularFaturamentoPeriodo = (periodo: string) => {
     if (!Array.isArray(pedidos)) return 0;
@@ -536,6 +538,9 @@ export function LojistaPedidosPage() {
       // Garantir que todos os pedidos tenham os campos necessários
       pedidosData = pedidosData.map(pedido => ({
         ...pedido,
+        status: (['pendente','aceito','preparando','pronto','entregue','cancelado'].includes((pedido.status || '').toLowerCase())
+          ? (pedido.status || '').toLowerCase()
+          : 'pendente') as Pedido['status'],
         taxa_entrega: pedido.taxa_entrega || 0,
         items: pedido.items?.map(item => ({
           ...item,
@@ -667,7 +672,7 @@ export function LojistaPedidosPage() {
           </div>
         </div>
 
-        <ResumoCards pedidos={pedidos} filtroPeriodo={filtroPeriodo} />
+        <ResumoCards pedidos={pedidos} filtroPeriodo={filtroPeriodo} pedidosFiltrados={pedidosFiltrados} />
 
         <Filtros
           filtroStatus={filtroStatus}
