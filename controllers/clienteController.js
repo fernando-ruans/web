@@ -842,6 +842,17 @@ module.exports = {
         return res.status(401).json({ error: "Usuário não autenticado" });
       }
 
+      // Paginação
+      const pageSize = 15;
+      const page = parseInt(req.query.page) > 0 ? parseInt(req.query.page) : 1;
+      const skip = (page - 1) * pageSize;
+
+      // Total de pedidos para paginação
+      const totalPedidos = await prisma.order.count({
+        where: { userId: req.user.id }
+      });
+      const totalPages = Math.ceil(totalPedidos / pageSize);
+
       const orders = await prisma.order.findMany({
         where: { 
           userId: req.user.id 
@@ -868,7 +879,9 @@ module.exports = {
         },
         orderBy: {
           data_criacao: 'desc' // usando data_criacao ao invés de createdAt
-        }
+        },
+        skip,
+        take: pageSize
       });
 
       // Formatar a resposta para garantir compatibilidade
@@ -891,7 +904,15 @@ module.exports = {
         }))
       }));
 
-      res.json({ data: formattedOrders });
+      res.json({
+        data: formattedOrders,
+        pagination: {
+          total: totalPedidos,
+          page,
+          pageSize,
+          totalPages
+        }
+      });
     } catch (err) {
       console.error("[listOrders] Erro ao listar pedidos:", err);
       res.status(500).json({ 

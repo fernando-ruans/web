@@ -89,22 +89,27 @@ export default function PedidosPage() {
   const [nota, setNota] = useState(5);
   const [comentario, setComentario] = useState('');
   const [enviandoAvaliacao, setEnviandoAvaliacao] = useState(false);
+  // Paginação
+  const [pagina, setPagina] = useState(1);
+  const [totalPaginas, setTotalPaginas] = useState(1);
+  const [totalPedidos, setTotalPedidos] = useState(0);
+  const pageSize = 15;
 
   useEffect(() => {
-    buscarPedidos();
-
-    // Atualizar pedidos a cada 30 segundos
-    const interval = setInterval(buscarPedidos, 30000);
+    buscarPedidos(pagina);
+    const interval = setInterval(() => buscarPedidos(pagina), 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [pagina]);
 
-  const buscarPedidos = async () => {
+  const buscarPedidos = async (paginaAtual = 1) => {
     setLoading(true);
     try {
-      const res = await fetch('/api/cliente/orders', { credentials: 'include' });
+      const res = await fetch(`/api/cliente/orders?page=${paginaAtual}`, { credentials: 'include' });
       if (!res.ok) throw new Error();
       const data = await res.json();
       setPedidos(data.data || []);
+      setTotalPaginas(data.pagination?.totalPages || 1);
+      setTotalPedidos(data.pagination?.total || 0);
     } catch {
       setErro('Erro ao carregar pedidos');
     } finally {
@@ -182,7 +187,7 @@ export default function PedidosPage() {
       <div className="flex flex-col items-center justify-center min-h-screen pb-32">
         <div className="text-red-500 text-lg">{erro}</div>
         <button 
-          onClick={buscarPedidos}
+          onClick={() => { setPagina(1); buscarPedidos(1); }}
           className="mt-4 px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 transition"
         >
           Tentar novamente
@@ -427,6 +432,22 @@ export default function PedidosPage() {
             );
           })
         )}
+      </div>
+      {/* Paginação */}
+      <div className="flex justify-center items-center gap-4 mt-10">
+        <button
+          onClick={() => setPagina(p => Math.max(1, p - 1))}
+          disabled={pagina === 1}
+          className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-200 transition"
+        >Anterior</button>
+        <span className="text-sm text-gray-600">
+          Página {pagina} de {totalPaginas} &bull; {totalPedidos} pedidos
+        </span>
+        <button
+          onClick={() => setPagina(p => Math.min(totalPaginas, p + 1))}
+          disabled={pagina === totalPaginas}
+          className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-200 transition"
+        >Próxima</button>
       </div>
     </div>
   );
