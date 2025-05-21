@@ -21,41 +21,10 @@ interface Restaurant {
 
 export default function LojistaPerfilPage() {
   const { user, loading } = useAuth();
-  const navigate = useNavigate();  useEffect(() => {
-    const validateAccess = async () => {
-      // Não redirecionar enquanto estiver carregando
-      if (loading) return;
-
-      // Se não houver usuário, redirecionar para login
-      if (!user) {
-        navigate('/login');
-        return;
-      }
-
-      const storedType = localStorage.getItem('tipo');
-      
-      // Se o tipo salvo não corresponder ao tipo do usuário atual, fazer logout
-      if (storedType !== user.tipo) {
-        window.location.href = '/login';
-        return;
-      }
-
-      // Verificar o tipo de usuário após ter certeza que ele está carregado
-      if (user.tipo === 'admin') {
-        navigate('/admin/restaurantes');
-        return;
-      }
-      
-      if (user.tipo !== 'lojista') {
-        navigate('/');
-        return;
-      }
-    };
-
-    validateAccess();
-  }, [user, navigate, loading]);
+  const navigate = useNavigate();
   const [editMode, setEditMode] = useState(false);
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
+  const [loadingRestaurant, setLoadingRestaurant] = useState(true);
   const [nome, setNome] = useState('');
   const [cep, setCep] = useState('');
   const [telefone, setTelefone] = useState('');
@@ -74,43 +43,56 @@ export default function LojistaPerfilPage() {
   const [msg, setMsg] = useState('');
   const [error, setError] = useState('');
 
+  // Verificação de acesso e fetch inicial
   useEffect(() => {
-    fetchRestaurantData();
-  }, []);  const fetchRestaurantData = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        setError('Token de autenticação não encontrado');
-        return;
+    async function init() {
+      if (!loading) {
+        if (!user) {
+          navigate('/login');
+          return;
+        }
+        if (user.tipo !== 'lojista') {
+          navigate('/');
+          return;
+        }
+        await fetchRestaurantData();
       }
-      
+    }
+    init();
+  }, [user, navigate, loading]);
+
+  const fetchRestaurantData = async () => {
+    try {
+      setLoadingRestaurant(true);
       const res = await fetch('/api/lojista/restaurants', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
         credentials: 'include'
       });
       
-      if (res.ok) {
-        const data = await res.json();
-        if (data && data.length > 0) {
-          const rest = data[0]; // Pega o primeiro restaurante
-          setRestaurant(rest);
-          setNome(rest.nome);
-          setCep(rest.cep || '');
-          setTelefone(rest.telefone || '');
-          setEndereco(rest.endereco || '');
-          setTaxaEntrega(rest.taxa_entrega?.toString() || '');
-          setTempoEntrega(rest.tempo_entrega?.toString() || '');
-          setImagem(rest.imagem || '');
-          setBanner(rest.banner || '');
-        }
+      if (!res.ok) {
+        throw new Error('Erro ao carregar dados do restaurante');
+      }
+      
+      const data = await res.json();
+      if (data && data.length > 0) {
+        const rest = data[0];
+        setRestaurant(rest);
+        setNome(rest.nome);
+        setCep(rest.cep || '');
+        setTelefone(rest.telefone || '');
+        setEndereco(rest.endereco || '');
+        setTaxaEntrega(rest.taxa_entrega?.toString() || '');
+        setTempoEntrega(rest.tempo_entrega?.toString() || '');
+        setImagem(rest.imagem || '');
+        setBanner(rest.banner || '');
       }
     } catch (err) {
       setError('Erro ao carregar dados do restaurante');
+      console.error('Erro ao buscar restaurante:', err);
+    } finally {
+      setLoadingRestaurant(false);
     }
   };
+
   const handleCepBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
     const cepValue = e.target.value;
     if (cepValue.length === 8 || cepValue.length === 9) {

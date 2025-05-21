@@ -35,24 +35,20 @@ function PrivateRoute({ children, admin = false, lojista = false }: PrivateRoute
   if (!auth || typeof auth !== 'object') return null;
   const { user, loading } = auth as any;
   
-  if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-yellow-50 via-yellow-100 to-orange-100">
-      <div className="text-orange-500 text-lg">Carregando...</div>
-    </div>;
-  }
-  
-  if (!user) {
+  if (!loading && !user) {
     return <Navigate to="/login" replace />;
   }
-  
-  if (admin && user.tipo !== 'admin') {
-    return <Navigate to="/" replace />;
+
+  if (!loading) {
+    if (admin && user?.tipo !== 'admin') {
+      return <Navigate to="/" replace />;
+    }
+
+    if (lojista && user?.tipo !== 'lojista') {
+      return <Navigate to="/" replace />;
+    }
   }
 
-  if (lojista && user.tipo !== 'lojista') {
-    return <Navigate to="/" replace />;
-  }
-  
   return <>{children}</>;
 }
 

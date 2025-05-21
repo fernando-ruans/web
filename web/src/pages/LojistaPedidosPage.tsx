@@ -470,30 +470,28 @@ export function LojistaPedidosPage() {
   const buscarPedidos = useCallback(async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      if (!token) {
-        console.error('Token não encontrado');
-        throw new Error('Não autorizado');
-      }
-      console.log('Iniciando busca de pedidos...');
-      
-      const response = await axios.get<ApiResponse | Pedido[]>('/api/lojista/orders', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        }
+      const res = await fetch('/api/lojista/orders', {
+        credentials: 'include'
       });
 
-      console.log('Resposta bruta da API:', response);
-      console.log('Dados da resposta:', response.data);
+      if (!res.ok) {
+        if (res.status === 401) {
+          setError('Sessão expirada. Por favor, faça login novamente.');
+          return;
+        }
+        throw new Error('Erro ao carregar pedidos');
+      }
 
-      // Verificando a estrutura da resposta e garantindo que pedidos seja um array
+      const data = await res.json();
       let pedidosData: Pedido[] = [];
-      if (Array.isArray(response.data)) {
-        pedidosData = response.data;
-      } else if (response.data?.pedidos) {
-        pedidosData = response.data.pedidos;
-      } else if (response.data?.data) {
-        pedidosData = response.data.data;
+      
+      // Normalizar a estrutura da resposta
+      if (Array.isArray(data)) {
+        pedidosData = data;
+      } else if (data?.pedidos) {
+        pedidosData = data.pedidos;
+      } else if (data?.data) {
+        pedidosData = data.data;
       }
 
       // Garantir que todos os pedidos tenham os campos necessários
@@ -505,19 +503,12 @@ export function LojistaPedidosPage() {
           adicionais: item.adicionais || []
         })) || []
       }));
-
-      console.log('Pedidos processados:', pedidosData);
-      console.log('Estrutura do primeiro pedido:', pedidosData[0]);
       
       setPedidos(pedidosData);
       setError(null);
     } catch (err) {
-      const error = err as any;
-      console.error('Erro detalhado ao buscar pedidos:', error);
-      console.error('Status da resposta:', error?.response?.status);
-      console.error('Dados do erro:', error?.response?.data);
-      console.error('Stack trace:', error?.stack);
-      setError('Erro ao carregar pedidos');
+      console.error('Erro ao buscar pedidos:', err);
+      setError('Erro ao carregar pedidos. Por favor, tente novamente.');
       setPedidos([]);
     } finally {
       setLoading(false);
@@ -526,25 +517,25 @@ export function LojistaPedidosPage() {
 
   const atualizarStatusPedido = async (pedidoId: number, novoStatus: Pedido['status']) => {
     try {
-      console.log('Atualizando status do pedido:', pedidoId, 'para:', novoStatus);
-      const response = await axios.put(`/api/lojista/orders/status`, { 
-        orderId: pedidoId,
-        status: novoStatus 
-      }, {
+      const res = await fetch('/api/lojista/orders/status', {
+        method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json'
-        }
+        },
+        credentials: 'include',
+        body: JSON.stringify({ 
+          orderId: pedidoId,
+          status: novoStatus 
+        })
       });
-      
-      console.log('Resposta da atualização de status:', response.data);
-      await buscarPedidos(); // Recarrega a lista de pedidos após a atualização
+
+      if (!res.ok) {
+        throw new Error('Erro ao atualizar status');
+      }
+
+      await buscarPedidos();
     } catch (err) {
-      const error = err as any;
       console.error('Erro ao atualizar status:', err);
-      console.error('Status da resposta:', error?.response?.status);
-      console.error('Dados do erro:', error?.response?.data);
-      console.error('Stack trace:', error?.stack);
       setError('Erro ao atualizar o status do pedido. Por favor, tente novamente.');
     }
   };
