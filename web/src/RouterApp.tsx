@@ -5,6 +5,7 @@ import HomePage from './pages/HomePage';
 import { useAuth } from './context/AuthContext';
 import RestaurantesPage from './pages/RestaurantesPage';
 import PedidosPage from './pages/PedidosPage';
+import DetalhePedidoPage from './pages/DetalhePedidoPage';
 import AvaliacoesPage from './pages/AvaliacoesPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
@@ -67,6 +68,7 @@ export default function RouterApp() {
           <Route path="/restaurantes/:id" element={<RestauranteMenuPage />} />
           <Route path="/carrinho" element={<CarrinhoPage />} />
           <Route path="/pedidos" element={<PrivateRoute><PedidosPage /></PrivateRoute>} />
+          <Route path="/pedidos/:id" element={<PrivateRoute><DetalhePedidoPage /></PrivateRoute>} />
           <Route path="/avaliacoes" element={<PrivateRoute><AvaliacoesPage /></PrivateRoute>} />
           <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
           

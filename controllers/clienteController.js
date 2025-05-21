@@ -874,7 +874,7 @@ module.exports = {
       const formattedOrders = orders.map(order => ({
         id: order.id,
         status: order.status,
-        total: order.total,
+        total: Number(order.total),
         data_criacao: order.data_criacao,
         restaurant: {
           nome: order.restaurant?.nome,
@@ -917,8 +917,16 @@ module.exports = {
           id: Number(id)
         },
         include: {
-          restaurant: true,
-          items: {
+          restaurant: {
+            select: {
+              id: true,
+              nome: true,
+              imagem: true,
+              telefone: true,
+              endereco: true
+            }
+          },
+          orderItems: {
             include: {
               product: true,
               adicionais: {
@@ -940,7 +948,61 @@ module.exports = {
         return res.status(403).json({ error: "Sem permissão para acessar este pedido" });
       }
 
-      res.json(order);
+      // Verificar se o endereço existe
+      if (!order.address) {
+        return res.status(500).json({ error: "Endereço do pedido não encontrado" });
+      }
+
+      // Calcular o total do pedido
+      let subtotal = 0;
+      const items = order.orderItems.map(item => {
+        // Calcular o total dos adicionais
+        const adicionalTotal = item.adicionais.reduce((acc, adicional) => {
+          return acc + (adicional.quantidade * adicional.adicional.preco);
+        }, 0);
+
+        // Calcular o total do item
+        const itemTotal = (item.quantidade * item.product.preco) + adicionalTotal;
+        subtotal += itemTotal;
+
+        // Formatar o item
+        return {
+          id: item.id,
+          quantidade: item.quantidade,
+          nome: item.product.nome,
+          preco: item.product.preco,
+          adicionais: item.adicionais.map(a => ({
+            id: a.adicionalId,
+            quantidade: a.quantidade,
+            nome: a.adicional.nome,
+            preco: a.adicional.preco
+          }))
+        };
+      });
+
+      // Formatar a resposta mantendo a consistência
+      const formattedOrder = {
+        id: order.id,
+        status: order.status,
+        data_criacao: order.data_criacao,
+        total: Number(subtotal + (order.taxa_entrega || 0)),
+        items,
+        taxa_entrega: order.taxa_entrega || 0,
+        observacao: order.observacao,
+        restaurant: order.restaurant,
+        endereco: {
+          id: order.address.id,
+          rua: order.address.rua,
+          numero: order.address.numero,
+          bairro: order.address.bairro,
+          cidade: order.address.cidade,
+          estado: order.address.estado,
+          complemento: order.address.complemento,
+          cep: order.address.cep
+        }
+      };
+
+      res.json(formattedOrder);
     } catch (err) {
       console.error("[getOrder] Erro ao buscar pedido:", err);
       res.status(500).json({ 
