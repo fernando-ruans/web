@@ -758,38 +758,80 @@ module.exports = {
   getRestaurantMenu: async (req, res) => {
     try {
       const { id } = req.params;
+      const restaurantId = parseInt(id);
 
-      if (!id || isNaN(Number(id))) {
-        return res.status(400).json({ error: "ID do restaurante inválido" });
+      console.log('[getRestaurantMenu] Iniciando busca - ID:', restaurantId);
+
+      if (!restaurantId) {
+        return res.status(400).json({ error: 'ID do restaurante inválido' });
       }
 
-      const menu = await prisma.categoria.findMany({
-        where: {
-          restaurantId: Number(id),
-          produtos: {
-            some: {
-              ativo: true
-            }
-          }
-        },
-        include: {
-          produtos: {
-            where: { ativo: true },
-            include: {
-              adicionais: {
-                where: { ativo: true }
-              }
-            }
-          }
+      // Primeiro busca apenas o restaurante
+      const restaurant = await prisma.restaurant.findUnique({
+        where: { id: restaurantId }
+      });
+
+      console.log('[getRestaurantMenu] Restaurante encontrado:', restaurant);
+
+      if (!restaurant) {
+        return res.status(404).json({ error: 'Restaurante não encontrado' });
+      }
+
+      // Depois busca as categorias
+      const categories = await prisma.category.findMany({
+        where: { 
+          restaurantId: restaurantId 
         }
       });
 
-      res.json(menu);
-    } catch (err) {
-      console.error("[getRestaurantMenu] Erro ao buscar cardápio:", err);
+      console.log('[getRestaurantMenu] Categorias encontradas:', categories);
+
+      // Por fim, busca os produtos de cada categoria
+      const menuData = [];
+      for (const category of categories) {
+        const products = await prisma.product.findMany({
+          where: { 
+            categoryId: category.id,
+            ativo: true 
+          },
+          include: {
+            adicionais: true
+          }
+        });
+
+        console.log(`[getRestaurantMenu] Produtos da categoria ${category.nome}:`, products);
+
+        if (products.length > 0) {
+          menuData.push({
+            id: category.id,
+            nome: category.nome,
+            produtos: products
+          });
+        }
+      }
+
+      console.log('[getRestaurantMenu] Menu completo montado:', {
+        numCategorias: menuData.length,
+        categorias: menuData.map(c => ({
+          nome: c.nome,
+          numProdutos: c.produtos.length
+        }))
+      });
+
+      // Remove campos sensíveis do restaurante antes de enviar
+      const { userId, ...restaurantInfo } = restaurant;
+
+      res.json({
+        data: menuData,
+        restaurant: restaurantInfo
+      });
+    } catch (error) {
+      console.error('[getRestaurantMenu] Erro detalhado:', error);
+      console.error('[getRestaurantMenu] Stack trace:', error.stack);
       res.status(500).json({ 
-        error: "Erro ao buscar cardápio",
-        details: process.env.NODE_ENV === 'development' ? err.message : undefined
+        error: 'Erro ao buscar menu do restaurante',
+        message: error.message,
+        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
       });
     }
   },
