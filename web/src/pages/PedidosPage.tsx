@@ -204,51 +204,57 @@ export default function PedidosPage() {
 
   return (
     <div className="max-w-4xl mx-auto p-6 min-h-screen pb-24 sm:pb-32">
-      <h1 className={theme.title + ' mb-6 text-center'}>Meus Pedidos</h1>
+      {/* Título aprimorado */}
+      <div className="flex items-center justify-center gap-3 mb-8">
+        <FaUtensils color="#f97316" size={32} />
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 tracking-tight drop-shadow-sm">
+          Meus Pedidos
+        </h1>
+      </div>
 
-      {/* Filtros e Busca */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+      {/* Filtros e Busca aprimorados */}
+      <div className="flex flex-col sm:flex-row gap-4 mb-8">
         <div className="flex-1">
-          <div className="relative">
+          <div className="relative shadow-sm">
             <input
               type="text"
               placeholder="Buscar por restaurante ou número do pedido"
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white text-gray-900 placeholder-gray-400 text-base shadow-inner transition"
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
             />
-            <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-              <FaSearch color="#9ca3af" />
+            <div className="absolute left-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
+              <FaSearch color="#9ca3af" size={18} />
             </div>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 bg-white rounded-xl shadow-sm px-2 py-1 items-center">
           <button
             onClick={() => setFiltro('todos')}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            className={`px-4 py-2 rounded-lg font-semibold transition-colors text-base focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2 ${
               filtro === 'todos'
-                ? 'bg-orange-500 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'bg-orange-500 text-white shadow'
+                : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
             }`}
           >
             Todos
           </button>
           <button
             onClick={() => setFiltro('andamento')}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            className={`px-4 py-2 rounded-lg font-semibold transition-colors text-base focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2 ${
               filtro === 'andamento'
-                ? 'bg-orange-500 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'bg-orange-500 text-white shadow'
+                : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
             }`}
           >
             Em Andamento
           </button>
           <button
             onClick={() => setFiltro('entregues')}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            className={`px-4 py-2 rounded-lg font-semibold transition-colors text-base focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2 ${
               filtro === 'entregues'
-                ? 'bg-orange-500 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'bg-orange-500 text-white shadow'
+                : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
             }`}
           >
             Entregues
