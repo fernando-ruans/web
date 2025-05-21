@@ -534,6 +534,7 @@ module.exports = {
             observacao: observacao || null,
             status: 'PENDING',
             total: Number(total),
+            taxa_entrega: taxaEntrega, // <-- Adiciona a taxa de entrega no pedido
             orderItems: {
               create: items.map(item => ({
                 productId: item.productId,
@@ -985,9 +986,9 @@ module.exports = {
         id: order.id,
         status: order.status,
         data_criacao: order.data_criacao,
-        total: Number(subtotal + (order.taxa_entrega || 0)),
+        total: Number(order.total), // Usa o valor salvo no pedido
         items,
-        taxa_entrega: order.taxa_entrega || 0,
+        taxa_entrega: Number(order.taxa_entrega), // Usa o valor salvo no pedido
         observacao: order.observacao,
         restaurant: order.restaurant,
         endereco: {
