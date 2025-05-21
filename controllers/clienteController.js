@@ -511,6 +511,18 @@ module.exports = {
         return res.status(404).json({ error: "Endereço não encontrado" });
       }
 
+      // Calcular total do pedido (produtos + adicionais + taxa de entrega)
+      let subtotal = 0;
+      for (const item of items) {
+        let adicionaisTotal = 0;
+        if (item.adicionais && Array.isArray(item.adicionais)) {
+          adicionaisTotal = item.adicionais.reduce((acc, adicional) => acc + (adicional.preco * adicional.quantidade), 0);
+        }
+        subtotal += (item.preco_unitario * item.quantidade) + adicionaisTotal;
+      }
+      const taxaEntrega = restaurant.taxa_entrega || 0;
+      const total = subtotal + taxaEntrega;
+
       // Criar o pedido em uma transação
       const order = await prisma.$transaction(async (tx) => {
         // Criar o pedido
@@ -521,7 +533,8 @@ module.exports = {
             addressId,
             observacao: observacao || null,
             status: 'PENDING',
-            items: {
+            total: total,
+            orderItems: {
               create: items.map(item => ({
                 productId: item.productId,
                 quantidade: item.quantidade,
@@ -530,14 +543,14 @@ module.exports = {
                   create: item.adicionais.map(adicional => ({
                     adicionalId: adicional.adicionalId,
                     quantidade: adicional.quantidade,
-                    preco: adicional.preco
+                    preco_unitario: adicional.preco
                   }))
                 } : undefined
               }))
             }
           },
           include: {
-            items: {
+            orderItems: {
               include: {
                 product: true,
                 adicionais: {
