@@ -83,7 +83,7 @@ export default function PedidosPage() {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState('');
-  const [filtro, setFiltro] = useState<'todos' | 'andamento' | 'entregues'>('todos');
+  const [filtro, setFiltro] = useState<'todos' | 'andamento' | 'entregues' | 'cancelados'>('todos');
   const [busca, setBusca] = useState('');
   const [avaliando, setAvaliando] = useState<number | null>(null);
   const [nota, setNota] = useState(5);
@@ -138,11 +138,16 @@ export default function PedidosPage() {
     }
   };
 
+  // Filtro principal
   const pedidosFiltrados = pedidos.filter(p => {
-    if (filtro === 'andamento') return p.status !== 'Entregue' && p.status !== 'Cancelado';
-    if (filtro === 'entregues') return p.status === 'Entregue';
+    const statusNormalizado = normalizarStatus(p.status as string);
+    // Filtro por status
+    if (filtro === 'andamento') return !['Entregue', 'Cancelado'].includes(statusNormalizado);
+    if (filtro === 'entregues') return statusNormalizado === 'Entregue';
+    if (filtro === 'cancelados') return statusNormalizado === 'Cancelado';
     return true;
   }).filter(p => {
+    // Filtro por busca
     if (!busca) return true;
     const termo = busca.toLowerCase();
     return (
@@ -239,37 +244,39 @@ export default function PedidosPage() {
             </div>
           </div>
         </div>
-        <div className="flex gap-2 bg-white rounded-xl shadow-sm px-2 py-1 items-center">
+        <div className="flex flex-wrap gap-1 bg-white rounded-xl shadow-sm px-2 py-1 items-center">
           <button
             onClick={() => setFiltro('todos')}
-            className={`px-4 py-2 rounded-lg font-semibold transition-colors text-base focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2 ${
+            className={`px-3 py-1 rounded-lg font-semibold text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2 ${
               filtro === 'todos'
                 ? 'bg-orange-500 text-white shadow'
                 : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
             }`}
-          >
-            Todos
-          </button>
+          >Todos</button>
           <button
             onClick={() => setFiltro('andamento')}
-            className={`px-4 py-2 rounded-lg font-semibold transition-colors text-base focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2 ${
+            className={`px-3 py-1 rounded-lg font-semibold text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2 ${
               filtro === 'andamento'
                 ? 'bg-orange-500 text-white shadow'
                 : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
             }`}
-          >
-            Em Andamento
-          </button>
+          >Andamento</button>
           <button
             onClick={() => setFiltro('entregues')}
-            className={`px-4 py-2 rounded-lg font-semibold transition-colors text-base focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2 ${
+            className={`px-3 py-1 rounded-lg font-semibold text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2 ${
               filtro === 'entregues'
                 ? 'bg-orange-500 text-white shadow'
                 : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
             }`}
-          >
-            Entregues
-          </button>
+          >Entregues</button>
+          <button
+            onClick={() => setFiltro('cancelados')}
+            className={`px-3 py-1 rounded-lg font-semibold text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2 ${
+              filtro === 'cancelados'
+                ? 'bg-orange-500 text-white shadow'
+                : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+            }`}
+          >Cancelados</button>
         </div>
       </div>
 
