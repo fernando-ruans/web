@@ -193,6 +193,39 @@ interface CardPedidoProps {
 
 function CardPedido({ pedido, onAtualizarStatus, loadingStatus }: CardPedidoProps) {
   const [showDetalhes, setShowDetalhes] = useState(false);
+  const [novoStatus, setNovoStatus] = useState<Pedido['status']>(pedido.status);
+
+  // Define as opções de status possíveis a partir do status atual
+  const opcoesStatus: { value: Pedido['status']; label: string }[] = [
+    { value: 'pendente', label: 'Pendente' },
+    { value: 'aceito', label: 'Aceito' },
+    { value: 'preparando', label: 'Em Preparo' },
+    { value: 'pronto', label: 'Pronto para Entrega' },
+    { value: 'entregue', label: 'Entregue' },
+    { value: 'cancelado', label: 'Cancelado' },
+  ];
+
+  // Define quais transições são permitidas a partir do status atual
+  const statusPermitidos: Record<Pedido['status'], Pedido['status'][]> = {
+    pendente: ['pendente', 'aceito', 'cancelado'],
+    aceito: ['aceito', 'preparando', 'cancelado'],
+    preparando: ['preparando', 'pronto', 'cancelado'],
+    pronto: ['pronto', 'entregue', 'cancelado'],
+    entregue: ['entregue'],
+    cancelado: ['cancelado'],
+  };
+
+  const opcoesFiltradas = statusPermitidos[pedido.status]?.length
+    ? opcoesStatus.filter(opt => statusPermitidos[pedido.status].includes(opt.value))
+    : opcoesStatus;
+
+  const handleStatusChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const novo = e.target.value as Pedido['status'];
+    setNovoStatus(novo);
+    if (novo !== pedido.status) {
+      await onAtualizarStatus(pedido.id, novo);
+    }
+  };
 
   return (
     <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-200 p-6 mb-4">
@@ -240,10 +273,16 @@ function CardPedido({ pedido, onAtualizarStatus, loadingStatus }: CardPedidoProp
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500"></div>
             </div>
           ) : (
-            <BotoesAcao
-              pedido={pedido}
-              onAtualizarStatus={onAtualizarStatus}
-            />
+            <select
+              value={novoStatus}
+              onChange={handleStatusChange}
+              className="px-3 py-2 rounded-lg border border-gray-300 shadow-sm text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition"
+              disabled={pedido.status === 'entregue' || pedido.status === 'cancelado'}
+            >
+              {opcoesFiltradas.map(opt => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
           )}
         </div>
       </div>
