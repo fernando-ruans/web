@@ -684,70 +684,56 @@ module.exports = {
     try {
       const { id } = req.params;
 
+      console.log(`[getRestaurant] Parâmetro recebido id:`, id);
+
       if (!id || isNaN(Number(id))) {
+        console.warn(`[getRestaurant] ID inválido recebido:`, id);
         return res.status(400).json({ error: "ID do restaurante inválido" });
       }
 
       const restaurant = await prisma.restaurant.findUnique({
         where: { 
-          id: Number(id),
-          ativo: true
-        },
-        include: {
-          categorias: true,
-          produtos: {
-            where: { ativo: true },
-            include: {
-              adicionais: {
-                where: { ativo: true }
-              }
-            }
-          },
-          reviews: {
-            select: {
-              id: true,
-              nota: true,
-              comentario: true,
-              createdAt: true,
-              user: {
-                select: {
-                  id: true,
-                  nome: true,
-                  avatarUrl: true
-                }
-              }
-            },
-            orderBy: {
-              createdAt: 'desc'
-            },
-            take: 10
-          },
-          _count: {
-            select: {
-              reviews: true
-            }
-          }
+          id: Number(id)
         }
+        // Removido include de categorias, produtos, reviews, etc. para evitar erro
       });
 
+      console.log(`[getRestaurant] Resultado do findUnique:`, restaurant);
+
       if (!restaurant) {
+        console.warn(`[getRestaurant] Restaurante não encontrado para id:`, id);
         return res.status(404).json({ error: "Restaurante não encontrado" });
       }
 
-      // Calcular média das avaliações
-      const avgRating = restaurant.reviews.length > 0
-        ? restaurant.reviews.reduce((acc, review) => acc + review.nota, 0) / restaurant.reviews.length
-        : null;
+      // Log dos campos principais
+      console.log(`[getRestaurant] Campos principais extraídos:`, {
+        id: restaurant.id,
+        nome: restaurant.nome,
+        taxa_entrega: restaurant.taxa_entrega,
+        tempo_entrega: restaurant.tempo_entrega,
+        status: restaurant.status,
+        telefone: restaurant.telefone,
+        aberto: restaurant.aberto,
+        cep: restaurant.cep
+      });
 
-      const response = {
-        ...restaurant,
-        avaliacaoMedia: Number(avgRating?.toFixed(1)) || null,
-        totalAvaliacoes: restaurant._count.reviews
-      };
-
-      res.json(response);
+      // Retornar apenas os campos principais para o checkout
+      res.json({
+        id: restaurant.id,
+        nome: restaurant.nome,
+        taxa_entrega: restaurant.taxa_entrega,
+        tempo_entrega: restaurant.tempo_entrega,
+        status: restaurant.status,
+        telefone: restaurant.telefone,
+        aberto: restaurant.aberto,
+        cep: restaurant.cep
+      });
+      // ...não retorna categorias, produtos, reviews, etc...
     } catch (err) {
       console.error("[getRestaurant] Erro ao buscar restaurante:", err);
+      if (err instanceof Error) {
+        console.error("[getRestaurant] Stack trace:", err.stack);
+      }
       res.status(500).json({ 
         error: "Erro ao buscar restaurante",
         details: process.env.NODE_ENV === 'development' ? err.message : undefined
