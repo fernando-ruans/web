@@ -68,6 +68,17 @@ const STATUS_DESC = {
   'Cancelado': 'Pedido foi cancelado'
 };
 
+// Função utilitária para normalizar status para o padrão visual
+const normalizarStatus = (status: string): PedidoStatus => {
+  const s = (status || '').toLowerCase();
+  if (s === 'pendente' || s === 'pending') return 'Pendente';
+  if (s === 'em preparo' || s === 'preparando' || s === 'preparation' || s === 'preparado') return 'Em Preparo';
+  if (s === 'pronto' || s === 'ready' || s === 'pronto para entrega') return 'Pronto';
+  if (s === 'entregue' || s === 'delivered' || s === 'concluido' || s === 'concluído') return 'Entregue';
+  if (s === 'cancelado' || s === 'canceled' || s === 'cancelled') return 'Cancelado';
+  return 'Pendente'; // fallback seguro
+};
+
 export default function DetalhePedidoPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -179,6 +190,9 @@ export default function DetalhePedidoPage() {
     );
   }
 
+  // Normaliza o status para garantir consistência visual e lógica
+  const statusNormalizado = normalizarStatus(pedido.status as string);
+
   return (
     <div className="max-w-4xl mx-auto p-6 min-h-screen pb-24 sm:pb-32">
       <div className="flex items-center gap-4 mb-6">
@@ -197,12 +211,10 @@ export default function DetalhePedidoPage() {
         <div className="flex justify-between items-start border-b border-gray-100 pb-6">
           <div>
             <div className="flex items-center gap-2 mb-2">
-              {STATUS_ICONS[pedido.status]}
-              <span className={`px-4 py-2 rounded-full text-sm font-medium ${STATUS_COLORS[pedido.status]}`}>
-                {pedido.status}
-              </span>
+              {STATUS_ICONS[statusNormalizado]}
+              <span className={`px-4 py-2 rounded-full text-sm font-medium ${STATUS_COLORS[statusNormalizado]}`}>{statusNormalizado}</span>
             </div>
-            <p className="text-gray-600">{STATUS_DESC[pedido.status]}</p>
+            <p className="text-gray-600">{STATUS_DESC[statusNormalizado]}</p>
           </div>
           <div className="text-right">
             <div className="text-sm text-gray-500">Realizado em</div>
@@ -211,19 +223,39 @@ export default function DetalhePedidoPage() {
         </div>
 
         {/* Barra de Progresso */}
-        {pedido.status !== 'Cancelado' && (
+        {statusNormalizado !== 'Cancelado' && (
           <div className="space-y-2">
-            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div className="relative h-2 bg-gray-100 rounded-full overflow-hidden flex items-center">
               <div 
-                style={{ width: `${getStatusPercentage(pedido.status)}%` }}
-                className="h-full bg-orange-500 rounded-full transition-all duration-700 ease-in-out"
+                style={{ width: `${getStatusPercentage(statusNormalizado)}%` }}
+                className="absolute left-0 top-0 h-full bg-orange-500 rounded-full transition-all duration-700 ease-in-out"
               />
+              {/* Checkpoints */}
+              {['Pendente', 'Em Preparo', 'Pronto', 'Entregue'].map((etapa, idx, arr) => {
+                const statusIdx = arr.indexOf(statusNormalizado);
+                const isDone = idx < statusIdx;
+                const isCurrent = idx === statusIdx;
+                const left = `${(idx / (arr.length - 1)) * 100}%`;
+                return (
+                  <div
+                    key={etapa}
+                    className="absolute top-1/2 -translate-y-1/2"
+                    style={{ left }}
+                  >
+                    <div className={`w-5 h-5 flex items-center justify-center rounded-full border-2 transition-all duration-300
+                      ${isDone ? 'bg-orange-500 border-orange-500 text-white' : isCurrent ? 'bg-white border-orange-500 text-orange-500' : 'bg-white border-gray-300 text-gray-300'}`}
+                    >
+                      {isDone ? <FaCheckCircle size={16} /> : <span className="w-2 h-2 rounded-full block" style={{ background: isCurrent ? '#fb923c' : '#d1d5db' }} />}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            <div className="flex justify-between text-sm text-gray-500">
-              <span className={pedido.status === 'Pendente' ? 'font-medium text-orange-600' : ''}>Recebido</span>
-              <span className={pedido.status === 'Em Preparo' ? 'font-medium text-orange-600' : ''}>Preparando</span>
-              <span className={pedido.status === 'Pronto' ? 'font-medium text-orange-600' : ''}>Pronto</span>
-              <span className={pedido.status === 'Entregue' ? 'font-medium text-orange-600' : ''}>Entregue</span>
+            <div className="flex justify-between text-sm text-gray-500 mt-2">
+              <span className={statusNormalizado === 'Pendente' ? 'font-medium text-orange-600' : ''}>Recebido</span>
+              <span className={statusNormalizado === 'Em Preparo' ? 'font-medium text-orange-600' : ''}>Preparando</span>
+              <span className={statusNormalizado === 'Pronto' ? 'font-medium text-orange-600' : ''}>Pronto</span>
+              <span className={statusNormalizado === 'Entregue' ? 'font-medium text-orange-600' : ''}>Entregue</span>
             </div>
           </div>
         )}
