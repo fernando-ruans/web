@@ -38,7 +38,10 @@ export default function ForgotPasswordPage() {
         {error && <div className="text-red-400 mb-2 text-center">{error}</div>}
         <button type="submit" className={theme.primary + ' w-full font-bold py-2 rounded'}>Enviar</button>
         <div className="flex justify-between mt-4 text-sm">
-          <a href="/login" className="text-orange-500 hover:underline">Voltar ao login</a>
+          <a href="/login" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-orange-600 font-bold shadow hover:bg-orange-50 hover:text-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-300 transition-all border border-orange-100">
+            <span className="text-xl">←</span>
+            Voltar ao login
+          </a>
           <a href="/register" className="text-orange-500 hover:underline">Criar conta</a>
         </div>
       </form>

@@ -184,9 +184,10 @@ export default function DetalhePedidoPage() {
       <div className="flex items-center gap-4 mb-6">
         <button
           onClick={() => navigate('/pedidos')}
-          className="text-orange-500 hover:text-orange-600 transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-orange-600 font-bold shadow hover:bg-orange-50 hover:text-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-300 transition-all border border-orange-100"
         >
-          ← Voltar para Meus Pedidos
+          <span className="text-xl">←</span>
+          Voltar para Meus Pedidos
         </button>
         <h1 className={theme.title}>Pedido #{pedido.id}</h1>
       </div>
