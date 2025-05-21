@@ -533,7 +533,7 @@ module.exports = {
             addressId,
             observacao: observacao || null,
             status: 'PENDING',
-            total: total,
+            total: Number(total),
             orderItems: {
               create: items.map(item => ({
                 productId: item.productId,
