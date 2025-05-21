@@ -257,7 +257,7 @@ export default function PedidosPage() {
       </div>
 
       {/* Lista de Pedidos */}
-      <div className="space-y-4">
+      <div className="space-y-6">
         {pedidosFiltrados.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
             Nenhum pedido encontrado
@@ -267,135 +267,136 @@ export default function PedidosPage() {
             <Link 
               key={pedido.id}
               to={`/pedidos/${pedido.id}`}
-              className="block"
+              className="block group"
             >
-              <Card className="bg-white hover:shadow-lg transition duration-200 ease-in-out rounded-xl p-6">
-                <div className="flex flex-col gap-4">
-                  {/* Cabeçalho do Pedido */}
-                  <div className="flex justify-between items-start">
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-2">
-                        <FaUtensils color="#f97316" size={18} />
-                        <h3 className="font-bold text-gray-900 text-lg">
-                          {pedido.restaurant.nome}
-                        </h3>
-                      </div>
-                      <div className="text-gray-500 text-sm">
-                        Pedido #{pedido.id} • {formatarData(pedido.data_criacao)}
-                      </div>
+              <div className={`relative bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-200 border-l-8 ${
+                pedido.status === 'Pendente' ? 'border-yellow-400' :
+                pedido.status === 'Em Preparo' ? 'border-blue-400' :
+                pedido.status === 'Pronto' ? 'border-orange-400' :
+                pedido.status === 'Entregue' ? 'border-green-500' :
+                'border-red-400'
+              } p-6 flex flex-col gap-4 cursor-pointer hover:-translate-y-1`}>  
+                {/* Cabeçalho do Pedido */}
+                <div className="flex justify-between items-start gap-4">
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <FaUtensils color="#f97316" size={20} />
+                      <h3 className="font-bold text-gray-900 text-lg group-hover:text-orange-600 transition-colors">
+                        {pedido.restaurant.nome}
+                      </h3>
                     </div>
-                    <div className={`px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2 ${STATUS_COLORS[pedido.status]}`}>
-                      {STATUS_ICONS[pedido.status]}
-                      <span>{pedido.status}</span>
-                    </div>
-                  </div>
-
-                  {/* Barra de Progresso e Status */}
-                  {pedido.status !== 'Cancelado' && (
-                    <div className="pt-2">
-                      <div className="relative">
-                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                          <div 
-                            style={{ width: `${getStatusPercentage(pedido.status)}%` }}
-                            className="h-full bg-orange-500 rounded-full transition-all duration-700 ease-in-out"
-                          />
-                        </div>
-                        <div className="flex justify-between text-xs text-gray-500 mt-2">
-                          <span className={pedido.status === 'Pendente' ? 'font-medium text-orange-600' : ''}>Recebido</span>
-                          <span className={pedido.status === 'Em Preparo' ? 'font-medium text-orange-600' : ''}>Preparando</span>
-                          <span className={pedido.status === 'Pronto' ? 'font-medium text-orange-600' : ''}>Pronto</span>
-                          <span className={pedido.status === 'Entregue' ? 'font-medium text-orange-600' : ''}>Entregue</span>
-                        </div>
-                      </div>
-                      <p className="text-sm text-gray-600 mt-2">{STATUS_DESC[pedido.status]}</p>
-                    </div>
-                  )}
-
-                  {/* Resumo do Pedido e Ações */}
-                  <div className="flex justify-between items-center pt-4 border-t border-gray-100">
-                    <div className="text-xl font-bold text-green-600">
-                      R$ {pedido.total.toFixed(2)}
+                    <div className="text-gray-500 text-xs">
+                      Pedido #{pedido.id} • {formatarData(pedido.data_criacao)}
                     </div>
                   </div>
+                  <div className={`px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2 shadow-sm ${STATUS_COLORS[pedido.status]}`}> 
+                    {STATUS_ICONS[pedido.status]}
+                    <span>{pedido.status}</span>
+                  </div>
+                </div>
 
-                  {/* Avaliação existente */}
+                {/* Barra de Progresso e Status */}
+                {pedido.status !== 'Cancelado' && (
+                  <div className="pt-2">
+                    <div className="relative">
+                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div 
+                          style={{ width: `${getStatusPercentage(pedido.status)}%` }}
+                          className="h-full bg-gradient-to-r from-orange-400 to-orange-500 rounded-full transition-all duration-700 ease-in-out"
+                        />
+                      </div>
+                      <div className="flex justify-between text-xs text-gray-400 mt-2 font-medium">
+                        <span className={pedido.status === 'Pendente' ? 'text-orange-500' : ''}>Recebido</span>
+                        <span className={pedido.status === 'Em Preparo' ? 'text-orange-500' : ''}>Preparando</span>
+                        <span className={pedido.status === 'Pronto' ? 'text-orange-500' : ''}>Pronto</span>
+                        <span className={pedido.status === 'Entregue' ? 'text-orange-500' : ''}>Entregue</span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">{STATUS_DESC[pedido.status]}</p>
+                  </div>
+                )}
+
+                {/* Resumo do Pedido e Ações */}
+                <div className="flex justify-between items-center pt-4 border-t border-gray-100 mt-2">
+                  <div className="text-2xl font-extrabold text-green-600 tracking-tight">
+                    R$ {pedido.total.toFixed(2)}
+                  </div>
                   {pedido.review && (
-                    <div className="mt-2 p-4 bg-gray-50 rounded-lg">
-                      <p className="text-sm font-medium text-gray-700 mb-2">Sua Avaliação:</p>
-                      <div className="flex items-center gap-2">
-                        <div className="flex">
-                          {[...Array(5)].map((_, i) => (
-                            <FaStar
-                              key={i}
-                              size={16}
-                              color={i < pedido.review!.nota ? '#fbbf24' : '#d1d5db'}
-                            />
-                          ))}
-                        </div>
-                        {pedido.review.comentario && (
-                          <span className="text-gray-600 text-sm">{pedido.review.comentario}</span>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Form de Avaliação */}
-                  {avaliando === pedido.id && (
-                    <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                      <h4 className="text-gray-900 font-medium mb-2">Avaliar Pedido</h4>
-                      <div className="flex items-center gap-2 mb-3">
-                        {[...Array(5)].map((_, i) => (
-                          <button
-                            key={i}
-                            onClick={() => setNota(i + 1)}
-                            className="hover:scale-110 transition"
-                          >
-                            <FaStar
-                              size={24}
-                              color={i < nota ? '#fbbf24' : '#d1d5db'}
-                            />
-                          </button>
-                        ))}
-                      </div>
-                      <textarea
-                        placeholder="Conte-nos sua experiência (opcional)"
-                        className="w-full p-2 border border-gray-300 rounded-lg resize-none mb-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                        rows={2}
-                        value={comentario}
-                        onChange={(e) => setComentario(e.target.value)}
-                      />
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleAvaliar(pedido.id)}
-                          disabled={enviandoAvaliacao}
-                          className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                        >
-                          {enviandoAvaliacao ? (
-                            <>
-                              <div className="animate-spin">
-                                <FaSpinner size={16} />
-                              </div>
-                              <span>Enviando...</span>
-                            </>
-                          ) : (
-                            'Enviar Avaliação'
-                          )}
-                        </button>
-                        <button
-                          onClick={() => {
-                            setAvaliando(null);
-                            setNota(5);
-                            setComentario('');
-                          }}
-                          className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
-                        >
-                          Cancelar
-                        </button>
-                      </div>
+                    <div className="flex items-center gap-1">
+                      {[...Array(5)].map((_, i) => (
+                        <FaStar
+                          key={i}
+                          size={18}
+                          color={i < pedido.review!.nota ? '#fbbf24' : '#d1d5db'}
+                        />
+                      ))}
                     </div>
                   )}
                 </div>
-              </Card>
+
+                {/* Avaliação existente */}
+                {pedido.review && (
+                  <div className="mt-2 p-3 bg-gray-50 rounded-lg">
+                    <span className="text-xs text-gray-700 font-medium">{pedido.review.comentario}</span>
+                  </div>
+                )}
+
+                {/* Form de Avaliação */}
+                {avaliando === pedido.id && (
+                  <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                    <h4 className="text-gray-900 font-medium mb-2">Avaliar Pedido</h4>
+                    <div className="flex items-center gap-2 mb-3">
+                      {[...Array(5)].map((_, i) => (
+                        <button
+                          key={i}
+                          onClick={() => setNota(i + 1)}
+                          className="hover:scale-110 transition"
+                        >
+                          <FaStar
+                            size={24}
+                            color={i < nota ? '#fbbf24' : '#d1d5db'}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                    <textarea
+                      placeholder="Conte-nos sua experiência (opcional)"
+                      className="w-full p-2 border border-gray-300 rounded-lg resize-none mb-3 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                      rows={2}
+                      value={comentario}
+                      onChange={(e) => setComentario(e.target.value)}
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleAvaliar(pedido.id)}
+                        disabled={enviandoAvaliacao}
+                        className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      >
+                        {enviandoAvaliacao ? (
+                          <>
+                            <div className="animate-spin">
+                              <FaSpinner size={16} />
+                            </div>
+                            <span>Enviando...</span>
+                          </>
+                        ) : (
+                          'Enviar Avaliação'
+                        )}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setAvaliando(null);
+                          setNota(5);
+                          setComentario('');
+                        }}
+                        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </Link>
           ))
         )}
