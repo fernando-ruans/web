@@ -422,7 +422,8 @@ module.exports = {  getProfile: async (req, res) => {
             select: {
               id: true,
               nome: true,
-              email: true
+              email: true,
+              telefone: true // <-- Adicionado telefone
             }
           },
           restaurant: {
@@ -459,7 +460,8 @@ module.exports = {  getProfile: async (req, res) => {
         usuario: {
           id: order.user.id,
           nome: order.user.nome,
-          email: order.user.email
+          email: order.user.email,
+          telefone: order.user.telefone // <-- Adicionado telefone na resposta
         },
         items: order.orderItems.map(item => ({
           id: item.id,
