@@ -24,5 +24,6 @@ router.put('/addresses/:id', adminController.updateAddress);
 router.delete('/addresses/:id', adminController.deleteAddress);
 router.put('/profile', adminController.updateProfile);
 router.get('/relatorios/resumo', adminController.relatorioResumo);
+router.get('/relatorios/pdf', adminController.gerarRelatorioPDF);
 
 module.exports = router;

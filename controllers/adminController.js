@@ -1,6 +1,28 @@
 const prisma = require('../prisma/prismaClient');
 const jwt = require('jsonwebtoken');
+const PDFDocument = require('pdfkit');
+const moment = require('moment');
+const path = require('path');
+const fs = require('fs');
+moment.locale('pt-br');
 const SECRET = process.env.JWT_SECRET || 'segredo123';
+
+// Cores do tema
+const colors = {
+  primary: '#f97316', // orange-500
+  secondary: '#1e40af', // blue-800
+  text: '#1f2937', // gray-800
+  subtext: '#6b7280', // gray-500
+  border: '#e5e7eb', // gray-200
+};
+
+// Função para formatar valores monetários
+const formatarMoeda = (valor) => {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  }).format(valor);
+};
 
 // Função para formatar CEP padrão: 00000-000
 const formatarCEP = (cep) => {
@@ -678,6 +700,237 @@ module.exports = {
     } catch (err) {
       console.error("[deleteAddress] Erro ao excluir endereço do admin:", err);
       res.status(500).json({ error: "Erro ao excluir endereço" });
+    }
+  },
+
+  gerarRelatorioPDF: async (req, res) => {
+    try {
+      const { dataInicio, dataFim } = req.query;
+
+      // Validar datas
+      const inicio = dataInicio ? moment(dataInicio).startOf('day') : moment().subtract(30, 'days').startOf('day');
+      const fim = dataFim ? moment(dataFim).endOf('day') : moment().endOf('day');
+
+      // Criar o documento PDF
+      const doc = new PDFDocument({
+        size: 'A4',
+        margins: {
+          top: 50,
+          bottom: 50,
+          left: 50,
+          right: 50
+        }
+      });
+      
+      // Configurar headers para download do PDF
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename=relatorio-${inicio.format('DD-MM-YYYY')}-a-${fim.format('DD-MM-YYYY')}.pdf`);
+      
+      // Pipe o PDF para a resposta
+      doc.pipe(res);
+
+      // Adicionar logo
+      const logoPath = path.join(__dirname, '..', 'uploads', 'logo.png');
+      if (fs.existsSync(logoPath)) {
+        doc.image(logoPath, 50, 45, { width: 120 });
+      }
+
+      // Adicionar cabeçalho com data de geração
+      doc.fontSize(10)
+         .fillColor(colors.subtext)
+         .text(`Gerado em: ${moment().format('DD/MM/YYYY HH:mm')}`, 400, 50, { align: 'right' });
+
+      // Adicionar título e período
+      doc.moveDown(3)
+         .fontSize(24)
+         .fillColor(colors.primary)
+         .text('Relatório Administrativo', 200, doc.y, { align: 'center' });
+      
+      doc.moveDown()
+         .fontSize(14)
+         .fillColor(colors.secondary)
+         .text(`Período: ${inicio.format('DD/MM/YYYY')} a ${fim.format('DD/MM/YYYY')}`, { align: 'center' });
+
+      // Adicionar linha divisória
+      doc.moveDown()
+         .moveTo(50, doc.y)
+         .lineTo(545, doc.y)
+         .strokeColor(colors.border)
+         .stroke();
+
+      // Buscar dados para o relatório
+      const [
+        pedidosEntregues,
+        pedidosCancelados,
+        restaurantes,
+        clientes,
+        faturamentoObj,
+        novosClientes,
+        topRestaurantes
+      ] = await Promise.all([
+        prisma.order.count({ 
+          where: { 
+            status: 'Entregue',
+            data_criacao: { gte: inicio.toDate(), lte: fim.toDate() }
+          }
+        }),
+        prisma.order.count({ 
+          where: { 
+            status: 'Cancelado',
+            data_criacao: { gte: inicio.toDate(), lte: fim.toDate() }
+          }
+        }),
+        prisma.restaurant.count(),
+        prisma.user.count({ where: { tipo: 'cliente' }}),
+        prisma.order.aggregate({
+          _sum: { total: true },
+          where: { 
+            status: 'Entregue',
+            data_criacao: { gte: inicio.toDate(), lte: fim.toDate() }
+          }
+        }),
+        prisma.user.count({
+          where: {
+            tipo: 'cliente',
+            createdAt: { gte: inicio.toDate(), lte: fim.toDate() }
+          }
+        }),
+        prisma.order.groupBy({
+          by: ['restaurantId'],
+          where: { 
+            status: 'Entregue',
+            data_criacao: { gte: inicio.toDate(), lte: fim.toDate() }
+          },
+          _sum: { total: true },
+          orderBy: { _sum: { total: 'desc' } },
+          take: 5
+        })
+      ]);
+
+      const faturamento = faturamentoObj._sum.total || 0;
+      const ticketMedio = pedidosEntregues > 0 ? faturamento / pedidosEntregues : 0;
+
+      // Seção: Métricas Gerais
+      doc.moveDown(2)
+         .fontSize(18)
+         .fillColor(colors.primary)
+         .text('Métricas Gerais', { underline: false });
+
+      // Grid de métricas
+      const metricas = [
+        [
+          { label: 'Total de Vendas', valor: pedidosEntregues.toLocaleString('pt-BR') },
+          { label: 'Faturamento Total', valor: formatarMoeda(faturamento) }
+        ],
+        [
+          { label: 'Ticket Médio', valor: formatarMoeda(ticketMedio) },
+          { label: 'Pedidos Cancelados', valor: pedidosCancelados.toLocaleString('pt-BR') }
+        ],
+        [
+          { label: 'Total de Restaurantes', valor: restaurantes.toLocaleString('pt-BR') },
+          { label: 'Total de Clientes', valor: clientes.toLocaleString('pt-BR') }
+        ],
+        [
+          { label: 'Novos Clientes', valor: novosClientes.toLocaleString('pt-BR') },
+          { label: 'Taxa de Conversão', valor: `${((pedidosEntregues / clientes * 100) || 0).toFixed(1)}%` }
+        ]
+      ];
+
+      doc.moveDown();
+      metricas.forEach((linha, i) => {
+        doc.fontSize(12).fillColor(colors.text);
+        
+        // Calcular posições para grid de 2 colunas
+        const colWidth = 247;
+        const startX = 50;
+        const startY = doc.y;
+
+        linha.forEach((metrica, j) => {
+          const x = startX + (j * colWidth);
+          
+          // Desenhar retângulo de fundo
+          doc.save()
+             .roundedRect(x, startY, colWidth - 10, 50, 5)
+             .fillColor('#f8fafc')  // slate-50
+             .fill()
+             .restore();
+
+          // Adicionar texto
+          doc.fillColor(colors.subtext)
+             .fontSize(10)
+             .text(metrica.label, x + 10, startY + 10);
+          
+          doc.fillColor(colors.text)
+             .fontSize(14)
+             .text(metrica.valor, x + 10, startY + 25);
+        });
+
+        doc.moveDown(2);
+      });
+
+      // Linha divisória
+      doc.moveTo(50, doc.y)
+         .lineTo(545, doc.y)
+         .strokeColor(colors.border)
+         .stroke();
+
+      // Top 5 Restaurantes
+      if (topRestaurantes.length > 0) {
+        doc.moveDown()
+           .fontSize(18)
+           .fillColor(colors.primary)
+           .text('Top 5 Restaurantes por Faturamento', { underline: false });
+
+        doc.moveDown();
+
+        // Buscar nomes dos restaurantes
+        const restaurantesDetalhes = await prisma.restaurant.findMany({
+          where: { 
+            id: { in: topRestaurantes.map(r => r.restaurantId) }
+          },
+          select: { id: true, nome: true }
+        });
+
+        // Cabeçalho da tabela
+        doc.fontSize(10)
+           .fillColor(colors.subtext)
+           .text('Posição', 50, doc.y, { width: 50 })
+           .text('Restaurante', 100, doc.y - 12, { width: 300 })
+           .text('Faturamento', 400, doc.y - 12, { width: 100 });
+
+        doc.moveTo(50, doc.y + 5)
+           .lineTo(545, doc.y + 5)
+           .strokeColor(colors.border)
+           .stroke();
+
+        doc.moveDown();
+
+        // Lista de restaurantes
+        for (const [index, restaurante] of topRestaurantes.entries()) {
+          const detalhes = restaurantesDetalhes.find(r => r.id === restaurante.restaurantId);
+          
+          doc.fontSize(12)
+             .fillColor(colors.text)
+             .text(`${index + 1}º`, 50, doc.y, { width: 50 })
+             .text(detalhes?.nome || 'Restaurante', 100, doc.y - 14, { width: 300 })
+             .text(formatarMoeda(restaurante._sum.total || 0), 400, doc.y - 14, { width: 100 });
+          
+          doc.moveDown();
+        }
+      }
+
+      // Adicionar rodapé
+      const bottomOfPage = doc.page.height - 50;
+      doc.fontSize(8)
+         .fillColor(colors.subtext)
+         .text('DeliveryX - Todos os direitos reservados', 50, bottomOfPage, { align: 'center' });
+
+      // Finalizar o documento sem criar páginas extras
+      doc.end();
+      
+      resolve();
+    } catch (error) {
+      reject(error);
     }
   },
 };
