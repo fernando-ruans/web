@@ -493,11 +493,17 @@ module.exports = {
       // Total de restaurantes
       const totalRestaurantes = await prisma.restaurant.count();
       // Total de clientes
-      const totalClientes = await prisma.user.count({ where: { tipo: 'cliente' } });
-      // Faturamento (soma dos pedidos entregues)
+      const totalClientes = await prisma.user.count({ where: { tipo: 'cliente' } });      // Faturamento (soma dos pedidos entregues de todos os restaurantes)
       const faturamentoObj = await prisma.order.aggregate({
         _sum: { total: true },
-        where: { status: 'Entregue' }
+        where: {
+          OR: [
+            { status: 'Entregue' },
+            { status: 'entregue' },
+            { status: 'DELIVERED' },
+            { status: 'delivered' }
+          ]
+        }
       });
       const faturamento = faturamentoObj._sum.total || 0;
       // Ticket médio
