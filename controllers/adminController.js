@@ -486,12 +486,12 @@ module.exports = {
   },
   relatorioResumo: async (req, res) => {
     try {
-      // Total de vendas = pedidos com status 'Entregue' (case insensitive)
+      // Total de vendas = pedidos com status entregue (todas as variações em UPPERCASE)
       const statusEntregue = [
-        'Entregue', 'entregue', 'DELIVERED', 'delivered'
+        'ENTREGUE', 'DELIVERED', 'COMPLETED'
       ];
       const statusCancelado = [
-        'Cancelado', 'CANCELADO', 'CANCELED', 'CANCELLED'
+        'CANCELADO', 'CANCELED', 'CANCELLED'
       ];
       // Total de vendas (pedidos entregues)
       const totalVendas = await prisma.order.count({
