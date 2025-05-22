@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import theme from '../theme';
 import { FaSpinner, FaMapMarkerAlt, FaPhoneAlt, FaBuilding, FaHashtag, FaHome, FaBarcode, FaShoppingCart } from 'react-icons/fa';
+import { FaMoneyBillWave, FaCreditCard, FaPix, FaRegCreditCard } from 'react-icons/fa6';
 
 interface Address {
   id: number;
@@ -23,7 +24,8 @@ export default function CarrinhoPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [addresses, setAddresses] = useState<Address[]>([]);
-  const [selectedAddressId, setSelectedAddressId] = useState<number>();  const [observacao, setObservacao] = useState('');
+  const [selectedAddressId, setSelectedAddressId] = useState<number>();  
+  const [observacao, setObservacao] = useState('');
   const [taxaEntrega, setTaxaEntrega] = useState(0);
   const [novoCep, setNovoCep] = useState('');
   const [loadingCep, setLoadingCep] = useState(false);
@@ -36,6 +38,8 @@ export default function CarrinhoPage() {
     complemento: '',
     cep: ''
   });
+  const [formaPagamento, setFormaPagamento] = useState<string>('');
+  const [trocoPara, setTrocoPara] = useState<string>('');
 
   // Carrega endereços do usuário
   useEffect(() => {
@@ -84,8 +88,20 @@ export default function CarrinhoPage() {
       return;
     }
 
+    if (!formaPagamento) {
+      setError('Selecione a forma de pagamento');
+      return;
+    }
+
+    if (formaPagamento === 'dinheiro' && (!trocoPara || isNaN(Number(trocoPara)) || Number(trocoPara) < total)) {
+      setError('Informe um valor válido para troco (maior ou igual ao total)');
+      return;
+    }
+
     setLoading(true);
-    setError('');    try {      const pedido = {
+    setError('');    
+    try {      
+      const pedido = {
         restaurantId: items[0].restauranteId,
         addressId: selectedAddressId,
         observacao: observacao || undefined,
@@ -98,7 +114,9 @@ export default function CarrinhoPage() {
               quantidade: a.quantidade,
               preco: a.preco // Corrigido: era preco_unitario, agora é preco
             }))
-          }))
+          })),
+        formaPagamento,
+        trocoPara: formaPagamento === 'dinheiro' ? Number(trocoPara) : undefined,
       };
 
       const res = await fetch('/api/cliente/orders', {
@@ -455,6 +473,51 @@ export default function CarrinhoPage() {
                 className="w-full p-3 border rounded-lg focus:border-orange-300 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
                 rows={3}
               />
+            </div>
+
+            <div className="bg-white/90 rounded-xl shadow-lg p-6 mb-8">
+              <h2 className="text-lg font-bold text-gray-700 mb-4">Forma de Pagamento</h2>
+              <div className="flex flex-wrap gap-4 mb-4">
+                <label className={`flex items-center gap-2 px-6 py-3 rounded-xl border-2 font-semibold text-base cursor-pointer transition-all duration-200 shadow-sm select-none
+                  ${formaPagamento === 'dinheiro' ? 'bg-orange-100 border-orange-500 text-orange-700 ring-2 ring-orange-200' : 'bg-gray-50 border-gray-200 text-gray-700 hover:border-orange-300 hover:bg-orange-50'}`}
+                >
+                  <input type="radio" className="hidden" name="pagamento" value="dinheiro" checked={formaPagamento === 'dinheiro'} onChange={() => setFormaPagamento('dinheiro')} />
+                  <FaMoneyBillWave size={22} /> Dinheiro
+                </label>
+                <label className={`flex items-center gap-2 px-6 py-3 rounded-xl border-2 font-semibold text-base cursor-pointer transition-all duration-200 shadow-sm select-none
+                  ${formaPagamento === 'debito' ? 'bg-orange-100 border-orange-500 text-orange-700 ring-2 ring-orange-200' : 'bg-gray-50 border-gray-200 text-gray-700 hover:border-orange-300 hover:bg-orange-50'}`}
+                >
+                  <input type="radio" className="hidden" name="pagamento" value="debito" checked={formaPagamento === 'debito'} onChange={() => setFormaPagamento('debito')} />
+                  <FaRegCreditCard size={22} /> Cartão de Débito
+                </label>
+                <label className={`flex items-center gap-2 px-6 py-3 rounded-xl border-2 font-semibold text-base cursor-pointer transition-all duration-200 shadow-sm select-none
+                  ${formaPagamento === 'credito' ? 'bg-orange-100 border-orange-500 text-orange-700 ring-2 ring-orange-200' : 'bg-gray-50 border-gray-200 text-gray-700 hover:border-orange-300 hover:bg-orange-50'}`}
+                >
+                  <input type="radio" className="hidden" name="pagamento" value="credito" checked={formaPagamento === 'credito'} onChange={() => setFormaPagamento('credito')} />
+                  <FaCreditCard size={22} /> Cartão de Crédito
+                </label>
+                <label className={`flex items-center gap-2 px-6 py-3 rounded-xl border-2 font-semibold text-base cursor-pointer transition-all duration-200 shadow-sm select-none
+                  ${formaPagamento === 'pix' ? 'bg-orange-100 border-orange-500 text-orange-700 ring-2 ring-orange-200' : 'bg-gray-50 border-gray-200 text-gray-700 hover:border-orange-300 hover:bg-orange-50'}`}
+                >
+                  <input type="radio" className="hidden" name="pagamento" value="pix" checked={formaPagamento === 'pix'} onChange={() => setFormaPagamento('pix')} />
+                  <FaPix size={22} /> Pix
+                </label>
+              </div>
+              {formaPagamento === 'dinheiro' && (
+                <div className="mt-2">
+                  <label className="block text-sm font-semibold text-gray-600 mb-1">Troco para quanto?</label>
+                  <input
+                    type="number"
+                    min={total}
+                    step="0.01"
+                    className="w-full px-4 py-2 border-2 border-orange-300 rounded-lg focus:border-orange-500 focus:ring focus:ring-orange-200 focus:ring-opacity-50 text-lg font-semibold"
+                    placeholder={`Ex: ${(total+5).toFixed(2)}`}
+                    value={trocoPara}
+                    onChange={e => setTrocoPara(e.target.value)}
+                  />
+                  <span className="text-xs text-gray-500">O entregador levará troco para o valor informado.</span>
+                </div>
+              )}
             </div>
 
             <div className="bg-gradient-to-r from-orange-100 via-yellow-50 to-orange-100 rounded-xl shadow-lg p-6 mb-8">
