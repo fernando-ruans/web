@@ -1286,6 +1286,10 @@ export default function LojistaRelatoriosPage() {
                     <span className="text-xl font-bold text-orange-700">{dados.adicionaisMaisVendidos?.[0]?.nome || 'Nenhum'}</span>
                     <span className="text-gray-600 text-sm">Adicional Mais Vendido</span>
                   </div>
+                  <div className="bg-cyan-50 rounded-xl p-6 flex flex-col items-center gap-2 shadow-md">
+                    <span className="text-2xl font-bold text-cyan-700">{dados.totalTaxasEntrega !== undefined ? `R$ ${dados.totalTaxasEntrega.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'R$ 0,00'}</span>
+                    <span className="text-gray-600 text-sm">Faturamento em Taxas de Entrega</span>
+                  </div>
                 </div>
 
                 </div> {/* Fechando a div ref={relatorioRef} */}
