@@ -72,6 +72,7 @@ const addressSchema = Joi.object({
   numero: Joi.string().required(),
   bairro: Joi.string().required(),
   cidade: Joi.string().required(),
+  estado: Joi.string().length(2).required(), // Adicionado campo estado obrigatório
   complemento: Joi.string().allow('', null),
   cep: Joi.string().required()
 });

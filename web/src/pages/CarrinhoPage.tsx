@@ -12,6 +12,7 @@ interface Address {
   numero: string;
   bairro: string;
   cidade: string;
+  estado: string; // <-- Adicionado campo estado
   complemento?: string;
   cep: string;
 }
@@ -40,6 +41,9 @@ export default function CarrinhoPage() {
   });
   const [formaPagamento, setFormaPagamento] = useState<string>('');
   const [trocoPara, setTrocoPara] = useState<string>('');
+  const [editandoEnderecoId, setEditandoEnderecoId] = useState<number|null>(null);
+  const [enderecoEdicao, setEnderecoEdicao] = useState<Partial<Address>>({});
+  const [loadingEdicaoEndereco, setLoadingEdicaoEndereco] = useState(false);
 
   // Carrega endereços do usuário
   useEffect(() => {
@@ -203,6 +207,45 @@ export default function CarrinhoPage() {
       setError(err.message || 'Erro ao cadastrar endereço');
     } finally {
       setLoadingNovoEndereco(false);
+    }
+  };
+
+  // Função para iniciar edição
+  const iniciarEdicaoEndereco = (address: Address) => {
+    setEditandoEnderecoId(address.id);
+    setEnderecoEdicao({ ...address });
+  };
+
+  // Função para salvar edição
+  const salvarEdicaoEndereco = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editandoEnderecoId) return;
+    setLoadingEdicaoEndereco(true);
+    setError('');
+    try {
+      // Remove os campos id e userId (se existirem) antes de enviar para o backend
+      const enderecoSemIdUserId = { ...enderecoEdicao };
+      delete (enderecoSemIdUserId as any).id;
+      delete (enderecoSemIdUserId as any).userId;
+      const res = await fetch(`/api/cliente/addresses/${editandoEnderecoId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(enderecoSemIdUserId)
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Erro ao editar endereço');
+      }
+      // Atualiza lista de endereços
+      const atualizado = await res.json();
+      setAddresses(addresses.map(a => a.id === atualizado.id ? atualizado : a));
+      setEditandoEnderecoId(null);
+      setEnderecoEdicao({});
+    } catch (err: any) {
+      setError(err.message || 'Erro ao editar endereço');
+    } finally {
+      setLoadingEdicaoEndereco(false);
     }
   };
 
@@ -440,12 +483,36 @@ export default function CarrinhoPage() {
                     >
                       <FaMapMarkerAlt size={20} color={selectedAddressId === address.id ? '#f97316' : '#9ca3af'} />
                       <div className="flex-1">
-                        <p className="font-semibold text-gray-800">{address.rua}, {address.numero}</p>
-                        {address.complemento && (
-                          <p className="text-sm text-gray-600">Complemento: {address.complemento}</p>
+                        {editandoEnderecoId === address.id ? (
+                          <form onClick={e => e.stopPropagation()} onSubmit={salvarEdicaoEndereco} className="space-y-2">
+                            <div className="grid grid-cols-2 gap-2">
+                              <input className="border rounded px-2 py-1" value={enderecoEdicao.rua||''} onChange={e=>setEnderecoEdicao({...enderecoEdicao,rua:e.target.value})} placeholder="Rua" required />
+                              <input className="border rounded px-2 py-1" value={enderecoEdicao.numero||''} onChange={e=>setEnderecoEdicao({...enderecoEdicao,numero:e.target.value})} placeholder="Número" required />
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <input className="border rounded px-2 py-1" value={enderecoEdicao.bairro||''} onChange={e=>setEnderecoEdicao({...enderecoEdicao,bairro:e.target.value})} placeholder="Bairro" required />
+                              <input className="border rounded px-2 py-1" value={enderecoEdicao.cidade||''} onChange={e=>setEnderecoEdicao({...enderecoEdicao,cidade:e.target.value})} placeholder="Cidade" required />
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <input className="border rounded px-2 py-1" value={enderecoEdicao.estado||''} onChange={e=>setEnderecoEdicao({...enderecoEdicao,estado:e.target.value})} placeholder="Estado" required />
+                              <input className="border rounded px-2 py-1" value={enderecoEdicao.cep||''} onChange={e=>setEnderecoEdicao({...enderecoEdicao,cep:e.target.value})} placeholder="CEP" required />
+                            </div>
+                            <input className="border rounded px-2 py-1 w-full" value={enderecoEdicao.complemento||''} onChange={e=>setEnderecoEdicao({...enderecoEdicao,complemento:e.target.value})} placeholder="Complemento" />
+                            <div className="flex gap-2 mt-2">
+                              <button type="submit" className="bg-green-500 text-white px-3 py-1 rounded" disabled={loadingEdicaoEndereco}>{loadingEdicaoEndereco?'Salvando...':'Salvar'}</button>
+                              <button type="button" className="bg-gray-200 px-3 py-1 rounded" onClick={e=>{e.stopPropagation();setEditandoEnderecoId(null);}}>Cancelar</button>
+                            </div>
+                          </form>
+                        ) : (
+                          <>
+                            <p className="font-semibold text-gray-800">{address.rua}, {address.numero}</p>
+                            {address.complemento && (
+                              <p className="text-sm text-gray-600">Complemento: {address.complemento}</p>
+                            )}
+                            <p className="text-sm text-gray-600">{address.bairro}</p>
+                            <p className="text-sm text-gray-600">{address.cidade} - CEP: {address.cep}</p>
+                          </>
                         )}
-                        <p className="text-sm text-gray-600">{address.bairro}</p>
-                        <p className="text-sm text-gray-600">{address.cidade} - CEP: {address.cep}</p>
                       </div>
                       <div className="flex items-center justify-center w-6 h-6">
                         <div className={`w-4 h-4 rounded-full border-2 ${
@@ -458,6 +525,9 @@ export default function CarrinhoPage() {
                           )}
                         </div>
                       </div>
+                      {editandoEnderecoId !== address.id && (
+                        <button type="button" className="ml-2 text-xs text-blue-600 underline hover:text-blue-800" onClick={e=>{e.stopPropagation();iniciarEdicaoEndereco(address);}}>Editar</button>
+                      )}
                     </div>
                   ))}
                 </div>
