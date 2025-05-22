@@ -249,10 +249,10 @@ export default function PedidosPage() {
             </div>
           </div>
         </div>
-        <div className="flex flex-wrap gap-1 bg-white rounded-xl shadow-sm px-2 py-1 items-center">
+        <div className="w-full sm:w-auto grid grid-cols-2 sm:flex gap-2 bg-white rounded-xl shadow-sm px-2 py-1 items-center mt-2 sm:mt-0">
           <button
             onClick={() => setFiltro('todos')}
-            className={`px-3 py-1 rounded-lg font-semibold text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2 ${
+            className={`w-full sm:w-auto px-3 py-1 rounded-lg font-semibold text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2 ${
               filtro === 'todos'
                 ? 'bg-orange-500 text-white shadow'
                 : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
@@ -260,7 +260,7 @@ export default function PedidosPage() {
           >Todos</button>
           <button
             onClick={() => setFiltro('andamento')}
-            className={`px-3 py-1 rounded-lg font-semibold text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2 ${
+            className={`w-full sm:w-auto px-3 py-1 rounded-lg font-semibold text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2 ${
               filtro === 'andamento'
                 ? 'bg-orange-500 text-white shadow'
                 : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
@@ -268,7 +268,7 @@ export default function PedidosPage() {
           >Andamento</button>
           <button
             onClick={() => setFiltro('entregues')}
-            className={`px-3 py-1 rounded-lg font-semibold text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2 ${
+            className={`w-full sm:w-auto px-3 py-1 rounded-lg font-semibold text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2 ${
               filtro === 'entregues'
                 ? 'bg-orange-500 text-white shadow'
                 : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
@@ -276,7 +276,7 @@ export default function PedidosPage() {
           >Entregues</button>
           <button
             onClick={() => setFiltro('cancelados')}
-            className={`px-3 py-1 rounded-lg font-semibold text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2 ${
+            className={`w-full sm:w-auto px-3 py-1 rounded-lg font-semibold text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2 ${
               filtro === 'cancelados'
                 ? 'bg-orange-500 text-white shadow'
                 : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
@@ -434,20 +434,26 @@ export default function PedidosPage() {
         )}
       </div>
       {/* Paginação */}
-      <div className="flex justify-center items-center gap-4 mt-10">
-        <button
-          onClick={() => setPagina(p => Math.max(1, p - 1))}
-          disabled={pagina === 1}
-          className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-200 transition"
-        >Anterior</button>
-        <span className="text-sm text-gray-600">
-          Página {pagina} de {totalPaginas} &bull; {totalPedidos} pedidos
+      <div className="flex flex-col items-center gap-2 mt-10 sm:flex-row sm:justify-center sm:items-center sm:gap-4">
+        <div className="flex flex-row gap-2 w-full sm:w-auto justify-center">
+          <button
+            onClick={() => setPagina(p => Math.max(1, p - 1))}
+            disabled={pagina === 1}
+            className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-200 transition"
+          >Anterior</button>
+          <button
+            onClick={() => setPagina(p => Math.min(totalPaginas, p + 1))}
+            disabled={pagina === totalPaginas}
+            className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-200 transition"
+          >Próxima</button>
+        </div>
+        <span
+          className="text-sm text-gray-600 text-center leading-snug px-2"
+        >
+          <span className="block sm:inline font-semibold">Página {pagina} de {totalPaginas}</span>
+          <span className="hidden sm:inline mx-1">&bull;</span>
+          <span className="block sm:inline">{totalPedidos} pedidos</span>
         </span>
-        <button
-          onClick={() => setPagina(p => Math.min(totalPaginas, p + 1))}
-          disabled={pagina === totalPaginas}
-          className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-200 transition"
-        >Próxima</button>
       </div>
     </div>
   );
