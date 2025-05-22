@@ -117,15 +117,7 @@ export default function RestaurantesPage() {
                     <span className="text-base sm:text-lg font-bold text-orange-600 flex items-center gap-2">
                       <span className="hidden sm:inline">🍽️</span> {rest.nome}
                     </span>
-                    {rest.status === 'ativo' ? (
-                      <span className="flex items-center gap-1 text-green-600 text-xs font-bold bg-green-50 px-2 py-0.5 rounded-full">
-                        <FaCheckCircle size={12} /> Ativo
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1 text-red-400 text-xs font-bold bg-red-50 px-2 py-0.5 rounded-full">
-                        <FaTimesCircle size={12} /> {rest.status}
-                      </span>
-                    )}
+                    {/* Removido badge de status (Ativo, aprovado, etc) */}
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 text-gray-500 text-xs mt-1">
