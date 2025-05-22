@@ -532,7 +532,7 @@ module.exports = {
             restaurantId,
             addressId,
             observacao: observacao || null,
-            status: 'PENDING',
+            status: 'PENDING', // Sempre salvar em UPPERCASE
             total: Number(total),
             taxa_entrega: taxaEntrega, // <-- Adiciona a taxa de entrega no pedido
             orderItems: {
@@ -887,7 +887,7 @@ module.exports = {
       // Formatar a resposta para garantir compatibilidade
       const formattedOrders = orders.map(order => ({
         id: order.id,
-        status: order.status,
+        status: (order.status || '').toUpperCase(), // Sempre retorna em UPPERCASE
         total: Number(order.total),
         data_criacao: order.data_criacao,
         restaurant: {
@@ -1005,7 +1005,7 @@ module.exports = {
       // Formatar a resposta mantendo a consistência
       const formattedOrder = {
         id: order.id,
-        status: order.status,
+        status: (order.status || '').toUpperCase(), // Sempre retorna em UPPERCASE
         data_criacao: order.data_criacao,
         total: Number(order.total), // Usa o valor salvo no pedido
         items,
