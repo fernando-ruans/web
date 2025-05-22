@@ -25,5 +25,7 @@ router.delete('/addresses/:id', adminController.deleteAddress);
 router.put('/profile', adminController.updateProfile);
 router.get('/relatorios/resumo', adminController.relatorioResumo);
 router.get('/relatorios/pdf', adminController.gerarRelatorioPDF);
+// Listar todos os pedidos do sistema (admin)
+router.get('/orders', adminController.listAllOrders);
 
 module.exports = router;

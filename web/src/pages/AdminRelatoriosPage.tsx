@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import theme from '../theme';
-import { FaChartBar, FaStore, FaUser, FaMoneyBillWave, FaSpinner, FaReceipt, FaUserPlus, FaPercent, FaTrophy, FaTimesCircle, FaFilePdf, FaCalendar } from 'react-icons/fa';
+import { FaChartBar, FaStore, FaUser, FaMoneyBillWave, FaSpinner, FaReceipt, FaUserPlus, FaPercent, FaTrophy, FaTimesCircle, FaFilePdf, FaCalendar, FaBoxOpen, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 
 interface RelatorioResumo {
   totalVendas: number;
@@ -14,12 +14,41 @@ interface RelatorioResumo {
   restauranteTop?: { id: number; nome: string; faturamento: number } | null;
 }
 
+interface PedidoAdmin {
+  id: number;
+  status: string;
+  total: number;
+  data_criacao: string;
+  usuario: {
+    id: number;
+    nome: string;
+    email: string;
+    telefone: string;
+  } | null;
+  restaurant: {
+    id: number;
+    nome: string;
+    imagem: string;
+  } | null;
+  items: any[];
+  taxa_entrega: number;
+  observacao: string;
+  endereco: any;
+}
+
 export default function AdminRelatoriosPage() {
   const [resumo, setResumo] = useState<RelatorioResumo | null>(null);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState('');
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
+
+  const [pedidos, setPedidos] = useState<PedidoAdmin[]>([]);
+  const [pedidosLoading, setPedidosLoading] = useState(true);
+  const [pedidosErro, setPedidosErro] = useState('');
+  const [pedidosPage, setPedidosPage] = useState(1);
+  const [pedidosTotalPages, setPedidosTotalPages] = useState(1);
+  const [pedidosTotal, setPedidosTotal] = useState(0);
 
   const carregarRelatorio = (params = '') => {
     setLoading(true);
@@ -32,8 +61,26 @@ export default function AdminRelatoriosPage() {
       .finally(() => setLoading(false));
   };
 
+  const carregarPedidos = (page = 1) => {
+    setPedidosLoading(true);
+    setPedidosErro('');
+    fetch(`/api/admin/orders?page=${page}`, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    })
+      .then(res => res.ok ? res.json() : Promise.reject(res))
+      .then(data => {
+        setPedidos(data.data);
+        setPedidosPage(data.pagination.page);
+        setPedidosTotalPages(data.pagination.totalPages);
+        setPedidosTotal(data.pagination.total);
+      })
+      .catch(() => setPedidosErro('Erro ao carregar pedidos.'))
+      .finally(() => setPedidosLoading(false));
+  };
+
   useEffect(() => {
     carregarRelatorio();
+    carregarPedidos(1);
   }, []);
 
   const handleFiltrar = () => {
@@ -167,6 +214,87 @@ export default function AdminRelatoriosPage() {
               </div>
             )}
           </div>
+        )}
+
+        {/* NOVO BLOCO: Listagem de pedidos do sistema */}
+        <h3 className="text-2xl font-bold text-orange-600 flex items-center gap-2 mt-8 mb-2"><FaBoxOpen /> Pedidos do Sistema</h3>
+        <div className="mb-2 text-gray-500 text-sm text-center">Pedidos recentes de todos os clientes e restaurantes. Paginação de 15 em 15.</div>
+        {pedidosLoading ? (
+          <div className="flex flex-col items-center justify-center py-6 text-blue-400"><FaSpinner size={28} /> Carregando pedidos...</div>
+        ) : pedidosErro ? (
+          <div className="text-red-400 text-center font-bold">{pedidosErro}</div>
+        ) : pedidos.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 py-8 text-gray-400">
+            <FaBoxOpen size={40} />
+            Nenhum pedido encontrado.
+          </div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm border rounded-xl overflow-hidden">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-2 py-2 text-left">#</th>
+                    <th className="px-2 py-2 text-left">Data</th>
+                    <th className="px-2 py-2 text-left">Cliente</th>
+                    <th className="px-2 py-2 text-left">Restaurante</th>
+                    <th className="px-2 py-2 text-left">Total</th>
+                    <th className="px-2 py-2 text-left">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pedidos.map(pedido => (
+                    <tr key={pedido.id} className="border-b hover:bg-gray-50">
+                      <td className="px-2 py-2 font-mono">{pedido.id}</td>
+                      <td className="px-2 py-2">{new Date(pedido.data_criacao).toLocaleString('pt-BR')}</td>
+                      <td className="px-2 py-2">
+                        {pedido.usuario ? (
+                          <span>
+                            <span className="font-bold">{pedido.usuario.nome}</span><br />
+                            <span className="text-xs text-gray-500">{pedido.usuario.email}</span>
+                          </span>
+                        ) : <span className="text-gray-400">-</span>}
+                      </td>
+                      <td className="px-2 py-2">
+                        {pedido.restaurant ? (
+                          <span className="flex items-center gap-2">
+                            {pedido.restaurant.imagem && <img src={pedido.restaurant.imagem} alt="" className="w-6 h-6 rounded-full object-cover" />}
+                            {pedido.restaurant.nome}
+                          </span>
+                        ) : <span className="text-gray-400">-</span>}
+                      </td>
+                      <td className="px-2 py-2 font-mono">R$ {pedido.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                      <td className="px-2 py-2">
+                        <span className="px-2 py-1 rounded text-xs font-bold bg-gray-100 text-gray-700">{pedido.status}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {/* Paginação */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-2 mt-4">
+              <div className="text-gray-500 text-sm text-center">
+                Página {pedidosPage} de {pedidosTotalPages} • {pedidosTotal} pedidos
+              </div>
+              <div className="flex gap-2">
+                <button
+                  className="bg-gray-200 px-3 py-1 rounded disabled:opacity-50"
+                  onClick={() => pedidosPage > 1 && carregarPedidos(pedidosPage - 1)}
+                  disabled={pedidosPage === 1}
+                >
+                  <FaChevronLeft /> Anterior
+                </button>
+                <button
+                  className="bg-gray-200 px-3 py-1 rounded disabled:opacity-50"
+                  onClick={() => pedidosPage < pedidosTotalPages && carregarPedidos(pedidosPage + 1)}
+                  disabled={pedidosPage === pedidosTotalPages}
+                >
+                  Próxima <FaChevronRight />
+                </button>
+              </div>
+            </div>
+          </>
         )}
       </div>
     </div>

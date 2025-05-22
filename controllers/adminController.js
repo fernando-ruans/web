@@ -933,4 +933,89 @@ module.exports = {
       reject(error);
     }
   },
+
+  // NOVA ROTA: Listar todos os pedidos do sistema (admin)
+  listAllOrders: async (req, res) => {
+    try {
+      // Paginação
+      const pageSize = 15;
+      const page = parseInt(req.query.page) > 0 ? parseInt(req.query.page) : 1;
+      const skip = (page - 1) * pageSize;
+
+      // Total de pedidos para paginação
+      const totalPedidos = await prisma.order.count();
+      const totalPages = Math.ceil(totalPedidos / pageSize);
+
+      // Buscar pedidos com dados relevantes
+      const orders = await prisma.order.findMany({
+        include: {
+          user: {
+            select: { id: true, nome: true, email: true, telefone: true }
+          },
+          restaurant: {
+            select: { id: true, nome: true, imagem: true }
+          },
+          orderItems: {
+            include: {
+              product: true,
+              adicionais: {
+                include: { adicional: true }
+              }
+            }
+          },
+          address: true
+        },
+        orderBy: { data_criacao: 'desc' },
+        skip,
+        take: pageSize
+      });
+
+      // Formatar resposta para o frontend admin
+      const formattedOrders = orders.map(order => ({
+        id: order.id,
+        status: order.status,
+        total: Number(order.total),
+        data_criacao: order.data_criacao,
+        usuario: order.user ? {
+          id: order.user.id,
+          nome: order.user.nome,
+          email: order.user.email,
+          telefone: order.user.telefone
+        } : null,
+        restaurant: order.restaurant ? {
+          id: order.restaurant.id,
+          nome: order.restaurant.nome,
+          imagem: order.restaurant.imagem
+        } : null,
+        items: order.orderItems.map(item => ({
+          id: item.id,
+          quantidade: item.quantidade,
+          nome: item.product?.nome || 'Produto',
+          preco: item.product?.preco || 0,
+          adicionais: item.adicionais.map(a => ({
+            id: a.adicionalId,
+            quantidade: a.quantidade,
+            nome: a.adicional?.nome || 'Adicional',
+            preco: a.adicional?.preco || 0
+          }))
+        })),
+        taxa_entrega: Number(order.taxa_entrega),
+        observacao: order.observacao,
+        endereco: order.address || null
+      }));
+
+      res.json({
+        data: formattedOrders,
+        pagination: {
+          total: totalPedidos,
+          page,
+          pageSize,
+          totalPages
+        }
+      });
+    } catch (err) {
+      console.error('[listAllOrders] Erro ao listar pedidos do admin:', err);
+      res.status(500).json({ error: 'Erro ao listar pedidos do sistema', details: process.env.NODE_ENV === 'development' ? err.message : undefined });
+    }
+  },
 };
