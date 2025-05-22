@@ -42,37 +42,56 @@ interface Pedido {
   };
 }
 
-type PedidoStatus = 'Pendente' | 'Em Preparo' | 'Pronto' | 'Entregue' | 'Cancelado';
+// Novo tipo de status para integração total com o painel do lojista
+// Inclui todos os status possíveis do painel do lojista
+// Pendente, Aceito, Em Preparo, Em Entrega, Pronto, Entregue, Cancelado
+
+type PedidoStatus =
+  | 'Pendente'
+  | 'Aceito'
+  | 'Em Preparo'
+  | 'Em Entrega'
+  | 'Pronto'
+  | 'Entregue'
+  | 'Cancelado';
 
 const STATUS_COLORS: Record<PedidoStatus, string> = {
   'Pendente': 'bg-yellow-100 text-yellow-800',
+  'Aceito': 'bg-blue-100 text-blue-800',
   'Em Preparo': 'bg-blue-100 text-blue-800',
+  'Em Entrega': 'bg-orange-100 text-orange-800',
   'Pronto': 'bg-orange-100 text-orange-800',
   'Entregue': 'bg-green-100 text-green-800',
-  'Cancelado': 'bg-red-100 text-red-800'
+  'Cancelado': 'bg-red-100 text-red-800',
 };
 
 const STATUS_ICONS = {
   'Pendente': <FaClock color="#a16207" />,
+  'Aceito': <FaTruckLoading color="#1d4ed8" />,
   'Em Preparo': <FaTruckLoading color="#1d4ed8" />,
+  'Em Entrega': <FaMotorcycle color="#ea580c" />,
   'Pronto': <FaMotorcycle color="#ea580c" />,
   'Entregue': <FaCheckCircle color="#15803d" />,
-  'Cancelado': <FaClock color="#b91c1c" />
+  'Cancelado': <FaClock color="#b91c1c" />,
 };
 
 const STATUS_DESC = {
   'Pendente': 'Aguardando confirmação do restaurante',
+  'Aceito': 'Pedido aceito pelo restaurante',
   'Em Preparo': 'O restaurante está preparando seu pedido',
+  'Em Entrega': 'Pedido saiu para entrega',
   'Pronto': 'Pedido pronto para entrega',
   'Entregue': 'Pedido entregue com sucesso',
-  'Cancelado': 'Pedido foi cancelado'
+  'Cancelado': 'Pedido foi cancelado',
 };
 
 // Função utilitária para normalizar status para o padrão visual
 const normalizarStatus = (status: string): PedidoStatus => {
   const s = (status || '').toLowerCase();
   if (s === 'pendente' || s === 'pending') return 'Pendente';
+  if (s === 'aceito' || s === 'accepted') return 'Aceito';
   if (s === 'em preparo' || s === 'preparando' || s === 'preparation' || s === 'preparado') return 'Em Preparo';
+  if (s === 'em entrega' || s === 'em rota' || s === 'out for delivery' || s === 'entregando') return 'Em Entrega';
   if (s === 'pronto' || s === 'ready' || s === 'pronto para entrega') return 'Pronto';
   if (s === 'entregue' || s === 'delivered' || s === 'concluido' || s === 'concluído') return 'Entregue';
   if (s === 'cancelado' || s === 'canceled' || s === 'cancelled') return 'Cancelado';
@@ -163,9 +182,11 @@ export default function PedidosPage() {
 
   const getStatusPercentage = (status: PedidoStatus): number => {
     switch (status) {
-      case 'Pendente': return 25;
-      case 'Em Preparo': return 50;
-      case 'Pronto': return 75;
+      case 'Pendente': return 10;
+      case 'Aceito': return 25;
+      case 'Em Preparo': return 45;
+      case 'Pronto': return 65;
+      case 'Em Entrega': return 85;
       case 'Entregue': return 100;
       default: return 0;
     }
@@ -302,7 +323,9 @@ export default function PedidosPage() {
               >
                 <div className={`relative bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-200 border-l-8 ${
                   statusNormalizado === 'Pendente' ? 'border-yellow-400' :
+                  statusNormalizado === 'Aceito' ? 'border-blue-400' :
                   statusNormalizado === 'Em Preparo' ? 'border-blue-400' :
+                  statusNormalizado === 'Em Entrega' ? 'border-orange-400' :
                   statusNormalizado === 'Pronto' ? 'border-orange-400' :
                   statusNormalizado === 'Entregue' ? 'border-green-500' :
                   'border-red-400'
@@ -337,10 +360,12 @@ export default function PedidosPage() {
                           />
                         </div>
                         <div className="flex justify-between text-xs text-gray-400 mt-2 font-medium">
-                          <span className={statusNormalizado === 'Pendente' ? 'text-orange-500' : ''}>Recebido</span>
-                          <span className={statusNormalizado === 'Em Preparo' ? 'text-orange-500' : ''}>Preparando</span>
+                          <span className={statusNormalizado === 'Pendente' ? 'text-orange-500' : ''}>Pendente</span>
+                          <span className={statusNormalizado === 'Aceito' ? 'text-blue-500' : ''}>Aceito</span>
+                          <span className={statusNormalizado === 'Em Preparo' ? 'text-blue-500' : ''}>Em Preparo</span>
                           <span className={statusNormalizado === 'Pronto' ? 'text-orange-500' : ''}>Pronto</span>
-                          <span className={statusNormalizado === 'Entregue' ? 'text-orange-500' : ''}>Entregue</span>
+                          <span className={statusNormalizado === 'Em Entrega' ? 'text-orange-500' : ''}>Em Entrega</span>
+                          <span className={statusNormalizado === 'Entregue' ? 'text-green-600' : ''}>Entregue</span>
                         </div>
                       </div>
                       <p className="text-xs text-gray-500 mt-2">{STATUS_DESC[statusNormalizado]}</p>
