@@ -457,6 +457,7 @@ module.exports = {  getProfile: async (req, res) => {
         status: order.status.toLowerCase(),
         createdAt: order.data_criacao,
         taxa_entrega: order.restaurant?.taxa_entrega || 0,
+        formaPagamento: order.formaPagamento || null, // <-- Inclui método de pagamento
         usuario: {
           id: order.user.id,
           nome: order.user.nome,
@@ -1328,6 +1329,86 @@ module.exports = {  getProfile: async (req, res) => {
     } catch (err) {
       console.error("[deleteAddress] Erro ao excluir endereço do lojista:", err);
       res.status(500).json({ error: "Erro ao excluir endereço" });
+    }
+  },
+  getOrderById: async (req, res) => {
+    try {
+      const { id } = req.params;
+      if (!id || isNaN(Number(id))) {
+        return res.status(400).json({ error: 'ID do pedido inválido' });
+      }
+      // Busca o pedido do restaurante do lojista autenticado
+      const order = await prisma.order.findFirst({
+        where: {
+          id: Number(id),
+          restaurant: { userId: req.user.id }
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              nome: true,
+              email: true,
+              telefone: true
+            }
+          },
+          restaurant: {
+            select: {
+              id: true,
+              nome: true,
+              taxa_entrega: true,
+              telefone: true
+            }
+          },
+          orderItems: {
+            include: {
+              product: true,
+              adicionais: {
+                include: {
+                  adicional: true
+                }
+              }
+            }
+          },
+          address: true
+        }
+      });
+      if (!order) {
+        return res.status(404).json({ error: 'Pedido não encontrado' });
+      }
+      // Formata a resposta para o frontend
+      const formattedOrder = {
+        id: order.id,
+        status: order.status.toLowerCase(),
+        createdAt: order.data_criacao,
+        taxa_entrega: order.restaurant?.taxa_entrega || 0,
+        formaPagamento: order.formaPagamento || null,
+        usuario: {
+          id: order.user.id,
+          nome: order.user.nome,
+          email: order.user.email,
+          telefone: order.user.telefone
+        },
+        restaurant: order.restaurant,
+        items: order.orderItems.map(item => ({
+          id: item.id,
+          quantidade: item.quantidade,
+          produto: item.product,
+          adicionais: item.adicionais.map(a => ({
+            id: a.adicional.id,
+            nome: a.adicional.nome,
+            preco: a.adicional.preco,
+            quantidade: a.quantidade
+          }))
+        })),
+        endereco: order.address,
+        observacao: order.observacao,
+        total: order.total
+      };
+      res.json(formattedOrder);
+    } catch (err) {
+      console.error('[getOrderById] Erro ao buscar pedido do lojista:', err);
+      res.status(500).json({ error: 'Erro ao buscar pedido do lojista' });
     }
   },
 };

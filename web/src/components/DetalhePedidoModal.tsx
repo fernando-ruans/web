@@ -36,6 +36,7 @@ interface DetalhePedidoModalProps {
       estado: string;
       cep: string;
     };
+    formaPagamento?: string;
   };
   statusNomes: Record<string, string>;
 }
@@ -78,6 +79,13 @@ const DetalhePedidoModal: React.FC<DetalhePedidoModalProps> = ({ open, onClose, 
             <span className="text-gray-900">{formatarData(pedido.createdAt)}</span>
           </div>
         </div>
+        {/* NOVO: Método de Pagamento */}
+        {pedido.formaPagamento && (
+          <div className="bg-gray-50 rounded-xl p-4">
+            <span className="text-sm text-gray-500 block">Forma de Pagamento</span>
+            <span className="text-gray-900 font-semibold">{pedido.formaPagamento.charAt(0).toUpperCase() + pedido.formaPagamento.slice(1)}</span>
+          </div>
+        )}
 
         <div className="bg-gray-50 rounded-xl p-4">
           <h3 className="font-medium text-gray-900 mb-2">Cliente</h3>

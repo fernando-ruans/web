@@ -488,10 +488,14 @@ module.exports = {
   createOrder: async (req, res) => {
     try {
       if (!req.user?.id) {
+        console.log('[createOrder] Falha na autenticação');
         return res.status(401).json({ error: "Usuário não autenticado" });
       }
 
-      const { restaurantId, addressId, observacao, items } = req.body;
+      // Loga o body recebido para debug
+      console.log('[createOrder] Body recebido:', req.body);
+
+      const { restaurantId, addressId, observacao, items, formaPagamento } = req.body;
 
       // Validar se o restaurante existe
       const restaurant = await prisma.restaurant.findUnique({
@@ -499,6 +503,7 @@ module.exports = {
       });
 
       if (!restaurant) {
+        console.log('[createOrder] Restaurante não encontrado:', restaurantId);
         return res.status(404).json({ error: "Restaurante não encontrado" });
       }
 
@@ -508,7 +513,36 @@ module.exports = {
       });
 
       if (!address || address.userId !== req.user.id) {
+        console.log('[createOrder] Endereço não encontrado ou não pertence ao usuário:', addressId);
         return res.status(404).json({ error: "Endereço não encontrado" });
+      }
+
+      // Validação dos itens
+      if (!items || !Array.isArray(items) || items.length === 0) {
+        console.log('[createOrder][ERRO] Itens do pedido ausentes ou inválidos:', items);
+        return res.status(400).json({ error: "Itens do pedido ausentes ou inválidos" });
+      }
+
+      // Validação da forma de pagamento
+      if (!formaPagamento || typeof formaPagamento !== 'string') {
+        console.log('[createOrder][ERRO] Forma de pagamento ausente ou inválida:', formaPagamento);
+        return res.status(400).json({ error: "Forma de pagamento ausente ou inválida" });
+      }
+
+      // LOG DETALHADO DOS ITENS E ADICIONAIS
+      for (const [idx, item] of items.entries()) {
+        if (!item.productId || !item.quantidade || !item.preco_unitario) {
+          console.log(`[createOrder][ERRO] Item do pedido inválido no índice ${idx}:`, item);
+          return res.status(400).json({ error: `Item do pedido inválido no índice ${idx}` });
+        }
+        if (item.adicionais && Array.isArray(item.adicionais)) {
+          for (const [aidx, adicional] of item.adicionais.entries()) {
+            if (!adicional.adicionalId || adicional.quantidade == null || adicional.preco == null) {
+              console.log(`[createOrder][ERRO] Adicional inválido no item ${idx}, adicional ${aidx}:`, adicional);
+              return res.status(400).json({ error: `Adicional inválido no item ${idx}, adicional ${aidx}` });
+            }
+          }
+        }
       }
 
       // Calcular total do pedido (produtos + adicionais + taxa de entrega)
@@ -524,17 +558,18 @@ module.exports = {
       const total = subtotal + taxaEntrega;
 
       // Criar o pedido em uma transação
-      const order = await prisma.$transaction(async (tx) => {
-        // Criar o pedido
-        const order = await tx.order.create({
-          data: {
+      try {
+        const order = await prisma.$transaction(async (tx) => {
+          // Loga o objeto enviado ao Prisma
+          const prismaOrderData = {
             userId: req.user.id,
             restaurantId,
             addressId,
             observacao: observacao || null,
-            status: 'PENDING', // Sempre salvar em UPPERCASE
+            status: 'PENDING',
             total: Number(total),
-            taxa_entrega: taxaEntrega, // <-- Adiciona a taxa de entrega no pedido
+            taxa_entrega: taxaEntrega,
+            formaPagamento: formaPagamento || null,
             orderItems: {
               create: items.map(item => ({
                 productId: item.productId,
@@ -549,27 +584,37 @@ module.exports = {
                 } : undefined
               }))
             }
-          },
-          include: {
-            orderItems: {
-              include: {
-                product: true,
-                adicionais: {
-                  include: {
-                    adicional: true
+          };
+          console.log('[createOrder][PRISMA] Dados enviados para criação do pedido:', JSON.stringify(prismaOrderData, null, 2));
+          // Criar o pedido
+          const order = await tx.order.create({
+            data: prismaOrderData,
+            include: {
+              orderItems: {
+                include: {
+                  product: true,
+                  adicionais: {
+                    include: {
+                      adicional: true
+                    }
                   }
                 }
-              }
-            },
-            address: true,
-            restaurant: true
-          }
+              },
+              address: true,
+              restaurant: true
+            }
+          });
+          return order;
         });
-
-        return order;
-      });
-
-      res.status(201).json(order);
+        res.status(201).json(order);
+      } catch (errTx) {
+        console.error('[createOrder] Erro PRISMA transação:', errTx);
+        if (errTx.stack) console.error('[createOrder] Stack trace:', errTx.stack);
+        if (errTx.code === 'P2003') {
+          return res.status(400).json({ error: 'Produto ou adicional não encontrado (chave estrangeira inválida)' });
+        }
+        return res.status(500).json({ error: 'Erro ao criar pedido (transação)', details: errTx.message });
+      }
     } catch (err) {
       console.error("[createOrder] Erro ao criar pedido:", err);
       res.status(500).json({ 
@@ -890,6 +935,7 @@ module.exports = {
         status: (order.status || '').toUpperCase(), // Sempre retorna em UPPERCASE
         total: Number(order.total),
         data_criacao: order.data_criacao,
+        formaPagamento: order.formaPagamento || null, // <-- Inclui método de pagamento
         restaurant: {
           nome: order.restaurant?.nome,
           imagem: order.restaurant?.imagem
@@ -1011,6 +1057,7 @@ module.exports = {
         items,
         taxa_entrega: Number(order.taxa_entrega), // Usa o valor salvo no pedido
         observacao: order.observacao,
+        formaPagamento: order.formaPagamento || null, // <-- Adiciona o campo formaPagamento
         restaurant: order.restaurant,
         endereco: {
           id: order.address.id,

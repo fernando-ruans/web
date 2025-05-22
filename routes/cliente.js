@@ -44,6 +44,7 @@ const orderSchema = Joi.object({
   restaurantId: Joi.number().required(),
   addressId: Joi.number().required(),
   observacao: Joi.string().allow('', null).optional(),
+  formaPagamento: Joi.string().required(), // <-- Adicionado campo obrigatório
   items: Joi.array().items(
     Joi.object({
       productId: Joi.number().required(),
@@ -78,7 +79,9 @@ const addressSchema = Joi.object({
 });
 
 router.post('/orders', auth(['cliente']), async (req, res, next) => {
-  const { error } = orderSchema.validate(req.body);
+  // Log para debug do body recebido
+  console.log('[POST /orders] Body recebido para validação:', req.body);
+  const { error } = orderSchema.validate(req.body, { allowUnknown: true });
   if (error) return res.status(400).json({ error: error.details[0].message });
   next();
 }, clienteController.createOrder);

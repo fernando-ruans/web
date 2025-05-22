@@ -54,6 +54,7 @@ interface Pedido {
   taxa_entrega: number;
   observacao?: string;
   endereco: Endereco;
+  formaPagamento?: string | null; // <-- Adicionado explicitamente
 }
 
 const statusClasses: Record<Pedido['status'], string> = {
@@ -142,7 +143,8 @@ const DetalhePedidoModalWrapper: React.FC<DetalhePedidoModalProps> = ({ pedido, 
         })) || [],
         taxa_entrega: pedido.taxa_entrega || 0,
         observacao: pedido.observacao,
-        endereco: pedido.endereco || undefined
+        endereco: pedido.endereco || undefined,
+        formaPagamento: (pedido as any).formaPagamento || undefined // <-- Adicionado repasse do campo
       }}
       statusNomes={statusNomes}
     />

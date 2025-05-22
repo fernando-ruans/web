@@ -43,6 +43,7 @@ router.put('/restaurants/:id/toggle-open', lojistaController.toggleRestaurantOpe
 
 // Rotas de pedidos
 router.get('/orders', lojistaController.listOrders);
+router.get('/orders/:id', lojistaController.getOrderById); // Detalhe do pedido individual
 router.put('/orders/status', lojistaController.updateOrderStatus); // Rota atualizada
 router.get('/reviews', lojistaController.listReviews);
 router.get('/orders/active', lojistaController.listActiveOrders);

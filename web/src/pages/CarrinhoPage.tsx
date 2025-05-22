@@ -110,6 +110,7 @@ export default function CarrinhoPage() {
         restaurantId: items[0].restauranteId,
         addressId: selectedAddressId,
         observacao: observacao || undefined,
+        formaPagamento, // <-- Adicionado para enviar ao backend
         items: items.map(item => ({
             productId: item.id,
             quantidade: item.quantidade,
