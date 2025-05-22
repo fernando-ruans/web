@@ -1015,6 +1015,8 @@ module.exports = {  getProfile: async (req, res) => {
         diasMaisMovimentados :
         diasDaSemana.map(dia => ({ dia, pedidos: 0 }));
         
+      // Calcular total das taxas de entrega dos pedidos concluídos
+      const totalTaxasEntrega = pedidosConcluidos.reduce((acc, p) => acc + (p.taxa_entrega || 0), 0);
       // Montar objeto de resposta
       const relatorio = {
         faturamentoTotal: faturamentoTotal || 0,
@@ -1029,7 +1031,8 @@ module.exports = {  getProfile: async (req, res) => {
         diasMaisMovimentados: diasMaisMovimentadosData,
         // NOVOS CAMPOS
         adicionaisMaisVendidos: adicionaisMaisVendidos.length > 0 ? adicionaisMaisVendidos : [{ nome: 'Sem dados', quantidade: 0 }],
-        faturamentoAdicionais: faturamentoAdicionais || 0
+        faturamentoAdicionais: faturamentoAdicionais || 0,
+        totalTaxasEntrega // NOVO CAMPO
       };
       
       res.json(relatorio);    } catch (err) {

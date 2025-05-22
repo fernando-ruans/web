@@ -38,6 +38,7 @@ interface RelatorioDados {
     quantidade: number;
   }[];
   faturamentoAdicionais: number;
+  totalTaxasEntrega?: number; // NOVO CAMPO
 }
 
 interface FiltroData {
@@ -586,13 +587,70 @@ export default function LojistaRelatoriosPage() {
       pdf.setTextColor(corDestaques);
       pdf.text(`${dados.mediaAvaliacao.toFixed(1)} de 5.0`, margin + contentWidth/2 + 5, infoY + infoHeight/2 + 17);
       
+      // Espaço após o quadro de resumo
+      let yTaxas = infoY + infoHeight + 15;
+      pdf.setDrawColor(220, 220, 220);
+      pdf.setLineWidth(0.3);
+      pdf.line(margin, yTaxas, pageWidth - margin, yTaxas); // linha separadora
+      yTaxas += 5;
+
+      // Taxa de entrega individual (fixa do restaurante)
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(12);
+      pdf.setTextColor(corSecundaria);
+      pdf.text('Taxa de Entrega por Pedido:', margin, yTaxas);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(corDestaques);
+      pdf.text(
+        restaurante.taxa_entrega !== undefined
+          ? `R$ ${Number(restaurante.taxa_entrega).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+          : 'Não informado',
+        margin + 65,
+        yTaxas
+      );
+      yTaxas += 8;
+
+      // Faturamento das taxas de entrega (soma do período)
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(12);
+      pdf.setTextColor(corSecundaria);
+      pdf.text('Faturamento das Taxas de Entrega:', margin, yTaxas);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(corDestaques);
+      pdf.text(
+        dados.totalTaxasEntrega !== undefined
+          ? `R$ ${Number(dados.totalTaxasEntrega).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+          : 'Não disponível',
+        margin + 85,
+        yTaxas
+      );
+      yTaxas += 12;
+
+      // Espaço extra antes da próxima seção
+      yTaxas += 2;
+      // currentY agora começa após o bloco de taxas
+      let currentY = yTaxas;
+
       // Produtos mais vendidos
+      const alturaNecessariaProdutos = 15 + 20 + 10 + (dados.produtosMaisVendidos.length * 8) + 20; // título + espaço + cabeçalho + linhas + margem extra
+      if (currentY + alturaNecessariaProdutos > pageHeight - 30) {
+        pdf.addPage();
+        currentY = margin + 10;
+        // Cabeçalho da página nova
+        pdf.setFontSize(14);
+        pdf.setTextColor(corSecundaria);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(`${restaurante.nome} - Relatório de Vendas (continuação)`, pageWidth / 2, margin, { align: 'center' });
+        pdf.setDrawColor(corPrimaria);
+        pdf.line(margin, margin + 5, pageWidth - margin, margin + 5);
+        currentY += 15;
+      }
       pdf.setTextColor(corSecundaria);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('Produtos Mais Vendidos', margin, infoY + infoHeight + 15);
+      pdf.text('Produtos Mais Vendidos', margin, currentY + 15);
       
       // Tabela de produtos
-      const startTableY = infoY + infoHeight + 20;
+      const startTableY = currentY + 20;
       const cellPadding = 5;
       const colWidths = [100, 30, 40];
       
@@ -608,7 +666,7 @@ export default function LojistaRelatoriosPage() {
       pdf.setTextColor(corTexto);
       pdf.setFillColor(255, 255, 255);
       
-      let currentY = startTableY + 10;
+      currentY = startTableY + 10;
       const totalProdutosVendidos = dados.produtosMaisVendidos.reduce((acc, p) => acc + p.quantidade, 0);
       
       dados.produtosMaisVendidos.forEach((produto, index) => {
@@ -631,7 +689,20 @@ export default function LojistaRelatoriosPage() {
         currentY += 8;
       });
       
-      // Tabela de adicionais mais vendidos
+      // Adicionais mais vendidos
+      const alturaNecessariaAdicionais = 15 + 20 + 10 + (dados.adicionaisMaisVendidos.length * 8) + 20; // título + espaço + cabeçalho + linhas + margem extra
+      if (currentY + alturaNecessariaAdicionais > pageHeight - 30) {
+        pdf.addPage();
+        currentY = margin + 10;
+        // Cabeçalho da página nova
+        pdf.setFontSize(14);
+        pdf.setTextColor(corSecundaria);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(`${restaurante.nome} - Relatório de Vendas (continuação)`, pageWidth / 2, margin, { align: 'center' });
+        pdf.setDrawColor(corPrimaria);
+        pdf.line(margin, margin + 5, pageWidth - margin, margin + 5);
+        currentY += 15;
+      }
       pdf.setTextColor(corSecundaria);
       pdf.setFont('helvetica', 'bold');
       pdf.text('Adicionais Mais Vendidos', margin, currentY + 15);
@@ -666,26 +737,34 @@ export default function LojistaRelatoriosPage() {
       pdf.text(`R$ ${dados.faturamentoAdicionais.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, margin + 60, currentY + 12);
       currentY += 20;
 
-      // Faturamento por categoria (gráfico de pizza)
+      // --- Faturamento por categoria (gráfico de pizza) ---
+      // Antes de desenhar, verifica se há espaço suficiente na página
+      const alturaNecessariaCategoria = 15 + 20 + 10 + (dados.faturamentoPorCategoria.length * 8) + 20; // título + espaço + cabeçalho + linhas + margem extra
+      if (currentY + alturaNecessariaCategoria > pageHeight - 30) {
+        pdf.addPage();
+        currentY = margin + 10;
+        // Cabeçalho da página nova
+        pdf.setFontSize(14);
+        pdf.setTextColor(corSecundaria);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(`${restaurante.nome} - Relatório de Vendas (continuação)`, pageWidth / 2, margin, { align: 'center' });
+        pdf.setDrawColor(corPrimaria);
+        pdf.line(margin, margin + 5, pageWidth - margin, margin + 5);
+        currentY += 15;
+      }
+      // Agora desenha normalmente o bloco de categoria
       pdf.setTextColor(corSecundaria);
       pdf.setFont('helvetica', 'bold');
       pdf.text('Faturamento por Categoria', margin, currentY + 15);
-      
       currentY += 20;
-      
-      // Tabela de categorias
       pdf.setFillColor(corPrimaria);
       pdf.setTextColor(255, 255, 255);
       pdf.rect(margin, currentY, colWidths[0] + colWidths[1] + colWidths[2], 10, 'F');
       pdf.text('Categoria', margin + cellPadding, currentY + 6.5);
       pdf.text('Valor (R$)', margin + colWidths[0] + cellPadding, currentY + 6.5);
       pdf.text('% Total', margin + colWidths[0] + colWidths[1] + cellPadding, currentY + 6.5);
-      
-      // Linhas da tabela - categorias
       pdf.setTextColor(corTexto);
-      
       currentY += 10;
-      
       dados.faturamentoPorCategoria.forEach((categoria, index) => {
         const altRow = index % 2 === 0;
         if (altRow) {
@@ -693,16 +772,12 @@ export default function LojistaRelatoriosPage() {
         } else {
           pdf.setFillColor(255, 255, 255);
         }
-        
         pdf.rect(margin, currentY, colWidths[0] + colWidths[1] + colWidths[2], 8, 'F');
-        
         pdf.setFont('helvetica', 'normal');
         pdf.text(categoria.categoria, margin + cellPadding, currentY + 5.5);
         pdf.text(categoria.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 }), margin + colWidths[0] + cellPadding, currentY + 5.5);
-        
         const percentual = ((categoria.valor / dados.faturamentoTotal) * 100).toFixed(1);
         pdf.text(`${percentual}%`, margin + colWidths[0] + colWidths[1] + cellPadding, currentY + 5.5);
-        
         currentY += 8;
       });
       
@@ -721,6 +796,19 @@ export default function LojistaRelatoriosPage() {
       }
       
       // Informações sobre dias de vendas
+      const alturaNecessariaDias = 15 + 20 + 10 + (dados.diasMaisMovimentados.length * 8) + 20; // título + espaço + cabeçalho + linhas + margem extra
+      if (currentY + alturaNecessariaDias > pageHeight - 30) {
+        pdf.addPage();
+        currentY = margin + 10;
+        // Cabeçalho da página nova
+        pdf.setFontSize(14);
+        pdf.setTextColor(corSecundaria);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(`${restaurante.nome} - Relatório de Vendas (continuação)`, pageWidth / 2, margin, { align: 'center' });
+        pdf.setDrawColor(corPrimaria);
+        pdf.line(margin, margin + 5, pageWidth - margin, margin + 5);
+        currentY += 15;
+      }
       pdf.setFontSize(13);
       pdf.setFont('helvetica', 'bold');
       pdf.setTextColor(corSecundaria);
