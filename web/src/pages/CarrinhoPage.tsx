@@ -105,6 +105,7 @@ export default function CarrinhoPage() {
     setLoading(true);
     setError('');    
     try {      
+      // Monta o objeto pedido apenas com os campos aceitos pelo backend
       const pedido = {
         restaurantId: items[0].restauranteId,
         addressId: selectedAddressId,
@@ -119,8 +120,6 @@ export default function CarrinhoPage() {
               preco: a.preco // Corrigido: era preco_unitario, agora é preco
             }))
           })),
-        formaPagamento,
-        trocoPara: formaPagamento === 'dinheiro' ? Number(trocoPara) : undefined,
       };
 
       const res = await fetch('/api/cliente/orders', {
