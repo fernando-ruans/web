@@ -477,7 +477,7 @@ export default function CarrinhoPage() {
 
             <div className="bg-white/90 rounded-xl shadow-lg p-6 mb-8">
               <h2 className="text-lg font-bold text-gray-700 mb-4">Forma de Pagamento</h2>
-              <div className="flex flex-row flex-wrap gap-2 mb-4 justify-start items-center">
+              <div className="flex flex-row flex-wrap gap-2 mb-4 justify-center items-center">
                 <label className={`flex items-center gap-2 px-3 py-2 min-w-[120px] rounded-lg border-2 font-semibold text-base cursor-pointer transition-all duration-200 shadow-sm select-none text-center justify-center
                   ${formaPagamento === 'dinheiro' ? 'bg-orange-100 border-orange-500 text-orange-700 ring-2 ring-orange-200' : 'bg-gray-50 border-gray-200 text-gray-700 hover:border-orange-300 hover:bg-orange-50'}`}
                 >
