@@ -728,6 +728,14 @@ module.exports = {
     try {
       const { dataInicio, dataFim } = req.query;
 
+      // Arrays de status padronizados (iguais ao painel)
+      const statusEntregue = [
+        'ENTREGUE', 'DELIVERED', 'COMPLETED'
+      ];
+      const statusCancelado = [
+        'CANCELADO', 'CANCELED', 'CANCELLED'
+      ];
+
       // Validar datas
       const inicio = dataInicio ? moment(dataInicio).startOf('day') : moment().subtract(30, 'days').startOf('day');
       const fim = dataFim ? moment(dataFim).endOf('day') : moment().endOf('day');
@@ -779,7 +787,7 @@ module.exports = {
          .strokeColor(colors.border)
          .stroke();
 
-      // Buscar dados para o relatório
+      // Buscar dados para o relatório usando arrays de status
       const [
         pedidosEntregues,
         pedidosCancelados,
@@ -791,13 +799,13 @@ module.exports = {
       ] = await Promise.all([
         prisma.order.count({ 
           where: { 
-            status: 'Entregue',
+            OR: statusEntregue.map(status => ({ status })),
             data_criacao: { gte: inicio.toDate(), lte: fim.toDate() }
           }
         }),
         prisma.order.count({ 
           where: { 
-            status: 'Cancelado',
+            OR: statusCancelado.map(status => ({ status })),
             data_criacao: { gte: inicio.toDate(), lte: fim.toDate() }
           }
         }),
@@ -806,7 +814,7 @@ module.exports = {
         prisma.order.aggregate({
           _sum: { total: true },
           where: { 
-            status: 'Entregue',
+            OR: statusEntregue.map(status => ({ status })),
             data_criacao: { gte: inicio.toDate(), lte: fim.toDate() }
           }
         }),
@@ -819,7 +827,7 @@ module.exports = {
         prisma.order.groupBy({
           by: ['restaurantId'],
           where: { 
-            status: 'Entregue',
+            OR: statusEntregue.map(status => ({ status })),
             data_criacao: { gte: inicio.toDate(), lte: fim.toDate() }
           },
           _sum: { total: true },
@@ -948,10 +956,12 @@ module.exports = {
 
       // Finalizar o documento sem criar páginas extras
       doc.end();
-      
-      resolve();
+      // Não usar resolve/reject aqui, Express lida com a resposta
     } catch (error) {
-      reject(error);
+      console.error('[gerarRelatorioPDF] Erro ao gerar PDF:', error);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Erro ao gerar PDF', details: error.message });
+      }
     }
   },
 
