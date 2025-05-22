@@ -404,18 +404,36 @@ export default function LojistaPerfilPage() {
                         <div className="flex-1">
                           <p className="text-sm text-gray-600 mb-1">Horário de Funcionamento</p>
                           <div className="grid grid-cols-2 gap-x-8 gap-y-2">
-                            {diasSemana.map((dia) => (
-                              <div key={dia} className="flex gap-2 items-center">
-                                <span className="capitalize text-gray-700 w-20">{dia}:</span>
-                                <input
-                                  className="w-32 bg-white border border-orange-200 rounded px-2 py-1 text-gray-900 focus:outline-none"
-                                  type="text"
-                                  placeholder="Ex: 08:00-18:00"
-                                  value={horarioFuncionamento[dia] || ''}
-                                  onChange={e => handleHorarioChange(dia, e.target.value)}
-                                />
-                              </div>
-                            ))}
+                            {/* Coluna 1: segunda, terça, quarta, quinta */}
+                            <div className="flex flex-col gap-2">
+                              {['segunda', 'terca', 'quarta', 'quinta'].map((dia) => (
+                                <div key={dia} className="flex gap-2 items-center">
+                                  <span className="capitalize text-gray-700 w-20">{dia.charAt(0).toUpperCase() + dia.slice(1)}:</span>
+                                  <input
+                                    className="w-32 bg-white border border-orange-200 rounded px-2 py-1 text-gray-900 focus:outline-none"
+                                    type="text"
+                                    placeholder="Ex: 08:00-18:00"
+                                    value={horarioFuncionamento[dia] || ''}
+                                    onChange={e => handleHorarioChange(dia, e.target.value)}
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                            {/* Coluna 2: sexta, sábado, domingo */}
+                            <div className="flex flex-col gap-2">
+                              {['sexta', 'sabado', 'domingo'].map((dia) => (
+                                <div key={dia} className="flex gap-2 items-center">
+                                  <span className="capitalize text-gray-700 w-20">{dia.charAt(0).toUpperCase() + dia.slice(1)}:</span>
+                                  <input
+                                    className="w-32 bg-white border border-orange-200 rounded px-2 py-1 text-gray-900 focus:outline-none"
+                                    type="text"
+                                    placeholder="Ex: 08:00-18:00"
+                                    value={horarioFuncionamento[dia] || ''}
+                                    onChange={e => handleHorarioChange(dia, e.target.value)}
+                                  />
+                                </div>
+                              ))}
+                            </div>
                           </div>
                           <span className="text-xs text-gray-400 mt-1 block">Deixe em branco para dias fechados. Exemplo: 08:00-18:00</span>
                         </div>
@@ -539,12 +557,24 @@ export default function LojistaPerfilPage() {
                         <div>
                           <p className="text-sm text-gray-600 mb-1">Horário de Funcionamento</p>
                           <div className="grid grid-cols-2 gap-x-8 gap-y-1">
-                            {Object.entries(restaurant.horario_funcionamento).map(([dia, horario]: any) => (
-                              <div key={dia} className="flex gap-2">
-                                <span className="capitalize text-gray-700 w-20">{dia}:</span>
-                                <span className="text-gray-900 font-medium">{horario || 'Fechado'}</span>
-                              </div>
-                            ))}
+                            {/* Coluna 1: segunda, terça, quarta, quinta */}
+                            <div className="flex flex-col gap-1">
+                              {['segunda', 'terca', 'quarta', 'quinta'].map((dia) => (
+                                <div key={dia} className="flex gap-2">
+                                  <span className="capitalize text-gray-700 w-20">{dia.charAt(0).toUpperCase() + dia.slice(1)}:</span>
+                                  <span className="text-gray-900 font-medium">{restaurant.horario_funcionamento?.[dia] || 'Fechado'}</span>
+                                </div>
+                              ))}
+                            </div>
+                            {/* Coluna 2: sexta, sábado, domingo */}
+                            <div className="flex flex-col gap-1">
+                              {['sexta', 'sabado', 'domingo'].map((dia) => (
+                                <div key={dia} className="flex gap-2">
+                                  <span className="capitalize text-gray-700 w-20">{dia.charAt(0).toUpperCase() + dia.slice(1)}:</span>
+                                  <span className="text-gray-900 font-medium">{restaurant.horario_funcionamento?.[dia] || 'Fechado'}</span>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         </div>
                       </div>
