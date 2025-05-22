@@ -17,6 +17,7 @@ interface Restaurant {
   imagem: string;
   banner: string;
   aberto: boolean;
+  horario_funcionamento?: Record<string, string>;
 }
 
 export default function LojistaPerfilPage() {
@@ -42,6 +43,18 @@ export default function LojistaPerfilPage() {
   const [banner, setBanner] = useState('');
   const [msg, setMsg] = useState('');
   const [error, setError] = useState('');
+  const diasSemana = [
+    'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'domingo'
+  ];
+  const [horarioFuncionamento, setHorarioFuncionamento] = useState<Record<string, string>>({
+    segunda: '',
+    terca: '',
+    quarta: '',
+    quinta: '',
+    sexta: '',
+    sabado: '',
+    domingo: ''
+  });
 
   // Verificação de acesso e fetch inicial
   useEffect(() => {
@@ -84,6 +97,9 @@ export default function LojistaPerfilPage() {
         setTempoEntrega(rest.tempo_entrega?.toString() || '');
         setImagem(rest.imagem || '');
         setBanner(rest.banner || '');
+        setHorarioFuncionamento(rest.horario_funcionamento || {
+          segunda: '', terca: '', quarta: '', quinta: '', sexta: '', sabado: '', domingo: ''
+        });
       }
     } catch (err) {
       setError('Erro ao carregar dados do restaurante');
@@ -131,7 +147,8 @@ export default function LojistaPerfilPage() {
         taxa_entrega: Number(taxaEntrega),
         tempo_entrega: Number(tempoEntrega),
         imagem,
-        banner
+        banner,
+        horario_funcionamento: horarioFuncionamento
       };
       
       const endpoint = restaurant 
@@ -224,6 +241,10 @@ export default function LojistaPerfilPage() {
     } catch (err) {
       setError('Erro ao alterar status do restaurante');
     }
+  };
+
+  const handleHorarioChange = (dia: string, valor: string) => {
+    setHorarioFuncionamento(prev => ({ ...prev, [dia]: valor }));
   };
 
   if (!user) return null;
@@ -377,6 +398,28 @@ export default function LojistaPerfilPage() {
                           />
                         </div>
                       </div>
+
+                      <div className="bg-orange-50 p-4 rounded-xl flex items-start gap-3 md:col-span-2">
+                        <FaClock size={20} color="#f97316" />
+                        <div className="flex-1">
+                          <p className="text-sm text-gray-600 mb-1">Horário de Funcionamento</p>
+                          <div className="grid grid-cols-2 gap-x-8 gap-y-2">
+                            {diasSemana.map((dia) => (
+                              <div key={dia} className="flex gap-2 items-center">
+                                <span className="capitalize text-gray-700 w-20">{dia}:</span>
+                                <input
+                                  className="w-32 bg-white border border-orange-200 rounded px-2 py-1 text-gray-900 focus:outline-none"
+                                  type="text"
+                                  placeholder="Ex: 08:00-18:00"
+                                  value={horarioFuncionamento[dia] || ''}
+                                  onChange={e => handleHorarioChange(dia, e.target.value)}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                          <span className="text-xs text-gray-400 mt-1 block">Deixe em branco para dias fechados. Exemplo: 08:00-18:00</span>
+                        </div>
+                      </div>
                     </div>
 
                     {msg && <div className="text-green-500 text-center mt-4">{msg}</div>}
@@ -488,6 +531,24 @@ export default function LojistaPerfilPage() {
                         </div>
                       </div>
                     </div>
+
+                    {/* Horário de Funcionamento */}
+                    {restaurant?.horario_funcionamento && (
+                      <div className="bg-orange-50 p-4 rounded-xl flex items-start gap-3 mt-4">
+                        <FaClock size={20} color="#f97316" />
+                        <div>
+                          <p className="text-sm text-gray-600 mb-1">Horário de Funcionamento</p>
+                          <div className="grid grid-cols-2 gap-x-8 gap-y-1">
+                            {Object.entries(restaurant.horario_funcionamento).map(([dia, horario]: any) => (
+                              <div key={dia} className="flex gap-2">
+                                <span className="capitalize text-gray-700 w-20">{dia}:</span>
+                                <span className="text-gray-900 font-medium">{horario || 'Fechado'}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     <div className="mt-8 flex justify-end">
                       <button

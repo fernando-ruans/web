@@ -315,7 +315,7 @@ module.exports = {  getProfile: async (req, res) => {
 
   createRestaurant: async (req, res) => {
     try {
-      const { nome, cep, telefone, endereco, taxa_entrega, tempo_entrega, status, imagem, banner } = req.body;
+      const { nome, cep, telefone, endereco, taxa_entrega, tempo_entrega, status, imagem, banner, horario_funcionamento } = req.body;
       if (!nome || !endereco || !taxa_entrega || !tempo_entrega) {
         return res.status(400).json({ error: 'Dados obrigatórios faltando' });
       }
@@ -330,7 +330,8 @@ module.exports = {  getProfile: async (req, res) => {
           tempo_entrega: Number(tempo_entrega),
           status: status || 'pendente',
           imagem: imagem || '',
-          banner: banner || '/banner-default.png'
+          banner: banner || '/banner-default.png',
+          ...(horario_funcionamento && { horario_funcionamento: typeof horario_funcionamento === 'object' ? horario_funcionamento : JSON.parse(horario_funcionamento) })
         }
       });
       res.status(201).json(restaurante);
@@ -345,7 +346,12 @@ module.exports = {  getProfile: async (req, res) => {
         where: { userId: req.user.id },
         include: { categories: true, orders: true, reviews: true }
       });
-      res.json(restaurantes);
+      // Garante que horario_funcionamento seja sempre um objeto (ou null)
+      const restaurantesComHorario = restaurantes.map(r => ({
+        ...r,
+        horario_funcionamento: r.horario_funcionamento ? (typeof r.horario_funcionamento === 'object' ? r.horario_funcionamento : JSON.parse(r.horario_funcionamento)) : null
+      }));
+      res.json(restaurantesComHorario);
     } catch (err) {
       res.status(500).json({ error: 'Erro ao listar restaurantes' });
     }
@@ -353,7 +359,7 @@ module.exports = {  getProfile: async (req, res) => {
   updateRestaurant: async (req, res) => {
     try {
       const { id } = req.params;
-      const { nome, cep, telefone, endereco, taxa_entrega, tempo_entrega, imagem, banner } = req.body;
+      const { nome, cep, telefone, endereco, taxa_entrega, tempo_entrega, imagem, banner, horario_funcionamento } = req.body;
       
       // Valida e converte os campos numéricos
       const taxaEntregaNum = taxa_entrega ? Number(taxa_entrega) : undefined;
@@ -368,7 +374,8 @@ module.exports = {  getProfile: async (req, res) => {
         ...(taxaEntregaNum !== undefined && { taxa_entrega: taxaEntregaNum }),
         ...(tempoEntregaNum !== undefined && { tempo_entrega: tempoEntregaNum }),
         ...(imagem && { imagem }),
-        ...(banner && { banner })
+        ...(banner && { banner }),
+        ...(horario_funcionamento && { horario_funcionamento: typeof horario_funcionamento === 'object' ? horario_funcionamento : JSON.parse(horario_funcionamento) })
       };
 
       const restaurante = await prisma.restaurant.update({

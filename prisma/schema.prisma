@@ -52,6 +52,7 @@ model Restaurant {
   telefone      String?
   aberto        Boolean    @default(false)
   cep           String?
+  horario_funcionamento Json? // Horários de funcionamento por dia da semana
   categories    Category[]
   orders        Order[]
   user          User       @relation(fields: [userId], references: [id])
