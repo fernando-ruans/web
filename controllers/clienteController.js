@@ -865,6 +865,10 @@ module.exports = {
 
       // Remove campos sensíveis do restaurante antes de enviar
       const { userId, ...restaurantInfo } = restaurant;
+      // Garante que horario_funcionamento seja sempre um objeto ou null
+      restaurantInfo.horario_funcionamento = restaurant.horario_funcionamento
+        ? (typeof restaurant.horario_funcionamento === 'object' ? restaurant.horario_funcionamento : JSON.parse(restaurant.horario_funcionamento))
+        : null;
 
       res.json({
         data: menuData,

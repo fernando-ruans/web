@@ -39,6 +39,7 @@ interface Restaurante {
   taxa_entrega: number;
   tempo_entrega: number;
   aberto: boolean;
+  horario_funcionamento?: Record<string, string>;
 }
 
 export default function RestauranteMenuPage() {
@@ -135,6 +136,33 @@ export default function RestauranteMenuPage() {
                 Taxa de entrega: R$ {restaurante.taxa_entrega.toFixed(2)}
               </span>
             </div>
+
+            {/* Horário de Funcionamento */}
+            {restaurante.horario_funcionamento && (
+              <div className="bg-orange-50 p-4 rounded-xl flex flex-col items-center gap-2 mt-4 w-full max-w-md mx-auto">
+                <p className="text-sm text-gray-600 mb-1 font-semibold flex items-center gap-2"><FaClock size={16} color="#f97316" />Horário de Funcionamento</p>
+                <div className="grid grid-cols-2 gap-x-8 gap-y-1 w-full">
+                  {/* Coluna 1: segunda, terça, quarta, quinta */}
+                  <div className="flex flex-col gap-1">
+                    {['segunda', 'terca', 'quarta', 'quinta'].map((dia) => (
+                      <div key={dia} className="flex gap-2">
+                        <span className="capitalize text-gray-700 w-20">{dia.charAt(0).toUpperCase() + dia.slice(1)}:</span>
+                        <span className="text-gray-900 font-medium">{restaurante.horario_funcionamento?.[dia] || 'Fechado'}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Coluna 2: sexta, sábado, domingo */}
+                  <div className="flex flex-col gap-1">
+                    {['sexta', 'sabado', 'domingo'].map((dia) => (
+                      <div key={dia} className="flex gap-2">
+                        <span className="capitalize text-gray-700 w-20">{dia.charAt(0).toUpperCase() + dia.slice(1)}:</span>
+                        <span className="text-gray-900 font-medium">{restaurante.horario_funcionamento?.[dia] || 'Fechado'}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
