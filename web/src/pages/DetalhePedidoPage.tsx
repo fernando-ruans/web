@@ -4,6 +4,7 @@ import { FaCheckCircle, FaClock, FaMotorcycle, FaTruckLoading, FaStar, FaSpinner
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import theme from '../theme';
+import { useWebSocket } from '../context/WebSocketContext';
 
 interface Pedido {
   id: number;
@@ -107,6 +108,7 @@ export default function DetalhePedidoPage() {
   const [enviandoAvaliacao, setEnviandoAvaliacao] = useState(false);
   const [nota, setNota] = useState(5);
   const [comentario, setComentario] = useState('');
+  const { socket } = useWebSocket();
 
   useEffect(() => {
     buscarPedido();
@@ -114,6 +116,27 @@ export default function DetalhePedidoPage() {
     const interval = setInterval(buscarPedido, 30000);
     return () => clearInterval(interval);
   }, [id]);
+
+  // Atualização em tempo real via WebSocket
+  useEffect(() => {
+    if (!socket || !id) return;
+    const handleMessage = (event: MessageEvent) => {
+      try {
+        const message = JSON.parse(event.data);
+        if (message.type === 'order-update' && message.data?.type === 'status-update') {
+          if (String(message.data.orderId) === String(id)) {
+            setPedido((prev) => prev ? { ...prev, ...message.data.order } : prev);
+          }
+        }
+      } catch (err) {
+        // Ignorar erros de parse
+      }
+    };
+    socket.addEventListener('message', handleMessage);
+    return () => {
+      socket.removeEventListener('message', handleMessage);
+    };
+  }, [socket, id]);
 
   const buscarPedido = async () => {
     try {
