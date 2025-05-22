@@ -1098,7 +1098,41 @@ export default function LojistaRelatoriosPage() {
                       />
                     </div>
                   </div>
-                  
+                </div>
+
+                {/* Gráfico de barras - Adicionais Mais Vendidos (abaixo do Faturamento por Categoria) */}
+                {dados.adicionaisMaisVendidos && dados.adicionaisMaisVendidos.length > 0 && dados.adicionaisMaisVendidos[0].nome !== 'Sem dados' && (
+                  <div className="bg-white rounded-xl p-6 shadow-md border border-gray-100 mb-8">
+                    <h3 className="text-xl font-bold text-gray-700 mb-4">Adicionais Mais Vendidos</h3>
+                    <div className="h-64">
+                      <Bar
+                        data={{
+                          labels: dados.adicionaisMaisVendidos.map(a => a.nome),
+                          datasets: [
+                            {
+                              label: 'Quantidade Vendida',
+                              data: dados.adicionaisMaisVendidos.map(a => a.quantidade),
+                              backgroundColor: 'rgba(255, 99, 132, 0.7)',
+                              borderColor: 'rgba(255, 99, 132, 1)',
+                              borderWidth: 1,
+                              barPercentage: 0.5,
+                              categoryPercentage: 0.5
+                            },
+                          ],
+                        }}
+                        options={{
+                          maintainAspectRatio: false,
+                          responsive: true,
+                          plugins: { legend: { display: false } },
+                          scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Gráficos de linha e barras - Pedidos últimos 7 dias e Dias mais movimentados */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                   {/* Gráfico de linha - Pedidos últimos 7 dias */}
                   <div className="bg-white rounded-xl p-6 shadow-md border border-gray-100">
                     <h3 className="text-xl font-bold text-gray-700 mb-4">Pedidos nos Últimos 7 Dias</h3>
@@ -1171,32 +1205,6 @@ export default function LojistaRelatoriosPage() {
                   </div>
                 </div>
 
-                {/* Gráfico de barras dos adicionais mais vendidos */}
-                {dados.adicionaisMaisVendidos && dados.adicionaisMaisVendidos.length > 0 && dados.adicionaisMaisVendidos[0].nome !== 'Sem dados' && (
-                  <div className="bg-white rounded-xl p-6 shadow-md border border-gray-100 mb-8">
-                    <h3 className="text-xl font-bold text-gray-700 mb-4">Adicionais Mais Vendidos</h3>
-                    <Bar
-                      data={{
-                        labels: dados.adicionaisMaisVendidos.map(a => a.nome),
-                        datasets: [
-                          {
-                            label: 'Quantidade Vendida',
-                            data: dados.adicionaisMaisVendidos.map(a => a.quantidade),
-                            backgroundColor: 'rgba(255, 99, 132, 0.7)',
-                            borderColor: 'rgba(255, 99, 132, 1)',
-                            borderWidth: 1,
-                          },
-                        ],
-                      }}
-                      options={{
-                        maintainAspectRatio: false,
-                        responsive: true,
-                        plugins: { legend: { display: false } },
-                        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
-                      }}
-                    />
-                  </div>
-                )}
                 </div> {/* Fechando a div ref={relatorioRef} */}
               </>
             ) : (
