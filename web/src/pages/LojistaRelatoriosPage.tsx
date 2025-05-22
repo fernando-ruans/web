@@ -643,7 +643,6 @@ export default function LojistaRelatoriosPage() {
       pdf.text('Qtde', margin + colWidths[0] + cellPadding, currentY + 6.5);
       pdf.setTextColor(corTexto);
       currentY += 10;
-      const totalAdicionaisVendidos = dados.adicionaisMaisVendidos.reduce((acc, a) => acc + a.quantidade, 0);
       dados.adicionaisMaisVendidos.forEach((adicional, index) => {
         const altRow = index % 2 === 0;
         if (altRow) {
@@ -657,19 +656,15 @@ export default function LojistaRelatoriosPage() {
         pdf.text(adicional.quantidade.toString(), margin + colWidths[0] + cellPadding, currentY + 5.5);
         currentY += 8;
       });
-      // Faturamento de adicionais estilizado
-      pdf.setFillColor(255, 230, 240); // Fundo rosa claro
-      pdf.setDrawColor(255, 99, 132); // Borda rosa
-      pdf.rect(margin, currentY + 10, 80, 18, 'FD');
+      // Faturamento de adicionais estilizado igual aos outros campos
       pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(12);
-      pdf.setTextColor(255, 99, 132);
-      pdf.text('Faturamento em Adicionais', margin + 5, currentY + 20);
+      pdf.setFontSize(11);
+      pdf.setTextColor(corSecundaria);
+      pdf.text('Faturamento em Adicionais:', margin, currentY + 12);
       pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(14);
-      pdf.setTextColor(34, 197, 94); // Verde
-      pdf.text(`R$ ${dados.faturamentoAdicionais.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, margin + 5, currentY + 30);
-      currentY += 38;
+      pdf.setTextColor(corDestaques);
+      pdf.text(`R$ ${dados.faturamentoAdicionais.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, margin + 60, currentY + 12);
+      currentY += 20;
 
       // Faturamento por categoria (gráfico de pizza)
       pdf.setTextColor(corSecundaria);
