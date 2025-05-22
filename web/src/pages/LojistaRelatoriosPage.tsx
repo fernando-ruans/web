@@ -33,6 +33,11 @@ interface RelatorioDados {
     dia: string;
     pedidos: number;
   }[];
+  adicionaisMaisVendidos: {
+    nome: string;
+    quantidade: number;
+  }[];
+  faturamentoAdicionais: number;
 }
 
 interface FiltroData {
@@ -72,7 +77,13 @@ const dadosExemplo: RelatorioDados = {
     { dia: 'Quarta', pedidos: 12 },
     { dia: 'Terça', pedidos: 10 },
     { dia: 'Segunda', pedidos: 8 }
-  ]
+  ],
+  adicionaisMaisVendidos: [
+    { nome: 'Queijo Extra', quantidade: 30 },
+    { nome: 'Bacon', quantidade: 25 },
+    { nome: 'Molho Especial', quantidade: 20 }
+  ],
+  faturamentoAdicionais: 500.00
 };
 
 export default function LojistaRelatoriosPage() {
@@ -620,6 +631,46 @@ export default function LojistaRelatoriosPage() {
         currentY += 8;
       });
       
+      // Tabela de adicionais mais vendidos
+      pdf.setTextColor(corSecundaria);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Adicionais Mais Vendidos', margin, currentY + 15);
+      currentY += 20;
+      pdf.setFillColor(corPrimaria);
+      pdf.setTextColor(255, 255, 255);
+      pdf.rect(margin, currentY, colWidths[0] + colWidths[1], 10, 'F');
+      pdf.text('Adicional', margin + cellPadding, currentY + 6.5);
+      pdf.text('Qtde', margin + colWidths[0] + cellPadding, currentY + 6.5);
+      pdf.setTextColor(corTexto);
+      currentY += 10;
+      const totalAdicionaisVendidos = dados.adicionaisMaisVendidos.reduce((acc, a) => acc + a.quantidade, 0);
+      dados.adicionaisMaisVendidos.forEach((adicional, index) => {
+        const altRow = index % 2 === 0;
+        if (altRow) {
+          pdf.setFillColor(245, 245, 245);
+        } else {
+          pdf.setFillColor(255, 255, 255);
+        }
+        pdf.rect(margin, currentY, colWidths[0] + colWidths[1], 8, 'F');
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(adicional.nome, margin + cellPadding, currentY + 5.5);
+        pdf.text(adicional.quantidade.toString(), margin + colWidths[0] + cellPadding, currentY + 5.5);
+        currentY += 8;
+      });
+      // Faturamento de adicionais estilizado
+      pdf.setFillColor(255, 230, 240); // Fundo rosa claro
+      pdf.setDrawColor(255, 99, 132); // Borda rosa
+      pdf.rect(margin, currentY + 10, 80, 18, 'FD');
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(12);
+      pdf.setTextColor(255, 99, 132);
+      pdf.text('Faturamento em Adicionais', margin + 5, currentY + 20);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(14);
+      pdf.setTextColor(34, 197, 94); // Verde
+      pdf.text(`R$ ${dados.faturamentoAdicionais.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, margin + 5, currentY + 30);
+      currentY += 38;
+
       // Faturamento por categoria (gráfico de pizza)
       pdf.setTextColor(corSecundaria);
       pdf.setFont('helvetica', 'bold');
@@ -804,7 +855,7 @@ export default function LojistaRelatoriosPage() {
   };
 
   return (
-    <div className={theme.bg + ' min-h-screen flex flex-col items-center pb-24 sm:pb-32'}>      {/* Toast de feedback */}
+    <div className={theme.bg + ' flex flex-col items-center pb-8 sm:pb-12'}>      {/* Toast de feedback */}
       {mostrarToast && (
         <div className="fixed top-20 right-4 bg-green-500 text-white px-4 py-3 rounded-md shadow-lg z-50 flex items-center gap-2 animate-slide-in">
           <FaCheckCircle />
@@ -1087,7 +1138,7 @@ export default function LojistaRelatoriosPage() {
                 </div>
                 
                 {/* Cards adicionais */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8 mt-8">
                   <div className="bg-purple-50 rounded-xl p-6 flex flex-col items-center gap-3 shadow-md">
                     <FaUsers size={32} color="#a855f7" />
                     <div className="text-2xl font-bold text-purple-700">{dados.clientesNovos}</div>
@@ -1107,6 +1158,45 @@ export default function LojistaRelatoriosPage() {
                     </div>                    <div className="text-gray-600 text-sm">Produto Mais Vendido</div>
                   </div>
                 </div>
+
+                {/* Cards principais (após os cards de produtos) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                  <div className="bg-pink-50 rounded-xl p-6 flex flex-col items-center gap-2 shadow-md">
+                    <span className="text-2xl font-bold text-pink-700">R$ {dados.faturamentoAdicionais?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                    <span className="text-gray-600 text-sm">Faturamento em Adicionais</span>
+                  </div>
+                  <div className="bg-orange-50 rounded-xl p-6 flex flex-col items-center gap-2 shadow-md">
+                    <span className="text-xl font-bold text-orange-700">{dados.adicionaisMaisVendidos?.[0]?.nome || 'Nenhum'}</span>
+                    <span className="text-gray-600 text-sm">Adicional Mais Vendido</span>
+                  </div>
+                </div>
+
+                {/* Gráfico de barras dos adicionais mais vendidos */}
+                {dados.adicionaisMaisVendidos && dados.adicionaisMaisVendidos.length > 0 && dados.adicionaisMaisVendidos[0].nome !== 'Sem dados' && (
+                  <div className="bg-white rounded-xl p-6 shadow-md border border-gray-100 mb-8">
+                    <h3 className="text-xl font-bold text-gray-700 mb-4">Adicionais Mais Vendidos</h3>
+                    <Bar
+                      data={{
+                        labels: dados.adicionaisMaisVendidos.map(a => a.nome),
+                        datasets: [
+                          {
+                            label: 'Quantidade Vendida',
+                            data: dados.adicionaisMaisVendidos.map(a => a.quantidade),
+                            backgroundColor: 'rgba(255, 99, 132, 0.7)',
+                            borderColor: 'rgba(255, 99, 132, 1)',
+                            borderWidth: 1,
+                          },
+                        ],
+                      }}
+                      options={{
+                        maintainAspectRatio: false,
+                        responsive: true,
+                        plugins: { legend: { display: false } },
+                        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+                      }}
+                    />
+                  </div>
+                )}
                 </div> {/* Fechando a div ref={relatorioRef} */}
               </>
             ) : (

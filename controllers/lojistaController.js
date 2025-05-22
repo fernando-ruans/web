@@ -842,7 +842,12 @@ module.exports = {  getProfile: async (req, res) => {
                 include: { 
                   category: true 
                 } 
-              } 
+              },
+              adicionais: {
+                include: {
+                  adicional: true
+                }
+              }
             } 
           },
           review: true
@@ -871,6 +876,9 @@ module.exports = {  getProfile: async (req, res) => {
         : 0;
         // Contagem de produtos vendidos
       const produtosVendidos = {};
+      // NOVO: Contagem de adicionais vendidos
+      const adicionaisVendidos = {};
+      let faturamentoAdicionais = 0;
       pedidosConcluidos.forEach(pedido => {
         if (pedido.orderItems && Array.isArray(pedido.orderItems)) {
           pedido.orderItems.forEach(item => {
@@ -881,12 +889,30 @@ module.exports = {  getProfile: async (req, res) => {
               }
               produtosVendidos[produtoNome] += item.quantidade || 0;
             }
+            // NOVO: contabilizar adicionais vendidos
+            if (item.adicionais && Array.isArray(item.adicionais)) {
+              item.adicionais.forEach(ad => {
+                const adicionalNome = ad.adicional?.nome || 'Adicional sem nome';
+                if (!adicionaisVendidos[adicionalNome]) {
+                  adicionaisVendidos[adicionalNome] = 0;
+                }
+                adicionaisVendidos[adicionalNome] += ad.quantidade || 0;
+                // Faturamento dos adicionais
+                if (ad.adicional?.preco) {
+                  faturamentoAdicionais += (ad.adicional.preco * (ad.quantidade || 0));
+                }
+              });
+            }
           });
         }
       });
-      
       // Produtos mais vendidos (top 5)
       const produtosMaisVendidos = Object.entries(produtosVendidos)
+        .map(([nome, quantidade]) => ({ nome, quantidade }))
+        .sort((a, b) => b.quantidade - a.quantidade)
+        .slice(0, 5);
+      // NOVO: Adicionais mais vendidos (top 5)
+      const adicionaisMaisVendidos = Object.entries(adicionaisVendidos)
         .map(([nome, quantidade]) => ({ nome, quantidade }))
         .sort((a, b) => b.quantidade - a.quantidade)
         .slice(0, 5);
@@ -1000,7 +1026,10 @@ module.exports = {  getProfile: async (req, res) => {
         pedidosUltimos7Dias: ultimos7Dias,
         faturamentoPorCategoria: faturamentoPorCategoriaData,
         produtosMaisVendidos: produtosMaisVendidosData,
-        diasMaisMovimentados: diasMaisMovimentadosData
+        diasMaisMovimentados: diasMaisMovimentadosData,
+        // NOVOS CAMPOS
+        adicionaisMaisVendidos: adicionaisMaisVendidos.length > 0 ? adicionaisMaisVendidos : [{ nome: 'Sem dados', quantidade: 0 }],
+        faturamentoAdicionais: faturamentoAdicionais || 0
       };
       
       res.json(relatorio);    } catch (err) {

@@ -17,6 +17,13 @@ code {
     monospace;
 }
 
+canvas {
+  max-height: 400px !important;
+  height: 100% !important;
+  min-height: 200px;
+  box-sizing: border-box;
+}
+
 h1,
 .text-blue-400 {
   color: #fb923c !important;
