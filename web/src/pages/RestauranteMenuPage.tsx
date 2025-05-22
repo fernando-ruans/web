@@ -67,7 +67,7 @@ export default function RestauranteMenuPage() {
   if (loading) return <div className="text-center text-gray-700 mt-10">Carregando...</div>;
   if (erro) return <div className="text-center text-red-400 mt-10">{erro}</div>;
   return (
-    <div className="max-w-3xl mx-auto p-4 min-h-screen pb-24 sm:pb-32">
+    <div className="max-w-4xl mx-auto p-4 min-h-screen pb-24 sm:pb-32">
       {restaurante && (
         <div className="bg-white rounded-xl shadow-lg p-6 mb-8 relative overflow-hidden">
           {/* Banner com gradiente */}          <div className="absolute top-0 left-0 w-full h-40">
@@ -139,26 +139,43 @@ export default function RestauranteMenuPage() {
 
             {/* Horário de Funcionamento */}
             {restaurante.horario_funcionamento && (
-              <div className="bg-orange-50 p-4 rounded-xl flex flex-col items-center gap-2 mt-4 w-full max-w-md mx-auto">
-                <p className="text-sm text-gray-600 mb-1 font-semibold flex items-center gap-2"><FaClock size={16} color="#f97316" />Horário de Funcionamento</p>
-                <div className="grid grid-cols-2 gap-x-8 gap-y-1 w-full">
+              <div className="bg-white p-5 rounded-2xl flex flex-col items-center gap-3 mt-6 w-full max-w-2xl mx-auto shadow border border-orange-100">
+                <div className="flex items-center gap-2 mb-2">
+                  <FaClock size={18} color="#f97316" />
+                  <span className="text-base font-bold text-orange-700">Horário de Funcionamento</span>
+                </div>
+                <div className="grid grid-cols-2 gap-x-12 gap-y-1 w-full">
                   {/* Coluna 1: segunda, terça, quarta, quinta */}
                   <div className="flex flex-col gap-1">
-                    {['segunda', 'terca', 'quarta', 'quinta'].map((dia) => (
-                      <div key={dia} className="flex gap-2">
-                        <span className="capitalize text-gray-700 w-20">{dia.charAt(0).toUpperCase() + dia.slice(1)}:</span>
-                        <span className="text-gray-900 font-medium">{restaurante.horario_funcionamento?.[dia] || 'Fechado'}</span>
-                      </div>
-                    ))}
+                    {['segunda', 'terca', 'quarta', 'quinta'].map((dia) => {
+                      const diasSemana = ['domingo','segunda','terca','quarta','quinta','sexta','sabado'];
+                      const hoje = diasSemana[new Date().getDay()];
+                      const isHoje = dia === hoje;
+                      return (
+                        <div key={dia} className={`grid grid-cols-[110px_1fr] items-center w-full px-2 py-1 rounded transition-all ${isHoje ? 'bg-orange-50 font-bold text-orange-700 border border-orange-100' : ''}`}>
+                          <span className="capitalize text-gray-700 font-medium text-base text-left">{dia.charAt(0).toUpperCase() + dia.slice(1)}:</span>
+                          <span className={`text-gray-900 font-semibold tracking-wide flex items-center ${restaurante.horario_funcionamento?.[dia]?.toLowerCase() === 'fechado' ? 'text-red-500' : ''}`}>{restaurante.horario_funcionamento?.[dia] || 'Fechado'}
+                            {isHoje && <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-orange-100 text-orange-600 font-bold border border-orange-200 align-middle whitespace-nowrap">Hoje</span>}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                   {/* Coluna 2: sexta, sábado, domingo */}
                   <div className="flex flex-col gap-1">
-                    {['sexta', 'sabado', 'domingo'].map((dia) => (
-                      <div key={dia} className="flex gap-2">
-                        <span className="capitalize text-gray-700 w-20">{dia.charAt(0).toUpperCase() + dia.slice(1)}:</span>
-                        <span className="text-gray-900 font-medium">{restaurante.horario_funcionamento?.[dia] || 'Fechado'}</span>
-                      </div>
-                    ))}
+                    {['sexta', 'sabado', 'domingo'].map((dia) => {
+                      const diasSemana = ['domingo','segunda','terca','quarta','quinta','sexta','sabado'];
+                      const hoje = diasSemana[new Date().getDay()];
+                      const isHoje = dia === hoje;
+                      return (
+                        <div key={dia} className={`grid grid-cols-[110px_1fr] items-center w-full px-2 py-1 rounded transition-all ${isHoje ? 'bg-orange-50 font-bold text-orange-700 border border-orange-100' : ''}`}>
+                          <span className="capitalize text-gray-700 font-medium text-base text-left">{dia.charAt(0).toUpperCase() + dia.slice(1)}:</span>
+                          <span className={`text-gray-900 font-semibold tracking-wide flex items-center ${restaurante.horario_funcionamento?.[dia]?.toLowerCase() === 'fechado' ? 'text-red-500' : ''}`}>{restaurante.horario_funcionamento?.[dia] || 'Fechado'}
+                            {isHoje && <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-orange-100 text-orange-600 font-bold border border-orange-200 align-middle whitespace-nowrap">Hoje</span>}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
