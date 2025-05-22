@@ -41,6 +41,7 @@ interface Pedido {
     estado: string;
     cep: string;
   };
+  formaPagamento?: string;
 }
 
 // Novo tipo de status para integração total com o painel do lojista
@@ -385,6 +386,13 @@ export default function DetalhePedidoPage() {
 
         {/* Resumo do Valor */}
         <div className="border-t border-gray-200 pt-4">
+          {/* Forma de Pagamento acima do subtotal */}
+          {pedido.formaPagamento && (
+            <div className="flex justify-between text-gray-600 mb-2">
+              <span>Forma de Pagamento:</span>
+              <span className="text-gray-900 font-semibold">{pedido.formaPagamento.charAt(0).toUpperCase() + pedido.formaPagamento.slice(1)}</span>
+            </div>
+          )}
           <div className="flex justify-between text-gray-600 mb-2">
             <span>Subtotal:</span>
             <span>R$ {(pedido.total - pedido.taxa_entrega).toFixed(2)}</span>
