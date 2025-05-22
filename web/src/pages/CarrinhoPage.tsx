@@ -477,30 +477,30 @@ export default function CarrinhoPage() {
 
             <div className="bg-white/90 rounded-xl shadow-lg p-6 mb-8">
               <h2 className="text-lg font-bold text-gray-700 mb-4">Forma de Pagamento</h2>
-              <div className="flex flex-wrap gap-4 mb-4">
-                <label className={`flex items-center gap-2 px-6 py-3 rounded-xl border-2 font-semibold text-base cursor-pointer transition-all duration-200 shadow-sm select-none
+              <div className="flex flex-row flex-wrap gap-2 mb-4 justify-start items-center">
+                <label className={`flex items-center gap-2 px-3 py-2 min-w-[120px] rounded-lg border-2 font-semibold text-base cursor-pointer transition-all duration-200 shadow-sm select-none text-center justify-center
                   ${formaPagamento === 'dinheiro' ? 'bg-orange-100 border-orange-500 text-orange-700 ring-2 ring-orange-200' : 'bg-gray-50 border-gray-200 text-gray-700 hover:border-orange-300 hover:bg-orange-50'}`}
                 >
                   <input type="radio" className="hidden" name="pagamento" value="dinheiro" checked={formaPagamento === 'dinheiro'} onChange={() => setFormaPagamento('dinheiro')} />
-                  <FaMoneyBillWave size={22} /> Dinheiro
+                  <FaMoneyBillWave size={18} /> Dinheiro
                 </label>
-                <label className={`flex items-center gap-2 px-6 py-3 rounded-xl border-2 font-semibold text-base cursor-pointer transition-all duration-200 shadow-sm select-none
+                <label className={`flex items-center gap-2 px-3 py-2 min-w-[120px] rounded-lg border-2 font-semibold text-base cursor-pointer transition-all duration-200 shadow-sm select-none text-center justify-center
                   ${formaPagamento === 'debito' ? 'bg-orange-100 border-orange-500 text-orange-700 ring-2 ring-orange-200' : 'bg-gray-50 border-gray-200 text-gray-700 hover:border-orange-300 hover:bg-orange-50'}`}
                 >
                   <input type="radio" className="hidden" name="pagamento" value="debito" checked={formaPagamento === 'debito'} onChange={() => setFormaPagamento('debito')} />
-                  <FaRegCreditCard size={22} /> Cartão de Débito
+                  <FaRegCreditCard size={18} /> Débito
                 </label>
-                <label className={`flex items-center gap-2 px-6 py-3 rounded-xl border-2 font-semibold text-base cursor-pointer transition-all duration-200 shadow-sm select-none
+                <label className={`flex items-center gap-2 px-3 py-2 min-w-[120px] rounded-lg border-2 font-semibold text-base cursor-pointer transition-all duration-200 shadow-sm select-none text-center justify-center
                   ${formaPagamento === 'credito' ? 'bg-orange-100 border-orange-500 text-orange-700 ring-2 ring-orange-200' : 'bg-gray-50 border-gray-200 text-gray-700 hover:border-orange-300 hover:bg-orange-50'}`}
                 >
                   <input type="radio" className="hidden" name="pagamento" value="credito" checked={formaPagamento === 'credito'} onChange={() => setFormaPagamento('credito')} />
-                  <FaCreditCard size={22} /> Cartão de Crédito
+                  <FaCreditCard size={18} /> Crédito
                 </label>
-                <label className={`flex items-center gap-2 px-6 py-3 rounded-xl border-2 font-semibold text-base cursor-pointer transition-all duration-200 shadow-sm select-none
+                <label className={`flex items-center gap-2 px-3 py-2 min-w-[120px] rounded-lg border-2 font-semibold text-base cursor-pointer transition-all duration-200 shadow-sm select-none text-center justify-center
                   ${formaPagamento === 'pix' ? 'bg-orange-100 border-orange-500 text-orange-700 ring-2 ring-orange-200' : 'bg-gray-50 border-gray-200 text-gray-700 hover:border-orange-300 hover:bg-orange-50'}`}
                 >
                   <input type="radio" className="hidden" name="pagamento" value="pix" checked={formaPagamento === 'pix'} onChange={() => setFormaPagamento('pix')} />
-                  <FaPix size={22} /> Pix
+                  <FaPix size={18} /> Pix
                 </label>
               </div>
               {formaPagamento === 'dinheiro' && (
