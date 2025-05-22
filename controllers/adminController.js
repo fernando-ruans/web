@@ -486,19 +486,20 @@ module.exports = {
   },
   relatorioResumo: async (req, res) => {
     try {
-      // Total de vendas = pedidos com status entregue (todas as variações em UPPERCASE)
+      // Vendas realizadas e pedidos entregues = pedidos com status entregue (variações)
       const statusEntregue = [
         'ENTREGUE', 'DELIVERED', 'COMPLETED'
       ];
       const statusCancelado = [
         'CANCELADO', 'CANCELED', 'CANCELLED'
       ];
-      // Total de vendas (pedidos entregues)
-      const totalVendas = await prisma.order.count({
+      // Vendas realizadas e pedidos entregues: ambos contam apenas entregues
+      const pedidosEntregues = await prisma.order.count({
         where: {
           OR: statusEntregue.map(status => ({ status }))
         }
       });
+      const totalVendas = pedidosEntregues;
       // Total de pedidos (todos os pedidos)
       const totalPedidos = await prisma.order.count();
       // Total de restaurantes
@@ -554,6 +555,7 @@ module.exports = {
       }
       res.json({
         totalVendas,
+        pedidosEntregues,
         totalPedidos,
         totalRestaurantes,
         totalClientes,

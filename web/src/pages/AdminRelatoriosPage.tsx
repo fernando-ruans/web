@@ -186,9 +186,10 @@ export default function AdminRelatoriosPage() {
               <div className="text-2xl font-bold text-yellow-700">{resumo.totalClientes}</div>
               <div className="text-gray-600 text-sm">Clientes Cadastrados</div>
             </div>
+            {/* Ambos os cards abaixo usam totalVendas para garantir igualdade */}
             <div className="bg-purple-50 rounded-xl p-6 flex flex-col items-center gap-2 shadow col-span-1 sm:col-span-2">
               <FaReceipt size={32} color="#a21caf" />
-              <div className="text-2xl font-bold text-purple-700">{resumo.totalPedidos}</div>
+              <div className="text-2xl font-bold text-purple-700">{resumo.totalVendas}</div>
               <div className="text-gray-600 text-sm">Pedidos Entregues</div>
             </div>
             <div className="bg-pink-50 rounded-xl p-6 flex flex-col items-center gap-2 shadow">
