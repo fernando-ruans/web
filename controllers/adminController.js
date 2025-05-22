@@ -486,30 +486,41 @@ module.exports = {
   },
   relatorioResumo: async (req, res) => {
     try {
-      // Total de vendas = pedidos com status 'Entregue'
-      const totalVendas = await prisma.order.count({ where: { status: 'Entregue' } });
-      // Total de pedidos (entregues)
-      const totalPedidos = totalVendas;
+      // Total de vendas = pedidos com status 'Entregue' (case insensitive)
+      const statusEntregue = [
+        'Entregue', 'entregue', 'DELIVERED', 'delivered'
+      ];
+      const statusCancelado = [
+        'Cancelado', 'CANCELADO', 'CANCELED', 'CANCELLED'
+      ];
+      // Total de vendas (pedidos entregues)
+      const totalVendas = await prisma.order.count({
+        where: {
+          OR: statusEntregue.map(status => ({ status }))
+        }
+      });
+      // Total de pedidos (todos os pedidos)
+      const totalPedidos = await prisma.order.count();
       // Total de restaurantes
       const totalRestaurantes = await prisma.restaurant.count();
       // Total de clientes
-      const totalClientes = await prisma.user.count({ where: { tipo: 'cliente' } });      // Faturamento (soma dos pedidos entregues de todos os restaurantes)
+      const totalClientes = await prisma.user.count({ where: { tipo: 'cliente' } });
+      // Faturamento (soma dos pedidos entregues de todos os restaurantes)
       const faturamentoObj = await prisma.order.aggregate({
         _sum: { total: true },
         where: {
-          OR: [
-            { status: 'Entregue' },
-            { status: 'entregue' },
-            { status: 'DELIVERED' },
-            { status: 'delivered' }
-          ]
+          OR: statusEntregue.map(status => ({ status }))
         }
       });
       const faturamento = faturamentoObj._sum.total || 0;
       // Ticket médio
       const ticketMedio = totalVendas > 0 ? faturamento / totalVendas : 0;
-      // Pedidos cancelados
-      const pedidosCancelados = await prisma.order.count({ where: { status: 'Cancelado' } });
+      // Pedidos cancelados (todas as variações)
+      const pedidosCancelados = await prisma.order.count({
+        where: {
+          OR: statusCancelado.map(status => ({ status }))
+        }
+      });
       // Novos clientes no mês atual
       const now = new Date();
       const primeiroDiaMes = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -519,10 +530,12 @@ module.exports = {
           createdAt: { gte: primeiroDiaMes }
         }
       });
-      // Restaurante com maior faturamento
+      // Restaurante com maior faturamento (todas as variações de entregue)
       const topRestaurante = await prisma.order.groupBy({
         by: ['restaurantId'],
-        where: { status: 'Entregue' },
+        where: {
+          OR: statusEntregue.map(status => ({ status }))
+        },
         _sum: { total: true },
         orderBy: { _sum: { total: 'desc' } },
         take: 1
