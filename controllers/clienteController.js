@@ -702,6 +702,7 @@ module.exports = {
           telefone: true,
           aberto: true, 
           cep: true,
+          horario_funcionamento: true, // <-- Adicionado aqui
           _count: {
             select: {
               reviews: true
@@ -715,7 +716,7 @@ module.exports = {
         }
       });
 
-      // Calcular média das avaliações
+      // Calcular média das avaliações e garantir parse do horario_funcionamento
       const restaurantsWithRating = restaurants.map(restaurant => {
         const avgRating = restaurant.reviews.length > 0
           ? restaurant.reviews.reduce((acc, review) => acc + review.nota, 0) / restaurant.reviews.length
@@ -724,6 +725,11 @@ module.exports = {
         const { reviews, ...rest } = restaurant;
         return {
           ...rest,
+          horario_funcionamento: restaurant.horario_funcionamento
+            ? (typeof restaurant.horario_funcionamento === 'object'
+                ? restaurant.horario_funcionamento
+                : JSON.parse(restaurant.horario_funcionamento))
+            : null,
           avaliacaoMedia: Number(avgRating?.toFixed(1)) || null,
           totalAvaliacoes: restaurant._count.reviews
         };
@@ -995,7 +1001,8 @@ module.exports = {
               nome: true,
               imagem: true,
               telefone: true,
-              endereco: true
+              endereco: true,
+              horario_funcionamento: true // Adicionado aqui
             }
           },
           orderItems: {
@@ -1062,7 +1069,14 @@ module.exports = {
         taxa_entrega: Number(order.taxa_entrega), // Usa o valor salvo no pedido
         observacao: order.observacao,
         formaPagamento: order.formaPagamento || null, // <-- Adiciona o campo formaPagamento
-        restaurant: order.restaurant,
+        restaurant: {
+          ...order.restaurant,
+          horario_funcionamento: order.restaurant?.horario_funcionamento
+            ? (typeof order.restaurant.horario_funcionamento === 'object'
+                ? order.restaurant.horario_funcionamento
+                : JSON.parse(order.restaurant.horario_funcionamento))
+            : null
+        },
         endereco: {
           id: order.address.id,
           rua: order.address.rua,

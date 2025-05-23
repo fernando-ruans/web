@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import theme from '../theme';
 import { useWebSocket } from '../context/WebSocketContext';
+import { resumoHorarioFuncionamento } from '../utils/horarioResumo';
 
 interface Pedido {
   id: number;
@@ -14,6 +15,7 @@ interface Pedido {
   restaurant: { 
     nome: string;
     telefone?: string;
+    horario_funcionamento?: Record<string, string> | null;
   };
   review?: { 
     nota: number; 
@@ -312,7 +314,9 @@ export default function DetalhePedidoPage() {
           <h3 className="font-medium text-orange-800 mb-2">Restaurante</h3>
           <div className="flex justify-between items-start">
             <div>
-              <p className="font-medium text-gray-900">{pedido.restaurant.nome}</p>
+              <p className="font-medium text-gray-900 flex items-center gap-2">
+                {pedido.restaurant.nome}
+              </p>
               {pedido.restaurant.telefone && (
                 <p className="text-gray-600 text-sm mt-1">{pedido.restaurant.telefone}</p>
               )}

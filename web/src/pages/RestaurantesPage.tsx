@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Card from '../components/Card';
 import { FaMapMarkerAlt, FaClock, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
+import { resumoHorarioFuncionamento } from '../utils/horarioResumo';
 
 interface Restaurante {
   id: number;
@@ -15,6 +16,7 @@ interface Restaurante {
   telefone?: string;
   endereco?: string;
   aberto: boolean;
+  horario_funcionamento?: Record<string, string>; // Adicionado para exibir horário resumido
 }
 
 export default function RestaurantesPage() {
@@ -113,11 +115,19 @@ export default function RestaurantesPage() {
 
                 {/* Detalhes */}
                 <div className="flex flex-col justify-between flex-1 pt-12 sm:pt-14 pb-4 px-4 sm:px-6 gap-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-base sm:text-lg font-bold text-orange-600 flex items-center gap-2">
-                      <span className="hidden sm:inline">🍽️</span> {rest.nome}
-                    </span>
-                    {/* Removido badge de status (Ativo, aprovado, etc) */}
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base sm:text-lg font-bold text-orange-600 flex items-center gap-2">
+                        <span className="hidden sm:inline">🍽️</span> {rest.nome}
+                      </span>
+                    </div>
+                    {/* Horário de funcionamento resumido */}
+                    {rest.horario_funcionamento && (
+                      <span className="text-xs text-gray-500 font-medium mt-0.5 flex items-center gap-1">
+                        <FaClock size={12} color="#fb923c" />
+                        {resumoHorarioFuncionamento(rest.horario_funcionamento)}
+                      </span>
+                    )}
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 text-gray-500 text-xs mt-1">
