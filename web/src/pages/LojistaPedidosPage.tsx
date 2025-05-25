@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import DetalhePedidoModal from '../components/DetalhePedidoModal';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -402,15 +402,23 @@ const Filtros = ({
   filtroPeriodo,
   setFiltroPeriodo,
   termoBusca,
-  setTermoBusca
+  setTermoBusca,
+  filtroPersonalizado,
+  setFiltroPersonalizado,
+  aplicarFiltroPersonalizado
 }: { 
   filtroStatus: Pedido['status'] | 'todos',
   setFiltroStatus: (status: Pedido['status'] | 'todos') => void,
   filtroPeriodo: string,
   setFiltroPeriodo: (periodo: string) => void,
   termoBusca: string,
-  setTermoBusca: (termo: string) => void
+  setTermoBusca: (termo: string) => void,
+  filtroPersonalizado: { inicio: string, fim: string },
+  setFiltroPersonalizado: (f: { inicio: string, fim: string }) => void,
+  aplicarFiltroPersonalizado: () => void
 }) => {
+  const refInicio = useRef<HTMLInputElement>(null);
+  const refFim = useRef<HTMLInputElement>(null);
   return (
     <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
       <div className="flex flex-wrap gap-6 items-center">
@@ -441,8 +449,7 @@ const Filtros = ({
             </svg>
           </div>
         </div>
-
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 items-center">
           {['hoje', 'ontem', 'semana', 'mes'].map((periodo) => (
             <button
               key={periodo}
@@ -455,6 +462,28 @@ const Filtros = ({
               {periodo.charAt(0).toUpperCase() + periodo.slice(1)}
             </button>
           ))}
+          <div className="flex items-center gap-2 ml-2">
+            <input
+              ref={refInicio}
+              type="date"
+              className="px-2 py-2 rounded border border-gray-300 text-gray-700 text-sm"
+              value={filtroPersonalizado.inicio}
+              onChange={e => setFiltroPersonalizado({ ...filtroPersonalizado, inicio: e.target.value })}
+            />
+            <span className="text-gray-500">até</span>
+            <input
+              ref={refFim}
+              type="date"
+              className="px-2 py-2 rounded border border-gray-300 text-gray-700 text-sm"
+              value={filtroPersonalizado.fim}
+              onChange={e => setFiltroPersonalizado({ ...filtroPersonalizado, fim: e.target.value })}
+            />
+            <button
+              className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded font-semibold text-sm"
+              onClick={aplicarFiltroPersonalizado}
+              type="button"
+            >Aplicar</button>
+          </div>
         </div>
       </div>
     </div>
@@ -475,6 +504,7 @@ export function LojistaPedidosPage() {
   const [filtroPeriodo, setFiltroPeriodo] = useState('hoje');
   const [termoBusca, setTermoBusca] = useState('');
   const [loadingStatus, setLoadingStatus] = useState<number | null>(null);
+  const [filtroPersonalizado, setFiltroPersonalizado] = useState({ inicio: '', fim: '' });
 
   const buscarPedidos = useCallback(async () => {
     try {
@@ -561,19 +591,22 @@ export function LojistaPedidosPage() {
     if (filtroStatus !== 'todos' && pedido.status !== filtroStatus) {
       return false;
     }
-
     // Filtro por termo de busca
     if (termoBusca) {
       const termoLower = termoBusca.toLowerCase();
       const pedidoTexto = `#${pedido.id} ${pedido.usuario?.nome || ''}`.toLowerCase();
       if (!pedidoTexto.includes(termoLower)) return false;
     }
-
     // Filtro por período
     const dataPedido = new Date(pedido.createdAt);
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
-    
+    if (filtroPeriodo === 'personalizado' && filtroPersonalizado.inicio && filtroPersonalizado.fim) {
+      // Corrige para garantir que o filtro de um único dia funcione corretamente
+      const inicio = new Date(filtroPersonalizado.inicio + 'T00:00:00');
+      const fim = new Date(filtroPersonalizado.fim + 'T23:59:59.999');
+      return dataPedido >= inicio && dataPedido <= fim;
+    }
     switch (filtroPeriodo) {
       case 'hoje':
         const inicioDia = new Date();
@@ -581,7 +614,6 @@ export function LojistaPedidosPage() {
         const fimDia = new Date();
         fimDia.setHours(23, 59, 59, 999);
         return dataPedido >= inicioDia && dataPedido <= fimDia;
-      
       case 'ontem':
         const inicioOntem = new Date();
         inicioOntem.setDate(hoje.getDate() - 1);
@@ -590,19 +622,16 @@ export function LojistaPedidosPage() {
         fimOntem.setDate(hoje.getDate() - 1);
         fimOntem.setHours(23, 59, 59, 999);
         return dataPedido >= inicioOntem && dataPedido <= fimOntem;
-      
       case 'semana':
         const inicioSemana = new Date();
         inicioSemana.setDate(hoje.getDate() - 7);
         inicioSemana.setHours(0, 0, 0, 0);
         return dataPedido >= inicioSemana;
-      
       case 'mes':
         const inicioMes = new Date();
         inicioMes.setMonth(hoje.getMonth() - 1);
         inicioMes.setHours(0, 0, 0, 0);
         return dataPedido >= inicioMes;
-      
       default:
         return true;
     }
@@ -622,6 +651,10 @@ export function LojistaPedidosPage() {
   useEffect(() => {
     buscarPedidos();
   }, [buscarPedidos]);
+
+  const aplicarFiltroPersonalizado = () => {
+    setFiltroPeriodo('personalizado');
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -649,6 +682,9 @@ export function LojistaPedidosPage() {
           setFiltroPeriodo={setFiltroPeriodo}
           termoBusca={termoBusca}
           setTermoBusca={setTermoBusca}
+          filtroPersonalizado={filtroPersonalizado}
+          setFiltroPersonalizado={setFiltroPersonalizado}
+          aplicarFiltroPersonalizado={aplicarFiltroPersonalizado}
         />
 
         {error && (
