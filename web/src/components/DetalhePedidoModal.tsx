@@ -58,9 +58,70 @@ const DetalhePedidoModal: React.FC<DetalhePedidoModalProps> = ({ open, onClose, 
     return new Date(data).toLocaleString('pt-BR');
   };
 
+  const handlePrintRecibo = () => {
+    const reciboWindow = window.open('', '_blank', 'width=400,height=600');
+    if (!reciboWindow) return;
+    const endereco = pedido.endereco
+      ? `${pedido.endereco.rua}, ${pedido.endereco.numero} ${pedido.endereco.complemento ? ' - ' + pedido.endereco.complemento : ''}, ${pedido.endereco.bairro}, ${pedido.endereco.cidade} - ${pedido.endereco.estado} | CEP: ${pedido.endereco.cep}`
+      : 'Não informado';
+    const reciboHtml = `
+      <html>
+        <head>
+          <title>Recibo Pedido #${pedido.id}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 24px; color: #222; }
+            h2 { margin-bottom: 8px; }
+            .info { margin-bottom: 8px; font-size: 14px; }
+            .itens { margin-bottom: 8px; }
+            .item { margin-bottom: 4px; }
+            .adicional { font-size: 12px; color: #555; margin-left: 12px; }
+            .total { font-weight: bold; font-size: 16px; margin-top: 12px; }
+            .obs { background: #fffbe6; padding: 6px; border-radius: 4px; margin-top: 8px; font-size: 13px; }
+            .print-btn { display: inline-block; margin-bottom: 16px; padding: 6px 16px; background: #f97316; color: #fff; border: none; border-radius: 4px; font-size: 14px; cursor: pointer; }
+            @media print { .print-btn { display: none; } }
+          </style>
+        </head>
+        <body>
+          <button class="print-btn" onclick="window.print()">Imprimir</button>
+          <h2>Pedido #${pedido.id}</h2>
+          <div class="info"><b>Cliente:</b> ${pedido.usuario.nome}</div>
+          <div class="info"><b>Telefone:</b> ${pedido.usuario.telefone}</div>
+          <div class="info"><b>Data:</b> ${formatarData(pedido.createdAt)}</div>
+          <div class="info"><b>Endereço:</b> ${endereco}</div>
+          <div class="itens">
+            <b>Itens:</b>
+            <ul style="padding-left: 18px;">
+              ${pedido.items.map(item => `
+                <li class="item">${item.quantidade}x ${item.nome} (${formatCurrency(item.preco)})
+                  ${item.adicionais && item.adicionais.length > 0 ? `<ul>${item.adicionais.map(ad => `<li class='adicional'>+ ${ad.quantidade}x ${ad.nome} (${formatCurrency(ad.preco)})</li>`).join('')}</ul>` : ''}
+                </li>
+              `).join('')}
+            </ul>
+          </div>
+          <div class="info"><b>Taxa de Entrega:</b> ${formatCurrency(pedido.taxa_entrega)}</div>
+          <div class="total">Total: ${formatCurrency(calcularTotal())}</div>
+          ${pedido.observacao ? `<div class="obs"><b>Obs:</b> ${pedido.observacao}</div>` : ''}
+        </body>
+      </html>
+    `;
+    reciboWindow.document.write(reciboHtml);
+    reciboWindow.document.close();
+    reciboWindow.focus();
+  };
+
   return (
     <Modal open={open} onClose={onClose} title={`Pedido #${pedido.id}`}>
       <div className="text-gray-600 space-y-6">
+        {/* Botão de imprimir recibo */}
+        <div className="flex justify-end">
+          <button
+            onClick={() => handlePrintRecibo()}
+            className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded font-semibold shadow text-sm mb-2"
+          >
+            Imprimir Recibo
+          </button>
+        </div>
+
         <div className="flex items-center justify-between">
           <div>
             <span className="text-sm text-gray-500 block">Status</span>
