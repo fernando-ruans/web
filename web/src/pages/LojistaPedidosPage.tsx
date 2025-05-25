@@ -304,11 +304,12 @@ const ResumoCards = ({ pedidos = [], filtroPeriodo, pedidosFiltrados }: { pedido
   const contarPorStatus = (status: Pedido['status']) => 
     Array.isArray(pedidosParaContar) ? pedidosParaContar.filter(p => (p.status || '').toLowerCase() === status.toLowerCase()).length : 0;
 
-  // Faturamento do período também deve usar pedidosFiltrados
+  // Faturamento do período também deve usar pedidosFiltrados, mas ignorar cancelados
   const calcularFaturamentoPeriodo = () => {
     if (!Array.isArray(pedidosParaContar)) return 0;
-    return pedidosParaContar.reduce((total, pedido) => 
-      total + calcularTotal(pedido.items, pedido.taxa_entrega), 0);
+    return pedidosParaContar
+      .filter(pedido => pedido.status !== 'cancelado')
+      .reduce((total, pedido) => total + calcularTotal(pedido.items, pedido.taxa_entrega), 0);
   };
 
   const cards = [
