@@ -299,48 +299,15 @@ function CardPedido({ pedido, onAtualizarStatus, loadingStatus }: CardPedidoProp
 }
 
 const ResumoCards = ({ pedidos = [], filtroPeriodo, pedidosFiltrados }: { pedidos: Pedido[], filtroPeriodo: string, pedidosFiltrados?: Pedido[] }) => {
-  // Usa pedidosFiltrados se vier, senão usa todos
-  const pedidosParaContar = pedidosFiltrados && pedidosFiltrados.length > 0 ? pedidosFiltrados : pedidos;
+  // Sempre usa pedidosFiltrados para contagem, garantindo consistência com a lista
+  const pedidosParaContar = pedidosFiltrados ?? pedidos;
   const contarPorStatus = (status: Pedido['status']) => 
     Array.isArray(pedidosParaContar) ? pedidosParaContar.filter(p => (p.status || '').toLowerCase() === status.toLowerCase()).length : 0;
 
-  const calcularFaturamentoPeriodo = (periodo: string) => {
-    if (!Array.isArray(pedidos)) return 0;
-    
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
-    
-    const pedidosFiltrados = pedidos.filter(p => {
-      if (!p?.createdAt || p.status === 'cancelado') return false;
-      
-      const dataPedido = new Date(p.createdAt);
-      dataPedido.setHours(0, 0, 0, 0);
-
-      switch (periodo) {
-        case 'hoje':
-          return dataPedido.getTime() === hoje.getTime();
-        
-        case 'ontem':
-          const ontem = new Date(hoje);
-          ontem.setDate(hoje.getDate() - 1);
-          return dataPedido.getTime() === ontem.getTime();
-        
-        case 'semana':
-          const inicioSemana = new Date(hoje);
-          inicioSemana.setDate(hoje.getDate() - 7);
-          return dataPedido >= inicioSemana;
-        
-        case 'mes':
-          const inicioMes = new Date(hoje);
-          inicioMes.setMonth(hoje.getMonth() - 1);
-          return dataPedido >= inicioMes;
-        
-        default:
-          return false;
-      }
-    });
-
-    return pedidosFiltrados.reduce((total, pedido) => 
+  // Faturamento do período também deve usar pedidosFiltrados
+  const calcularFaturamentoPeriodo = () => {
+    if (!Array.isArray(pedidosParaContar)) return 0;
+    return pedidosParaContar.reduce((total, pedido) => 
       total + calcularTotal(pedido.items, pedido.taxa_entrega), 0);
   };
 
@@ -380,7 +347,7 @@ const ResumoCards = ({ pedidos = [], filtroPeriodo, pedidosFiltrados }: { pedido
     },
     {
       titulo: 'Hoje',
-      valor: pedidos.filter(p => {
+      valor: pedidosParaContar.filter(p => {
         const hoje = new Date();
         const dataPedido = new Date(p.createdAt);
         return dataPedido.toDateString() === hoje.toDateString();
@@ -393,8 +360,9 @@ const ResumoCards = ({ pedidos = [], filtroPeriodo, pedidosFiltrados }: { pedido
         </svg>
       )
     },
-    {      titulo: 'Faturamento do Período',
-      valor: formatCurrency(calcularFaturamentoPeriodo(filtroPeriodo)),
+    {
+      titulo: 'Faturamento do Período',
+      valor: formatCurrency(calcularFaturamentoPeriodo()),
       cor: 'from-green-400 to-green-600'
     },
     {
@@ -419,9 +387,7 @@ const ResumoCards = ({ pedidos = [], filtroPeriodo, pedidosFiltrados }: { pedido
                 <p className="text-white/80 text-sm font-medium mb-1">{card.titulo}</p>
                 <p className="text-3xl font-bold">{card.valor}</p>
               </div>
-              <div className="bg-white/20 p-3 rounded-lg">
-                {card.icone}
-              </div>
+              {card.icone && <div className="bg-white/20 p-3 rounded-lg">{card.icone}</div>}
             </div>
           </div>
         </div>
@@ -708,7 +674,7 @@ export function LojistaPedidosPage() {
         ) : pedidosFiltrados.length === 0 ? (
           <div className="text-center py-12">
             <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <h3 className="mt-2 text-lg font-medium text-gray-900">Nenhum pedido encontrado</h3>
             <p className="mt-1 text-gray-500">Tente alterar os filtros ou aguarde novos pedidos.</p>
