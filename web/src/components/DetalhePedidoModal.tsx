@@ -79,13 +79,6 @@ const DetalhePedidoModal: React.FC<DetalhePedidoModalProps> = ({ open, onClose, 
             <span className="text-gray-900">{formatarData(pedido.createdAt)}</span>
           </div>
         </div>
-        {/* NOVO: Método de Pagamento */}
-        {pedido.formaPagamento && (
-          <div className="bg-gray-50 rounded-xl p-4">
-            <span className="text-sm text-gray-500 block">Forma de Pagamento</span>
-            <span className="text-gray-900 font-semibold">{pedido.formaPagamento.charAt(0).toUpperCase() + pedido.formaPagamento.slice(1)}</span>
-          </div>
-        )}
 
         <div className="bg-gray-50 rounded-xl p-4">
           <h3 className="font-medium text-gray-900 mb-2">Cliente</h3>
@@ -178,6 +171,13 @@ const DetalhePedidoModal: React.FC<DetalhePedidoModalProps> = ({ open, onClose, 
         )}
 
         <div className="border-t border-gray-200 pt-4 mt-6">
+          {/* Forma de Pagamento antes da taxa de entrega */}
+          {pedido.formaPagamento && (
+            <div className="flex justify-between text-gray-600 mb-2">
+              <span>Forma de Pagamento:</span>
+              <span className="font-semibold">{pedido.formaPagamento.charAt(0).toUpperCase() + pedido.formaPagamento.slice(1)}</span>
+            </div>
+          )}
           <div className="flex justify-between text-gray-600 mb-2">
             <span>Taxa de Entrega:</span>
             <span>{formatCurrency(pedido.taxa_entrega)}</span>
