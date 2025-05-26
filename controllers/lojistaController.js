@@ -498,7 +498,7 @@ module.exports = {  getProfile: async (req, res) => {
         return res.status(400).json({ error: 'ID do pedido é obrigatório' });
       }
 
-      if (!['pendente', 'aceito', 'preparando', 'pronto', 'entregue', 'cancelado'].includes(status)) {
+      if (!['pendente', 'preparando', 'em_entrega', 'entregue', 'cancelado'].includes(status)) {
         return res.status(400).json({ error: 'Status inválido' });
       }
 

@@ -940,25 +940,33 @@ module.exports = {
       });
 
       // Formatar a resposta para garantir compatibilidade
-      const formattedOrders = orders.map(order => ({
-        id: order.id,
-        status: (order.status || '').toUpperCase(), // Sempre retorna em UPPERCASE
-        total: Number(order.total),
-        data_criacao: order.data_criacao,
-        formaPagamento: order.formaPagamento || null, // <-- Inclui método de pagamento
-        restaurant: {
-          nome: order.restaurant?.nome,
-          imagem: order.restaurant?.imagem
-        },
-        items: order.orderItems.map(item => ({
-          quantidade: item.quantidade,
-          product: item.product,
-          adicionais: item.adicionais.map(a => ({
-            quantidade: a.quantidade,
-            adicional: a.adicional
+      const formattedOrders = orders.map(order => {
+        // Normaliza status para minúsculo e sem underscores
+        let status = (order.status || '').toLowerCase();
+        if (status === 'em_entrega' || status === 'em-entrega') status = 'em entrega';
+        if (status === 'em preparo' || status === 'em_preparo' || status === 'em-preparo') status = 'em preparo';
+        if (status === 'em rota' || status === 'em_rota' || status === 'em-rota') status = 'em entrega';
+        // Mantém os demais status como estão
+        return {
+          id: order.id,
+          status,
+          total: Number(order.total),
+          data_criacao: order.data_criacao,
+          formaPagamento: order.formaPagamento || null, // <-- Inclui método de pagamento
+          restaurant: {
+            nome: order.restaurant?.nome,
+            imagem: order.restaurant?.imagem
+          },
+          items: order.orderItems.map(item => ({
+            quantidade: item.quantidade,
+            product: item.product,
+            adicionais: item.adicionais.map(a => ({
+              quantidade: a.quantidade,
+              adicional: a.adicional
+            }))
           }))
-        }))
-      }));
+        };
+      });
 
       res.json({
         data: formattedOrders,
@@ -1060,9 +1068,14 @@ module.exports = {
       });
 
       // Formatar a resposta mantendo a consistência
+      let status = (order.status || '').toLowerCase();
+      if (status === 'em_entrega' || status === 'em-entrega') status = 'em entrega';
+      if (status === 'em preparo' || status === 'em_preparo' || status === 'em-preparo') status = 'em preparo';
+      if (status === 'em rota' || status === 'em_rota' || status === 'em-rota') status = 'em entrega';
+      // Mantém os demais status como estão
       const formattedOrder = {
         id: order.id,
-        status: (order.status || '').toUpperCase(), // Sempre retorna em UPPERCASE
+        status,
         data_criacao: order.data_criacao,
         total: Number(order.total), // Usa o valor salvo no pedido
         items,

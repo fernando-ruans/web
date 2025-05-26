@@ -522,17 +522,22 @@ export function LojistaPedidosPage() {
       }
 
       // Garantir que todos os pedidos tenham os campos necessários
-      pedidosData = pedidosData.map(pedido => ({
-        ...pedido,
-        status: (['pendente','aceito','preparando','pronto','entregue','cancelado'].includes((pedido.status || '').toLowerCase())
-          ? (pedido.status || '').toLowerCase()
-          : 'pendente') as Pedido['status'],
-        taxa_entrega: pedido.taxa_entrega || 0,
-        items: pedido.items?.map(item => ({
-          ...item,
-          adicionais: item.adicionais || []
-        })) || []
-      }));
+      const statusValidos = ['pendente','preparando','em_entrega','entregue','cancelado'];
+      pedidosData = pedidosData.map(pedido => {
+        let status = (pedido.status || '').toLowerCase();
+        if (!statusValidos.includes(status)) {
+          status = 'pendente';
+        }
+        return {
+          ...pedido,
+          status: status as Pedido['status'],
+          taxa_entrega: pedido.taxa_entrega || 0,
+          items: pedido.items?.map(item => ({
+            ...item,
+            adicionais: item.adicionais || []
+          })) || []
+        };
+      });
       
       setPedidos(pedidosData);
       setError(null);
@@ -645,7 +650,7 @@ export function LojistaPedidosPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-28">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8">
           <div>
