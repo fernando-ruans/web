@@ -52,39 +52,31 @@ interface Pedido {
 
 type PedidoStatus =
   | 'Pendente'
-  | 'Aceito'
   | 'Em Preparo'
   | 'Em Entrega'
-  | 'Pronto'
   | 'Entregue'
   | 'Cancelado';
 
 const STATUS_COLORS: Record<PedidoStatus, string> = {
   'Pendente': 'bg-yellow-100 text-yellow-800',
-  'Aceito': 'bg-blue-100 text-blue-800',
   'Em Preparo': 'bg-blue-100 text-blue-800',
   'Em Entrega': 'bg-orange-100 text-orange-800',
-  'Pronto': 'bg-orange-100 text-orange-800',
   'Entregue': 'bg-green-100 text-green-800',
   'Cancelado': 'bg-red-100 text-red-800',
 };
 
-const STATUS_ICONS = {
+const STATUS_ICONS: Record<PedidoStatus, React.ReactNode> = {
   'Pendente': <FaClock color="#a16207" size={24} />,
-  'Aceito': <FaTruckLoading color="#1d4ed8" size={24} />,
   'Em Preparo': <FaTruckLoading color="#1d4ed8" size={24} />,
   'Em Entrega': <FaMotorcycle color="#ea580c" size={24} />,
-  'Pronto': <FaMotorcycle color="#ea580c" size={24} />,
   'Entregue': <FaCheckCircle color="#15803d" size={24} />,
   'Cancelado': <FaClock color="#b91c1c" size={24} />,
 };
 
-const STATUS_DESC = {
+const STATUS_DESC: Record<PedidoStatus, string> = {
   'Pendente': 'Aguardando confirmação do restaurante',
-  'Aceito': 'Pedido aceito pelo restaurante',
   'Em Preparo': 'O restaurante está preparando seu pedido',
   'Em Entrega': 'Pedido saiu para entrega',
-  'Pronto': 'Pedido pronto para entrega',
   'Entregue': 'Pedido entregue com sucesso',
   'Cancelado': 'Pedido foi cancelado',
 };
@@ -93,10 +85,8 @@ const STATUS_DESC = {
 const normalizarStatus = (status: string): PedidoStatus => {
   const s = (status || '').toLowerCase();
   if (s === 'pendente' || s === 'pending') return 'Pendente';
-  if (s === 'aceito' || s === 'accepted') return 'Aceito';
   if (s === 'em preparo' || s === 'preparando' || s === 'preparation' || s === 'preparado') return 'Em Preparo';
   if (s === 'em entrega' || s === 'em rota' || s === 'out for delivery' || s === 'entregando') return 'Em Entrega';
-  if (s === 'pronto' || s === 'ready' || s === 'pronto para entrega') return 'Pronto';
   if (s === 'entregue' || s === 'delivered' || s === 'concluido' || s === 'concluído') return 'Entregue';
   if (s === 'cancelado' || s === 'canceled' || s === 'cancelled') return 'Cancelado';
   return 'Pendente'; // fallback seguro
@@ -189,10 +179,8 @@ export default function DetalhePedidoPage() {
   const getStatusPercentage = (status: PedidoStatus): number => {
     switch (status) {
       case 'Pendente': return 10;
-      case 'Aceito': return 25;
-      case 'Em Preparo': return 45;
-      case 'Pronto': return 65;
-      case 'Em Entrega': return 85;
+      case 'Em Preparo': return 40;
+      case 'Em Entrega': return 70;
       case 'Entregue': return 100;
       default: return 0;
     }
@@ -241,31 +229,31 @@ export default function DetalhePedidoPage() {
   const statusNormalizado = normalizarStatus(pedido.status as string);
 
   return (
-    <div className="max-w-4xl mx-auto p-6 min-h-screen pb-24 sm:pb-32">
-      <div className="flex items-center gap-4 mb-6">
+    <div className="max-w-4xl mx-auto p-2 sm:p-6 min-h-screen pb-28 sm:pb-32">
+      <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 mb-4 sm:mb-6">
         <button
           onClick={() => navigate('/pedidos')}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-orange-600 font-bold shadow hover:bg-orange-50 hover:text-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-300 transition-all border border-orange-100"
+          className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg bg-white text-orange-600 font-bold shadow hover:bg-orange-50 hover:text-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-300 transition-all border border-orange-100 text-sm sm:text-base"
         >
-          <span className="text-xl">←</span>
+          <span className="text-lg sm:text-xl">←</span>
           Voltar para Meus Pedidos
         </button>
-        <h1 className={theme.title}>Pedido #{pedido.id}</h1>
+        <h1 className={theme.title + ' text-lg sm:text-3xl'}>Pedido #{pedido.id}</h1>
       </div>
 
-      <div className="bg-white rounded-xl shadow-lg p-6 space-y-6">
+      <div className="bg-white rounded-xl shadow-lg p-3 sm:p-6 space-y-4 sm:space-y-6">
         {/* Cabeçalho com Status */}
-        <div className="flex justify-between items-start border-b border-gray-100 pb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-100 pb-4 sm:pb-6 gap-2 sm:gap-0">
           <div>
             <div className="flex items-center gap-2 mb-2">
               {STATUS_ICONS[statusNormalizado]}
-              <span className={`px-4 py-2 rounded-full text-sm font-medium ${STATUS_COLORS[statusNormalizado]}`}>{statusNormalizado}</span>
+              <span className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium ${STATUS_COLORS[statusNormalizado]}`}>{statusNormalizado}</span>
             </div>
-            <p className="text-gray-600">{STATUS_DESC[statusNormalizado]}</p>
+            <p className="text-gray-600 text-xs sm:text-base">{STATUS_DESC[statusNormalizado]}</p>
           </div>
           <div className="text-right">
-            <div className="text-sm text-gray-500">Realizado em</div>
-            <div className="font-medium">{formatarData(pedido.data_criacao)}</div>
+            <div className="text-xs sm:text-sm text-gray-500">Realizado em</div>
+            <div className="font-medium text-sm sm:text-base">{formatarData(pedido.data_criacao)}</div>
           </div>
         </div>
 
@@ -277,8 +265,8 @@ export default function DetalhePedidoPage() {
                 style={{ width: `${getStatusPercentage(statusNormalizado)}%` }}
                 className="absolute left-0 top-0 h-full bg-orange-500 rounded-full transition-all duration-700 ease-in-out"
               />
-              {/* Checkpoints */}
-              {['Pendente', 'Aceito', 'Em Preparo', 'Pronto', 'Em Entrega', 'Entregue'].map((etapa, idx, arr) => {
+              {/* Checkpoints - agora 4 pontos para 4 status principais */}
+              {['Pendente', 'Em Preparo', 'Em Entrega', 'Entregue'].map((etapa, idx, arr) => {
                 const statusIdx = arr.indexOf(statusNormalizado);
                 const isDone = idx < statusIdx;
                 const isCurrent = idx === statusIdx;
@@ -289,20 +277,18 @@ export default function DetalhePedidoPage() {
                     className="absolute top-1/2 -translate-y-1/2"
                     style={{ left }}
                   >
-                    <div className={`w-5 h-5 flex items-center justify-center rounded-full border-2 transition-all duration-300
+                    <div className={`w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center rounded-full border-2 transition-all duration-300
                       ${isDone ? 'bg-orange-500 border-orange-500 text-white' : isCurrent ? 'bg-white border-orange-500 text-orange-500' : 'bg-white border-gray-300 text-gray-300'}`}
                     >
-                      {isDone ? <FaCheckCircle size={16} /> : <span className="w-2 h-2 rounded-full block" style={{ background: isCurrent ? '#fb923c' : '#d1d5db' }} />}
+                      {isDone ? <FaCheckCircle size={12} /> : <span className="w-2 h-2 rounded-full block" style={{ background: isCurrent ? '#fb923c' : '#d1d5db' }} />}
                     </div>
                   </div>
                 );
               })}
             </div>
-            <div className="flex justify-between text-sm text-gray-500 mt-2">
+            <div className="flex justify-between text-xs sm:text-sm text-gray-500 mt-2">
               <span className={statusNormalizado === 'Pendente' ? 'font-medium text-orange-600' : ''}>Pendente</span>
-              <span className={statusNormalizado === 'Aceito' ? 'font-medium text-blue-600' : ''}>Aceito</span>
               <span className={statusNormalizado === 'Em Preparo' ? 'font-medium text-blue-600' : ''}>Em Preparo</span>
-              <span className={statusNormalizado === 'Pronto' ? 'font-medium text-orange-600' : ''}>Pronto</span>
               <span className={statusNormalizado === 'Em Entrega' ? 'font-medium text-orange-600' : ''}>Em Entrega</span>
               <span className={statusNormalizado === 'Entregue' ? 'font-medium text-green-600' : ''}>Entregue</span>
             </div>
@@ -310,60 +296,60 @@ export default function DetalhePedidoPage() {
         )}
 
         {/* Informações do Restaurante */}
-        <div className="bg-orange-50 rounded-xl p-4">
-          <h3 className="font-medium text-orange-800 mb-2">Restaurante</h3>
-          <div className="flex justify-between items-start">
+        <div className="bg-orange-50 rounded-xl p-3 sm:p-4">
+          <h3 className="font-medium text-orange-800 mb-1 sm:mb-2 text-sm sm:text-base">Restaurante</h3>
+          <div className="flex flex-col sm:flex-row justify-between items-start">
             <div>
-              <p className="font-medium text-gray-900 flex items-center gap-2">
+              <p className="font-medium text-gray-900 flex items-center gap-2 text-sm sm:text-base">
                 {pedido.restaurant.nome}
               </p>
               {pedido.restaurant.telefone && (
-                <p className="text-gray-600 text-sm mt-1">{pedido.restaurant.telefone}</p>
+                <p className="text-gray-600 text-xs sm:text-sm mt-1">{pedido.restaurant.telefone}</p>
               )}
             </div>
           </div>
         </div>
 
         {/* Endereço de Entrega */}
-        <div className="bg-gray-50 rounded-xl p-4">
-          <h3 className="font-medium text-gray-900 mb-2">Endereço de Entrega</h3>
-          <p className="text-gray-800">{pedido.endereco.rua}, {pedido.endereco.numero}</p>
+        <div className="bg-gray-50 rounded-xl p-3 sm:p-4">
+          <h3 className="font-medium text-gray-900 mb-1 sm:mb-2 text-sm sm:text-base">Endereço de Entrega</h3>
+          <p className="text-gray-800 text-sm sm:text-base">{pedido.endereco.rua}, {pedido.endereco.numero}</p>
           {pedido.endereco.complemento && (
-            <p className="text-gray-600">Complemento: {pedido.endereco.complemento}</p>
+            <p className="text-gray-600 text-xs sm:text-sm">Complemento: {pedido.endereco.complemento}</p>
           )}
-          <p className="text-gray-600">{pedido.endereco.bairro}</p>
-          <p className="text-gray-600">{pedido.endereco.cidade} - {pedido.endereco.estado}</p>
-          <p className="text-gray-600">CEP: {pedido.endereco.cep}</p>
+          <p className="text-gray-600 text-xs sm:text-sm">{pedido.endereco.bairro}</p>
+          <p className="text-gray-600 text-xs sm:text-sm">{pedido.endereco.cidade} - {pedido.endereco.estado}</p>
+          <p className="text-gray-600 text-xs sm:text-sm">CEP: {pedido.endereco.cep}</p>
         </div>
 
         {/* Itens do Pedido */}
         <div>
-          <h3 className="font-medium text-gray-900 mb-3">Itens do Pedido</h3>
-          <div className="space-y-4">
+          <h3 className="font-medium text-gray-900 mb-2 sm:mb-3 text-sm sm:text-base">Itens do Pedido</h3>
+          <div className="space-y-3 sm:space-y-4">
             {pedido.items.map((item) => (
-              <div key={item.id} className="bg-gray-50 rounded-xl p-4">
-                <div className="flex justify-between items-start">
+              <div key={item.id} className="bg-gray-50 rounded-xl p-3 sm:p-4">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0">
                   <div>
-                    <p className="font-medium text-gray-900">
+                    <p className="font-medium text-gray-900 text-sm sm:text-base">
                       {item.quantidade}x {item.nome}
                     </p>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-xs sm:text-sm text-gray-500">
                       R$ {item.preco.toFixed(2)} cada
                     </p>
                   </div>
-                  <p className="text-orange-500 font-medium">
+                  <p className="text-orange-500 font-medium text-sm sm:text-base">
                     R$ {(item.preco * item.quantidade).toFixed(2)}
                   </p>
                 </div>
 
                 {item.adicionais && item.adicionais.length > 0 && (
                   <div className="mt-2 pt-2 border-t border-gray-200">
-                    <p className="text-sm font-medium text-gray-700 mb-1">
+                    <p className="text-xs sm:text-sm font-medium text-gray-700 mb-1">
                       Adicionais:
                     </p>
                     <div className="space-y-1">
                       {item.adicionais.map((adicional, idx) => (
-                        <div key={idx} className="flex justify-between text-sm">
+                        <div key={idx} className="flex justify-between text-xs sm:text-sm">
                           <span className="text-gray-600">
                             {adicional.quantidade}x {adicional.nome}
                           </span>
@@ -382,30 +368,30 @@ export default function DetalhePedidoPage() {
 
         {/* Observações */}
         {pedido.observacao && (
-          <div className="bg-orange-50 rounded-xl p-4">
-            <h3 className="font-medium text-gray-900 mb-2">Observações</h3>
-            <p className="text-gray-600">{pedido.observacao}</p>
+          <div className="bg-orange-50 rounded-xl p-3 sm:p-4">
+            <h3 className="font-medium text-gray-900 mb-1 sm:mb-2 text-sm sm:text-base">Observações</h3>
+            <p className="text-gray-600 text-xs sm:text-sm">{pedido.observacao}</p>
           </div>
         )}
 
         {/* Resumo do Valor */}
-        <div className="border-t border-gray-200 pt-4">
+        <div className="border-t border-gray-200 pt-3 sm:pt-4">
           {/* Forma de Pagamento acima do subtotal */}
           {pedido.formaPagamento && (
-            <div className="flex justify-between text-gray-600 mb-2">
+            <div className="flex justify-between text-xs sm:text-sm text-gray-600 mb-2">
               <span>Forma de Pagamento:</span>
               <span className="text-gray-900 font-semibold">{pedido.formaPagamento.charAt(0).toUpperCase() + pedido.formaPagamento.slice(1)}</span>
             </div>
           )}
-          <div className="flex justify-between text-gray-600 mb-2">
+          <div className="flex justify-between text-xs sm:text-sm text-gray-600 mb-2">
             <span>Subtotal:</span>
             <span>R$ {(pedido.total - pedido.taxa_entrega).toFixed(2)}</span>
           </div>
-          <div className="flex justify-between text-gray-600 mb-2">
+          <div className="flex justify-between text-xs sm:text-sm text-gray-600 mb-2">
             <span>Taxa de Entrega:</span>
             <span>R$ {pedido.taxa_entrega.toFixed(2)}</span>
           </div>
-          <div className="flex justify-between text-lg font-bold mt-2">
+          <div className="flex justify-between text-base sm:text-lg font-bold mt-2">
             <span className="text-gray-900">Total:</span>
             <span className="text-green-600">R$ {pedido.total.toFixed(2)}</span>
           </div>
@@ -413,10 +399,10 @@ export default function DetalhePedidoPage() {
 
         {/* Avaliação */}
         {pedido.status === 'Entregue' && !pedido.review && (
-          <div className="border-t border-gray-200 pt-6">
-            <h3 className="font-medium text-gray-900 mb-4">Avaliar Pedido</h3>
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
+          <div className="border-t border-gray-200 pt-4 sm:pt-6">
+            <h3 className="font-medium text-gray-900 mb-2 sm:mb-4 text-sm sm:text-base">Avaliar Pedido</h3>
+            <div className="space-y-3 sm:space-y-4">
+              <div className="flex items-center gap-1 sm:gap-2">
                 {[...Array(5)].map((_, i) => (
                   <button
                     key={i}
@@ -424,7 +410,7 @@ export default function DetalhePedidoPage() {
                     className="hover:scale-110 transition"
                   >
                     <FaStar
-                      size={24}
+                      size={20}
                       color={i < nota ? '#fbbf24' : '#d1d5db'}
                     />
                   </button>
@@ -432,20 +418,20 @@ export default function DetalhePedidoPage() {
               </div>
               <textarea
                 placeholder="Conte-nos sua experiência (opcional)"
-                className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                rows={3}
+                className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-xs sm:text-sm"
+                rows={2}
                 value={comentario}
                 onChange={(e) => setComentario(e.target.value)}
               />
               <button
                 onClick={handleAvaliar}
                 disabled={enviandoAvaliacao}
-                className="w-full px-4 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-xs sm:text-base"
               >
                 {enviandoAvaliacao ? (
                   <>
                     <div className="animate-spin">
-                      <FaSpinner size={20} />
+                      <FaSpinner size={16} />
                     </div>
                     <span>Enviando avaliação...</span>
                   </>
@@ -459,20 +445,20 @@ export default function DetalhePedidoPage() {
 
         {/* Avaliação Existente */}
         {pedido.review && (
-          <div className="border-t border-gray-200 pt-6">
-            <h3 className="font-medium text-gray-900 mb-4">Sua Avaliação</h3>
-            <div className="bg-gray-50 rounded-xl p-4">
-              <div className="flex items-center gap-2 mb-2">
+          <div className="border-t border-gray-200 pt-4 sm:pt-6">
+            <h3 className="font-medium text-gray-900 mb-2 sm:mb-4 text-sm sm:text-base">Sua Avaliação</h3>
+            <div className="bg-gray-50 rounded-xl p-3 sm:p-4">
+              <div className="flex items-center gap-1 sm:gap-2 mb-2">
                 {[...Array(5)].map((_, i) => (
                   <FaStar
                     key={i}
-                    size={20}
+                    size={16}
                     color={i < pedido.review!.nota ? '#fbbf24' : '#d1d5db'}
                   />
                 ))}
               </div>
               {pedido.review.comentario && (
-                <p className="text-gray-600 mt-2">{pedido.review.comentario}</p>
+                <p className="text-gray-600 mt-1 sm:mt-2 text-xs sm:text-sm">{pedido.review.comentario}</p>
               )}
             </div>
           </div>

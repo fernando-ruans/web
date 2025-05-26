@@ -47,21 +47,20 @@ interface Endereco {
 
 interface Pedido {
   id: number;
-  status: 'pendente' | 'aceito' | 'preparando' | 'pronto' | 'entregue' | 'cancelado';
+  status: 'pendente' | 'preparando' | 'em_entrega' | 'entregue' | 'cancelado';
   createdAt: string;
   usuario: Usuario;
   items: ItemPedido[];
   taxa_entrega: number;
   observacao?: string;
   endereco: Endereco;
-  formaPagamento?: string | null; // <-- Adicionado explicitamente
+  formaPagamento?: string | null;
 }
 
 const statusClasses: Record<Pedido['status'], string> = {
   'pendente': 'bg-yellow-100 text-yellow-800 transition-colors duration-200',
-  'aceito': 'bg-blue-100 text-blue-800 transition-colors duration-200',
-  'preparando': 'bg-purple-100 text-purple-800 transition-colors duration-200',
-  'pronto': 'bg-green-100 text-green-800 transition-colors duration-200',
+  'preparando': 'bg-blue-100 text-blue-800 transition-colors duration-200',
+  'em_entrega': 'bg-orange-100 text-orange-800 transition-colors duration-200',
   'entregue': 'bg-gray-100 text-gray-800 transition-colors duration-200',
   'cancelado': 'bg-red-100 text-red-800 transition-colors duration-200',
 };
@@ -108,9 +107,8 @@ const calcularTotal = (items: ItemPedido[], taxa_entrega: number = 0) => {
 
 const statusNomes: Record<Pedido['status'], string> = {
   'pendente': 'Pendente',
-  'aceito': 'Aceito',
   'preparando': 'Em Preparo',
-  'pronto': 'Pronto para Entrega',
+  'em_entrega': 'Em Entrega',
   'entregue': 'Entregue',
   'cancelado': 'Cancelado'
 };
@@ -154,17 +152,16 @@ const DetalhePedidoModalWrapper: React.FC<DetalhePedidoModalProps> = ({ pedido, 
 const BotoesAcao = ({ pedido, onAtualizarStatus }: { pedido: Pedido, onAtualizarStatus: (id: number, status: Pedido['status']) => Promise<void> }) => {
   const botoesPorStatus: Record<Pedido['status'], Array<{ status: Pedido['status'], texto: string, cor: string }>> = {
     'pendente': [
-      { status: 'aceito', texto: 'Aceitar Pedido', cor: 'bg-green-500 hover:bg-green-600' },
-      { status: 'cancelado', texto: 'Recusar', cor: 'bg-red-500 hover:bg-red-600' }
-    ],
-    'aceito': [
-      { status: 'preparando', texto: 'Iniciar Preparo', cor: 'bg-blue-500 hover:bg-blue-600' }
+      { status: 'preparando', texto: 'Iniciar Preparo', cor: 'bg-blue-500 hover:bg-blue-600' },
+      { status: 'cancelado', texto: 'Cancelar', cor: 'bg-red-500 hover:bg-red-600' }
     ],
     'preparando': [
-      { status: 'pronto', texto: 'Pronto para Entrega', cor: 'bg-yellow-500 hover:bg-yellow-600' }
+      { status: 'em_entrega', texto: 'Enviar para Entrega', cor: 'bg-orange-500 hover:bg-orange-600' },
+      { status: 'cancelado', texto: 'Cancelar', cor: 'bg-red-500 hover:bg-red-600' }
     ],
-    'pronto': [
-      { status: 'entregue', texto: 'Confirmar Entrega', cor: 'bg-purple-500 hover:bg-purple-600' }
+    'em_entrega': [
+      { status: 'entregue', texto: 'Confirmar Entrega', cor: 'bg-green-500 hover:bg-green-600' },
+      { status: 'cancelado', texto: 'Cancelar', cor: 'bg-red-500 hover:bg-red-600' }
     ],
     'entregue': [],
     'cancelado': []
@@ -200,19 +197,17 @@ function CardPedido({ pedido, onAtualizarStatus, loadingStatus }: CardPedidoProp
   // Define as opções de status possíveis a partir do status atual
   const opcoesStatus: { value: Pedido['status']; label: string }[] = [
     { value: 'pendente', label: 'Pendente' },
-    { value: 'aceito', label: 'Aceito' },
     { value: 'preparando', label: 'Em Preparo' },
-    { value: 'pronto', label: 'Pronto para Entrega' },
+    { value: 'em_entrega', label: 'Em Entrega' },
     { value: 'entregue', label: 'Entregue' },
     { value: 'cancelado', label: 'Cancelado' },
   ];
 
   // Define quais transições são permitidas a partir do status atual
   const statusPermitidos: Record<Pedido['status'], Pedido['status'][]> = {
-    pendente: ['pendente', 'aceito', 'cancelado'],
-    aceito: ['aceito', 'preparando', 'cancelado'],
-    preparando: ['preparando', 'pronto', 'cancelado'],
-    pronto: ['pronto', 'entregue', 'cancelado'],
+    pendente: ['pendente', 'preparando', 'cancelado'],
+    preparando: ['preparando', 'em_entrega', 'cancelado'],
+    em_entrega: ['em_entrega', 'entregue', 'cancelado'],
     entregue: ['entregue'],
     cancelado: ['cancelado'],
   };
@@ -230,46 +225,39 @@ function CardPedido({ pedido, onAtualizarStatus, loadingStatus }: CardPedidoProp
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-200 p-6 mb-4">
-      <div className="flex justify-between items-start">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <h3 className="text-lg font-bold text-gray-900">Pedido #{pedido.id}</h3>
-            <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusClasses[pedido.status]}`}>
-              {statusNomes[pedido.status]}
-            </span>
+    <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-200 p-4 sm:p-6 mb-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start gap-2 sm:gap-0">
+        <div className="space-y-2 w-full">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-base sm:text-lg font-bold text-gray-900">Pedido #{pedido.id}</h3>
+            <span className={`px-2 sm:px-3 py-1 rounded-full text-xs font-medium ${statusClasses[pedido.status]}`}>{statusNomes[pedido.status]}</span>
           </div>
-          
-          <div className="flex items-center gap-1 text-sm text-gray-500">
+          <div className="flex items-center gap-1 text-xs sm:text-sm text-gray-500">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <span>{format(new Date(pedido.createdAt), "dd/MM/yyyy HH:mm", { locale: ptBR })}</span>
           </div>
-
-          <div className="flex items-center gap-1 text-gray-600">
+          <div className="flex items-center gap-1 text-xs sm:text-sm text-gray-600">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
             <span>{pedido.usuario.nome}</span>
           </div>
-
-          <p className="text-lg font-bold text-orange-500">
+          <p className="text-base sm:text-lg font-bold text-orange-500">
             {formatCurrency(calcularTotal(pedido.items, pedido.taxa_entrega))}
           </p>
         </div>
-        
-        <div className="flex flex-col items-end gap-3">
+        <div className="flex flex-col items-end gap-2 sm:gap-3 w-full sm:w-auto mt-2 sm:mt-0">
           <button
             onClick={() => setShowDetalhes(true)}
-            className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 hover:shadow-md flex items-center gap-2"
+            className="bg-orange-500 hover:bg-orange-600 text-white px-4 sm:px-6 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 hover:shadow-md flex items-center gap-2 w-full sm:w-auto"
           >
             <span>Ver Detalhes</span>
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </button>
-          
           {loadingStatus === pedido.id ? (
             <div className="flex items-center justify-center p-2">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500"></div>
@@ -278,7 +266,7 @@ function CardPedido({ pedido, onAtualizarStatus, loadingStatus }: CardPedidoProp
             <select
               value={novoStatus}
               onChange={handleStatusChange}
-              className="px-3 py-2 rounded-lg border border-gray-300 shadow-sm text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition"
+              className="px-2 sm:px-3 py-2 rounded-lg border border-gray-300 shadow-sm text-xs sm:text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400 transition w-full sm:w-auto"
               disabled={pedido.status === 'entregue' || pedido.status === 'cancelado'}
             >
               {opcoesFiltradas.map(opt => (
@@ -288,7 +276,6 @@ function CardPedido({ pedido, onAtualizarStatus, loadingStatus }: CardPedidoProp
           )}
         </div>
       </div>
-
       <DetalhePedidoModalWrapper
         pedido={pedido}
         isOpen={showDetalhes}
@@ -337,7 +324,7 @@ const ResumoCards = ({ pedidos = [], filtroPeriodo, pedidosFiltrados }: { pedido
     },
     {
       titulo: 'Em Entrega',
-      valor: contarPorStatus('pronto'),
+      valor: contarPorStatus('em_entrega'),
       cor: 'from-orange-400 to-orange-600',
       icone: (
         <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none">

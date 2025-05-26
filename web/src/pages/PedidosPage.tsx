@@ -48,39 +48,31 @@ interface Pedido {
 
 type PedidoStatus =
   | 'Pendente'
-  | 'Aceito'
   | 'Em Preparo'
   | 'Em Entrega'
-  | 'Pronto'
   | 'Entregue'
   | 'Cancelado';
 
 const STATUS_COLORS: Record<PedidoStatus, string> = {
   'Pendente': 'bg-yellow-100 text-yellow-800',
-  'Aceito': 'bg-blue-100 text-blue-800',
   'Em Preparo': 'bg-blue-100 text-blue-800',
   'Em Entrega': 'bg-orange-100 text-orange-800',
-  'Pronto': 'bg-orange-100 text-orange-800',
   'Entregue': 'bg-green-100 text-green-800',
   'Cancelado': 'bg-red-100 text-red-800',
 };
 
-const STATUS_ICONS = {
+const STATUS_ICONS: Record<PedidoStatus, React.ReactNode> = {
   'Pendente': <FaClock color="#a16207" />,
-  'Aceito': <FaTruckLoading color="#1d4ed8" />,
   'Em Preparo': <FaTruckLoading color="#1d4ed8" />,
   'Em Entrega': <FaMotorcycle color="#ea580c" />,
-  'Pronto': <FaMotorcycle color="#ea580c" />,
   'Entregue': <FaCheckCircle color="#15803d" />,
   'Cancelado': <FaClock color="#b91c1c" />,
 };
 
-const STATUS_DESC = {
+const STATUS_DESC: Record<PedidoStatus, string> = {
   'Pendente': 'Aguardando confirmação do restaurante',
-  'Aceito': 'Pedido aceito pelo restaurante',
   'Em Preparo': 'O restaurante está preparando seu pedido',
   'Em Entrega': 'Pedido saiu para entrega',
-  'Pronto': 'Pedido pronto para entrega',
   'Entregue': 'Pedido entregue com sucesso',
   'Cancelado': 'Pedido foi cancelado',
 };
@@ -89,10 +81,8 @@ const STATUS_DESC = {
 const normalizarStatus = (status: string): PedidoStatus => {
   const s = (status || '').toLowerCase();
   if (s === 'pendente' || s === 'pending') return 'Pendente';
-  if (s === 'aceito' || s === 'accepted') return 'Aceito';
   if (s === 'em preparo' || s === 'preparando' || s === 'preparation' || s === 'preparado') return 'Em Preparo';
   if (s === 'em entrega' || s === 'em rota' || s === 'out for delivery' || s === 'entregando') return 'Em Entrega';
-  if (s === 'pronto' || s === 'ready' || s === 'pronto para entrega') return 'Pronto';
   if (s === 'entregue' || s === 'delivered' || s === 'concluido' || s === 'concluído') return 'Entregue';
   if (s === 'cancelado' || s === 'canceled' || s === 'cancelled') return 'Cancelado';
   return 'Pendente'; // fallback seguro
@@ -183,10 +173,8 @@ export default function PedidosPage() {
   const getStatusPercentage = (status: PedidoStatus): number => {
     switch (status) {
       case 'Pendente': return 10;
-      case 'Aceito': return 25;
-      case 'Em Preparo': return 45;
-      case 'Pronto': return 65;
-      case 'Em Entrega': return 85;
+      case 'Em Preparo': return 40;
+      case 'Em Entrega': return 70;
       case 'Entregue': return 100;
       default: return 0;
     }
@@ -245,35 +233,35 @@ export default function PedidosPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 min-h-screen pb-24 sm:pb-32">
+    <div className="max-w-4xl mx-auto p-2 sm:p-6 min-h-screen pb-28 sm:pb-32">
       {/* Título aprimorado */}
-      <div className="flex items-center justify-center gap-3 mb-8">
-        <FaUtensils color="#f97316" size={32} />
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 tracking-tight drop-shadow-sm">
+      <div className="flex flex-col items-center justify-center gap-2 sm:gap-3 mb-6 sm:mb-8">
+        <FaTruckLoading color="#f97316" size={28} />
+        <h1 className="text-xl sm:text-3xl font-extrabold text-gray-900 tracking-tight drop-shadow-sm text-center">
           Meus Pedidos
         </h1>
       </div>
 
       {/* Filtros e Busca aprimorados */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6 sm:mb-8">
         <div className="flex-1">
           <div className="relative shadow-sm">
             <input
               type="text"
               placeholder="Buscar por restaurante ou número do pedido"
-              className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white text-gray-900 placeholder-gray-400 text-base shadow-inner transition"
+              className="w-full pl-10 pr-3 py-2 sm:py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 bg-white text-gray-900 placeholder-gray-400 text-sm sm:text-base shadow-inner transition"
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
             />
-            <div className="absolute left-4 top-1/2 transform -translate-y-1/2 pointer-events-none">
-              <FaSearch color="#9ca3af" size={18} />
+            <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+              <FaSearch color="#9ca3af" size={16} />
             </div>
           </div>
         </div>
         <div className="w-full sm:w-auto grid grid-cols-2 sm:flex gap-2 bg-white rounded-xl shadow-sm px-2 py-1 items-center mt-2 sm:mt-0">
           <button
             onClick={() => setFiltro('todos')}
-            className={`w-full sm:w-auto px-3 py-1 rounded-lg font-semibold text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2 ${
+            className={`w-full sm:w-auto px-2 sm:px-3 py-1 rounded-lg font-semibold text-xs sm:text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2 ${
               filtro === 'todos'
                 ? 'bg-orange-500 text-white shadow'
                 : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
@@ -281,7 +269,7 @@ export default function PedidosPage() {
           >Todos</button>
           <button
             onClick={() => setFiltro('andamento')}
-            className={`w-full sm:w-auto px-3 py-1 rounded-lg font-semibold text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2 ${
+            className={`w-full sm:w-auto px-2 sm:px-3 py-1 rounded-lg font-semibold text-xs sm:text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2 ${
               filtro === 'andamento'
                 ? 'bg-orange-500 text-white shadow'
                 : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
@@ -289,7 +277,7 @@ export default function PedidosPage() {
           >Andamento</button>
           <button
             onClick={() => setFiltro('entregues')}
-            className={`w-full sm:w-auto px-3 py-1 rounded-lg font-semibold text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2 ${
+            className={`w-full sm:w-auto px-2 sm:px-3 py-1 rounded-lg font-semibold text-xs sm:text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2 ${
               filtro === 'entregues'
                 ? 'bg-orange-500 text-white shadow'
                 : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
@@ -297,7 +285,7 @@ export default function PedidosPage() {
           >Entregues</button>
           <button
             onClick={() => setFiltro('cancelados')}
-            className={`w-full sm:w-auto px-3 py-1 rounded-lg font-semibold text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2 ${
+            className={`w-full sm:w-auto px-2 sm:px-3 py-1 rounded-lg font-semibold text-xs sm:text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2 ${
               filtro === 'cancelados'
                 ? 'bg-orange-500 text-white shadow'
                 : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
@@ -306,8 +294,8 @@ export default function PedidosPage() {
         </div>
       </div>
 
-      {/* Lista de Pedidos */}
-      <div className="space-y-6">
+      {/* Lista de pedidos */}
+      <div className="flex flex-col gap-4">
         {pedidosFiltrados.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
             Nenhum pedido encontrado
@@ -323,18 +311,16 @@ export default function PedidosPage() {
               >
                 <div className={`relative bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-200 border-l-8 ${
                   statusNormalizado === 'Pendente' ? 'border-yellow-400' :
-                  statusNormalizado === 'Aceito' ? 'border-blue-400' :
                   statusNormalizado === 'Em Preparo' ? 'border-blue-400' :
                   statusNormalizado === 'Em Entrega' ? 'border-orange-400' :
-                  statusNormalizado === 'Pronto' ? 'border-orange-400' :
                   statusNormalizado === 'Entregue' ? 'border-green-500' :
                   'border-red-400'
-                } p-6 flex flex-col gap-4 cursor-pointer hover:-translate-y-1`}>  
+                } p-4 sm:p-6 flex flex-col gap-4 cursor-pointer hover:-translate-y-1`}>  
                   {/* Cabeçalho do Pedido */}
                   <div className="flex justify-between items-start gap-4">
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <FaUtensils color="#f97316" size={20} />
+                        <FaTruckLoading color="#f97316" size={20} />
                         <h3 className="font-bold text-gray-900 text-lg group-hover:text-orange-600 transition-colors">
                           {pedido.restaurant.nome}
                         </h3>
@@ -361,9 +347,7 @@ export default function PedidosPage() {
                         </div>
                         <div className="flex justify-between text-xs text-gray-400 mt-2 font-medium">
                           <span className={statusNormalizado === 'Pendente' ? 'text-orange-500' : ''}>Pendente</span>
-                          <span className={statusNormalizado === 'Aceito' ? 'text-blue-500' : ''}>Aceito</span>
                           <span className={statusNormalizado === 'Em Preparo' ? 'text-blue-500' : ''}>Em Preparo</span>
-                          <span className={statusNormalizado === 'Pronto' ? 'text-orange-500' : ''}>Pronto</span>
                           <span className={statusNormalizado === 'Em Entrega' ? 'text-orange-500' : ''}>Em Entrega</span>
                           <span className={statusNormalizado === 'Entregue' ? 'text-green-600' : ''}>Entregue</span>
                         </div>
