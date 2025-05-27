@@ -533,6 +533,7 @@ export function LojistaPedidosPage() {
           ...pedido,
           status: status as Pedido['status'],
           taxa_entrega: pedido.taxa_entrega || 0,
+          observacao: pedido.observacao || '', // Garante que observacao sempre é repassada
           items: pedido.items?.map(item => ({
             ...item,
             adicionais: item.adicionais || []

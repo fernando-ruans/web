@@ -453,7 +453,8 @@ module.exports = {  getProfile: async (req, res) => {
                 }
               }
             }
-          }
+          },
+          review: true // <-- Adicionado para incluir avaliação
         },
         orderBy: { data_criacao: 'desc' }
       });
@@ -465,6 +466,7 @@ module.exports = {  getProfile: async (req, res) => {
         createdAt: order.data_criacao,
         taxa_entrega: order.restaurant?.taxa_entrega || 0,
         formaPagamento: order.formaPagamento || null, // <-- Inclui método de pagamento
+        observacao: order.observacao, // <-- Corrigido: repassa observacao para o frontend
         usuario: {
           id: order.user.id,
           nome: order.user.nome,
@@ -481,7 +483,11 @@ module.exports = {  getProfile: async (req, res) => {
             preco: a.adicional.preco,
             quantidade: a.quantidade
           }))
-        }))
+        })),
+        review: order.review ? {
+          nota: order.review.nota,
+          comentario: order.review.comentario
+        } : undefined // <-- repassa review para o frontend
       }));
 
       res.json({ data: formattedOrders });
