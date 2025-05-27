@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import Card from '../components/Card';
-import { FaMapMarkerAlt, FaClock, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
+import { FaMapMarkerAlt, FaClock, FaCheckCircle, FaTimesCircle, FaStar } from 'react-icons/fa';
 import { resumoHorarioFuncionamento } from '../utils/horarioResumo';
 
 interface Restaurante {
@@ -17,6 +17,8 @@ interface Restaurante {
   endereco?: string;
   aberto: boolean;
   horario_funcionamento?: Record<string, string>; // Adicionado para exibir horário resumido
+  avaliacaoMedia?: number; // Média de avaliações
+  totalAvaliacoes?: number; // Total de avaliações
 }
 
 export default function RestaurantesPage() {
@@ -121,6 +123,17 @@ export default function RestaurantesPage() {
                         <span className="hidden sm:inline">🍽️</span> {rest.nome}
                       </span>
                     </div>
+                    {/* Avaliação média */}
+                    {typeof rest.avaliacaoMedia === 'number' && (
+                      <span className="flex items-center gap-1 text-yellow-500 text-sm font-semibold mt-1">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <FaStar key={i} size={14} color={i < Math.round(rest.avaliacaoMedia!) ? '#fbbf24' : '#e5e7eb'} />
+                        ))}
+                        <span className="ml-1 text-gray-700">{rest.avaliacaoMedia.toFixed(1)}
+                          <span className="text-xs text-gray-400 font-normal ml-2">({rest.totalAvaliacoes || 0} avaliações)</span>
+                        </span>
+                      </span>
+                    )}
                     {/* Horário de funcionamento resumido */}
                     {rest.horario_funcionamento && (
                       <span className="text-xs text-gray-500 font-medium mt-0.5 flex items-center gap-1">
