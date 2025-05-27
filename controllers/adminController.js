@@ -486,56 +486,81 @@ module.exports = {
   },
   relatorioResumo: async (req, res) => {
     try {
-      // Vendas realizadas e pedidos entregues = pedidos com status entregue (variações)
       const statusEntregue = [
-        'ENTREGUE', 'DELIVERED', 'COMPLETED'
+        'ENTREGUE', 'entregue', 'DELIVERED', 'delivered', 'COMPLETED', 'completed'
       ];
       const statusCancelado = [
-        'CANCELADO', 'CANCELED', 'CANCELLED'
+        'CANCELADO', 'cancelado', 'CANCELED', 'canceled', 'CANCELLED', 'cancelled'
       ];
-      // Vendas realizadas e pedidos entregues: ambos contam apenas entregues
+
+      // NOVO: Filtro de datas
+      let { dataInicio, dataFim } = req.query;
+      let filtroData = {};
+      if (dataInicio) {
+        try {
+          dataInicio = new Date(dataInicio);
+          if (!isNaN(dataInicio.getTime())) filtroData.gte = dataInicio;
+        } catch (e) {}
+      }
+      if (dataFim) {
+        try {
+          dataFim = new Date(dataFim);
+          if (!isNaN(dataFim.getTime())) filtroData.lte = dataFim;
+        } catch (e) {}
+      }
+      // Se não houver filtro, não aplica nada
+      const filtroPedidos = Object.keys(filtroData).length > 0 ? { data_criacao: filtroData } : {};
+      const filtroClientes = Object.keys(filtroData).length > 0 ? { createdAt: filtroData, tipo: 'cliente' } : { tipo: 'cliente' };
+
+      // Pedidos entregues
       const pedidosEntregues = await prisma.order.count({
         where: {
-          OR: statusEntregue.map(status => ({ status }))
+          OR: statusEntregue.map(status => ({ status })),
+          ...filtroPedidos
         }
       });
       const totalVendas = pedidosEntregues;
       // Total de pedidos (todos os pedidos)
-      const totalPedidos = await prisma.order.count();
-      // Total de restaurantes
+      const totalPedidos = await prisma.order.count({ where: { ...filtroPedidos } });
+      // Total de restaurantes (não filtra por data)
       const totalRestaurantes = await prisma.restaurant.count();
-      // Total de clientes
-      const totalClientes = await prisma.user.count({ where: { tipo: 'cliente' } });
-      // Faturamento (soma dos pedidos entregues de todos os restaurantes)
+      // Total de clientes (aplica filtro de data se houver)
+      const totalClientes = await prisma.user.count({ where: filtroClientes });
+      // Faturamento (soma dos pedidos entregues)
       const faturamentoObj = await prisma.order.aggregate({
         _sum: { total: true },
         where: {
-          OR: statusEntregue.map(status => ({ status }))
+          OR: statusEntregue.map(status => ({ status })),
+          ...filtroPedidos
         }
       });
       const faturamento = faturamentoObj._sum.total || 0;
       // Ticket médio
       const ticketMedio = totalVendas > 0 ? faturamento / totalVendas : 0;
-      // Pedidos cancelados (todas as variações)
+      // Pedidos cancelados
       const pedidosCancelados = await prisma.order.count({
         where: {
-          OR: statusCancelado.map(status => ({ status }))
+          OR: statusCancelado.map(status => ({ status })),
+          ...filtroPedidos
         }
       });
-      // Novos clientes no mês atual
-      const now = new Date();
-      const primeiroDiaMes = new Date(now.getFullYear(), now.getMonth(), 1);
-      const novosClientesMes = await prisma.user.count({
-        where: {
-          tipo: 'cliente',
-          createdAt: { gte: primeiroDiaMes }
-        }
-      });
-      // Restaurante com maior faturamento (todas as variações de entregue)
+      // Novos clientes no período (ou mês atual se não houver filtro)
+      let novosClientesMes = 0;
+      if (Object.keys(filtroData).length > 0) {
+        novosClientesMes = await prisma.user.count({ where: filtroClientes });
+      } else {
+        const now = new Date();
+        const primeiroDiaMes = new Date(now.getFullYear(), now.getMonth(), 1);
+        novosClientesMes = await prisma.user.count({
+          where: { tipo: 'cliente', createdAt: { gte: primeiroDiaMes } }
+        });
+      }
+      // Restaurante com maior faturamento
       const topRestaurante = await prisma.order.groupBy({
         by: ['restaurantId'],
         where: {
-          OR: statusEntregue.map(status => ({ status }))
+          OR: statusEntregue.map(status => ({ status })),
+          ...filtroPedidos
         },
         _sum: { total: true },
         orderBy: { _sum: { total: 'desc' } },
@@ -730,10 +755,10 @@ module.exports = {
 
       // Arrays de status padronizados (iguais ao painel)
       const statusEntregue = [
-        'ENTREGUE', 'DELIVERED', 'COMPLETED'
+        'ENTREGUE', 'entregue', 'DELIVERED', 'delivered', 'COMPLETED', 'completed'
       ];
       const statusCancelado = [
-        'CANCELADO', 'CANCELED', 'CANCELLED'
+        'CANCELADO', 'cancelado', 'CANCELED', 'canceled', 'CANCELLED', 'cancelled'
       ];
 
       // Validar datas
@@ -968,17 +993,34 @@ module.exports = {
   // NOVA ROTA: Listar todos os pedidos do sistema (admin)
   listAllOrders: async (req, res) => {
     try {
-      // Paginação
       const pageSize = 15;
       const page = parseInt(req.query.page) > 0 ? parseInt(req.query.page) : 1;
       const skip = (page - 1) * pageSize;
 
-      // Total de pedidos para paginação
-      const totalPedidos = await prisma.order.count();
+      // NOVO: Filtro de datas
+      let { dataInicio, dataFim } = req.query;
+      let filtroData = {};
+      if (dataInicio) {
+        try {
+          dataInicio = new Date(dataInicio);
+          if (!isNaN(dataInicio.getTime())) filtroData.gte = dataInicio;
+        } catch (e) {}
+      }
+      if (dataFim) {
+        try {
+          dataFim = new Date(dataFim);
+          if (!isNaN(dataFim.getTime())) filtroData.lte = dataFim;
+        } catch (e) {}
+      }
+      const filtroPedidos = Object.keys(filtroData).length > 0 ? { data_criacao: filtroData } : {};
+
+      // Total de pedidos para paginação (com filtro de data)
+      const totalPedidos = await prisma.order.count({ where: { ...filtroPedidos } });
       const totalPages = Math.ceil(totalPedidos / pageSize);
 
-      // Buscar pedidos com dados relevantes
+      // Buscar pedidos com dados relevantes (com filtro de data)
       const orders = await prisma.order.findMany({
+        where: { ...filtroPedidos },
         include: {
           user: {
             select: { id: true, nome: true, email: true, telefone: true }

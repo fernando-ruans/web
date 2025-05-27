@@ -50,31 +50,62 @@ export default function AdminRelatoriosPage() {
   const [pedidosTotalPages, setPedidosTotalPages] = useState(1);
   const [pedidosTotal, setPedidosTotal] = useState(0);
 
+  // Função para carregar o relatório com logs de depuração
   const carregarRelatorio = (params = '') => {
     setLoading(true);
-    fetch(`/api/admin/relatorios/resumo${params}`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    setErro('');
+    const url = `/api/admin/relatorios/resumo${params}`;
+    const token = localStorage.getItem('token');
+    console.log('[AdminRelatorios] Buscando resumo:', url);
+    fetch(url, {
+      headers: { Authorization: `Bearer ${token}` }
     })
-      .then(res => res.ok ? res.json() : Promise.reject(res))
-      .then(data => setResumo(data))
-      .catch(() => setErro('Erro ao carregar dados do relatório.'))
+      .then(res => {
+        if (!res.ok) {
+          console.error('[AdminRelatorios] Erro HTTP:', res.status, res.statusText);
+          return Promise.reject(res);
+        }
+        return res.json();
+      })
+      .then(data => {
+        console.log('[AdminRelatorios] Dados recebidos:', data);
+        setResumo(data);
+      })
+      .catch(err => {
+        setErro('Erro ao carregar dados do relatório.');
+        console.error('[AdminRelatorios] Erro ao carregar dados:', err);
+      })
       .finally(() => setLoading(false));
   };
 
+  // Função para carregar pedidos (sem filtro de data, apenas paginação)
   const carregarPedidos = (page = 1) => {
     setPedidosLoading(true);
     setPedidosErro('');
-    fetch(`/api/admin/orders?page=${page}`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    const url = `/api/admin/orders?page=${page}`;
+    const token = localStorage.getItem('token');
+    console.log('[AdminRelatorios] Buscando pedidos:', url);
+    fetch(url, {
+      headers: { Authorization: `Bearer ${token}` }
     })
-      .then(res => res.ok ? res.json() : Promise.reject(res))
+      .then(res => {
+        if (!res.ok) {
+          console.error('[AdminRelatorios] Erro HTTP pedidos:', res.status, res.statusText);
+          return Promise.reject(res);
+        }
+        return res.json();
+      })
       .then(data => {
+        console.log('[AdminRelatorios] Pedidos recebidos:', data);
         setPedidos(data.data);
         setPedidosPage(data.pagination.page);
         setPedidosTotalPages(data.pagination.totalPages);
         setPedidosTotal(data.pagination.total);
       })
-      .catch(() => setPedidosErro('Erro ao carregar pedidos.'))
+      .catch(err => {
+        setPedidosErro('Erro ao carregar pedidos.');
+        console.error('[AdminRelatorios] Erro ao carregar pedidos:', err);
+      })
       .finally(() => setPedidosLoading(false));
   };
 
@@ -83,37 +114,41 @@ export default function AdminRelatoriosPage() {
     carregarPedidos(1);
   }, []);
 
+  // Função para filtrar por data
   const handleFiltrar = () => {
     const params = new URLSearchParams();
     if (dataInicio) params.append('dataInicio', dataInicio);
     if (dataFim) params.append('dataFim', dataFim);
+    console.log('[AdminRelatorios] Filtro aplicado:', { dataInicio, dataFim });
     carregarRelatorio(`?${params.toString()}`);
   };
 
+  // Função para gerar PDF
   const handleGerarPDF = () => {
     const params = new URLSearchParams();
     if (dataInicio) params.append('dataInicio', dataInicio);
     if (dataFim) params.append('dataFim', dataFim);
-    
+    const url = `/api/admin/relatorios/pdf?${params.toString()}`;
     const token = localStorage.getItem('token');
-    // Criar um link temporário para download com o cabeçalho de autorização
-    fetch(`/api/admin/relatorios/pdf?${params.toString()}`, {
-      headers: { 
-        Authorization: `Bearer ${token}`
-      }
+    console.log('[AdminRelatorios] Gerando PDF:', url);
+    fetch(url, {
+      headers: { Authorization: `Bearer ${token}` }
     })
-    .then(response => response.blob())
-    .then(blob => {
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `relatorio-${dataInicio || 'geral'}-a-${dataFim || 'atual'}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      a.remove();
-    })
-    .catch(() => setErro('Erro ao gerar PDF. Tente novamente.'));
+      .then(response => response.blob())
+      .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `relatorio-${dataInicio || 'geral'}-a-${dataFim || 'atual'}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+      })
+      .catch(err => {
+        setErro('Erro ao gerar PDF. Tente novamente.');
+        console.error('[AdminRelatorios] Erro ao gerar PDF:', err);
+      });
   };
 
   return (
