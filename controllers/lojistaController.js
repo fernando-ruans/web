@@ -916,7 +916,7 @@ module.exports = {  getProfile: async (req, res) => {
       const avaliacoes = pedidos
         .filter(p => p.review && typeof p.review.nota === 'number' && p.review.nota > 0)
         .map(p => p.review.nota);
-      
+      // Se não houver avaliações, retorna 0 (zero) ao invés de null
       const mediaAvaliacao = avaliacoes.length > 0 
         ? avaliacoes.reduce((acc, nota) => acc + nota, 0) / avaliacoes.length 
         : 0;
@@ -1067,7 +1067,7 @@ module.exports = {  getProfile: async (req, res) => {
       const relatorio = {
         faturamentoTotal: faturamentoTotal || 0,
         totalVendas: pedidosConcluidos.length,
-        mediaAvaliacao: mediaAvaliacao || 0,
+        mediaAvaliacao: mediaAvaliacao, // agora pode ser null
         pedidosCancelados: pedidosCancelados.length,
         ticketMedio: ticketMedio || 0,
         clientesNovos: clientesNovos || 0,
@@ -1075,10 +1075,9 @@ module.exports = {  getProfile: async (req, res) => {
         faturamentoPorCategoria: faturamentoPorCategoriaData,
         produtosMaisVendidos: produtosMaisVendidosData,
         diasMaisMovimentados: diasMaisMovimentadosData,
-        // NOVOS CAMPOS
         adicionaisMaisVendidos: adicionaisMaisVendidos.length > 0 ? adicionaisMaisVendidos : [{ nome: 'Sem dados', quantidade: 0 }],
         faturamentoAdicionais: faturamentoAdicionais || 0,
-        totalTaxasEntrega // NOVO CAMPO
+        totalTaxasEntrega
       };
       
       res.json(relatorio);    } catch (err) {

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import theme from '../theme';
 import { FaPlus, FaStore, FaCheckCircle, FaTrashAlt, FaTimesCircle, FaUserTie, FaEdit } from 'react-icons/fa';
 import UploadImage from '../components/UploadImage';
-import { useLocation } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
 import { buscarCEP, formatarEndereco } from '../utils/cepUtils';
 
 export default function AdminRestaurantesPage() {
@@ -329,6 +329,9 @@ export default function AdminRestaurantesPage() {
                     )}
                     <button onClick={() => handleExcluir(r.id)} className="w-full px-3 py-2 rounded-lg bg-red-500 text-white font-bold hover:bg-red-600 transition flex items-center justify-center gap-1 shadow" title="Excluir"><FaTrashAlt size={14} /> Excluir</button>
                     <button onClick={() => openDelegateModal(r)} className="w-full px-3 py-2 rounded-lg bg-yellow-400 text-gray-900 font-bold hover:bg-yellow-500 transition flex items-center justify-center gap-1 shadow" title="Delegar Lojista"><FaUserTie size={14} /> Delegar Lojista</button>
+                    <Link to={`/admin/restaurantes/${r.id}/relatorio`} className="w-full px-3 py-2 rounded-lg bg-purple-500 text-white font-bold hover:bg-purple-600 transition flex items-center justify-center gap-1 shadow text-center" title="Ver Relatório">
+                      📊 Ver Relatório
+                    </Link>
                   </div>
                 </div>
               </div>

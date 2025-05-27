@@ -857,7 +857,7 @@ module.exports = {
           },
           _sum: { total: true },
           orderBy: { _sum: { total: 'desc' } },
-          take: 5
+          take: 1
         })
       ]);
 
@@ -1089,6 +1089,114 @@ module.exports = {
     } catch (err) {
       console.error('[listAllOrders] Erro ao listar pedidos do admin:', err);
       res.status(500).json({ error: 'Erro ao listar pedidos do sistema', details: process.env.NODE_ENV === 'development' ? err.message : undefined });
+    }
+  },
+
+  relatorioRestauranteAdmin: async (req, res) => {
+    try {
+      const { id } = req.params;
+      let { dataInicio, dataFim } = req.query;
+      const restaurantId = Number(id);
+      if (!restaurantId) {
+        return res.status(400).json({ error: 'ID do restaurante é obrigatório' });
+      }
+      // Arrays de status aceitando maiúsculo/minúsculo
+      const statusEntregue = [
+        'ENTREGUE', 'entregue', 'DELIVERED', 'delivered', 'COMPLETED', 'completed'
+      ];
+      const statusCancelado = [
+        'CANCELADO', 'cancelado', 'CANCELED', 'canceled', 'CANCELLED', 'cancelled'
+      ];
+      // Filtro de datas
+      let filtroData = {};
+      if (dataInicio) {
+        try {
+          dataInicio = new Date(dataInicio);
+          if (!isNaN(dataInicio.getTime())) filtroData.gte = dataInicio;
+        } catch (e) {}
+      }
+      if (dataFim) {
+        try {
+          dataFim = new Date(dataFim);
+          if (!isNaN(dataFim.getTime())) filtroData.lte = dataFim;
+        } catch (e) {}
+      }
+      const filtroPedidos = Object.keys(filtroData).length > 0 ? { data_criacao: filtroData, restaurantId } : { restaurantId };
+      // Pedidos entregues
+      const pedidosEntregues = await prisma.order.count({
+        where: {
+          OR: statusEntregue.map(status => ({ status })),
+          ...filtroPedidos
+        }
+      });
+      const totalVendas = pedidosEntregues;
+      // Total de pedidos
+      const totalPedidos = await prisma.order.count({ where: { ...filtroPedidos } });
+      // Faturamento (soma dos pedidos entregues)
+      const faturamentoObj = await prisma.order.aggregate({
+        _sum: { total: true },
+        where: {
+          OR: statusEntregue.map(status => ({ status })),
+          ...filtroPedidos
+        }
+      });
+      const faturamento = faturamentoObj._sum.total || 0;
+      // Ticket médio
+      const ticketMedio = totalVendas > 0 ? faturamento / totalVendas : 0;
+      // Pedidos cancelados
+      const pedidosCancelados = await prisma.order.count({
+        where: {
+          OR: statusCancelado.map(status => ({ status })),
+          ...filtroPedidos
+        }
+      });
+      // Restaurante info
+      const restaurante = await prisma.restaurant.findUnique({ where: { id: restaurantId } });
+      // Produtos mais vendidos
+      const produtosVendidos = await prisma.order.findMany({
+        where: {
+          OR: statusEntregue.map(status => ({ status })),
+          ...filtroPedidos
+        },
+        include: {
+          orderItems: {
+            include: { product: true }
+          }
+        }
+      });
+      const produtosMaisVendidos = {};
+      produtosVendidos.forEach(pedido => {
+        pedido.orderItems.forEach(item => {
+          const nome = item.product?.nome || 'Produto';
+          produtosMaisVendidos[nome] = (produtosMaisVendidos[nome] || 0) + (item.quantidade || 0);
+        });
+      });
+      const topProdutos = Object.entries(produtosMaisVendidos)
+        .map(([nome, quantidade]) => ({ nome, quantidade }))
+        .sort((a, b) => b.quantidade - a.quantidade)
+        .slice(0, 5);
+      // Buscar avaliações do restaurante
+      const reviews = await prisma.review.findMany({
+        where: { restaurantId },
+        select: { nota: true }
+      });
+      const mediaAvaliacao = reviews.length > 0
+        ? reviews.reduce((acc, r) => acc + (r.nota || 0), 0) / reviews.length
+        : null;
+      // Montar resposta
+      res.json({
+        restaurante: restaurante ? { id: restaurante.id, nome: restaurante.nome } : null,
+        faturamento,
+        totalVendas,
+        ticketMedio,
+        pedidosCancelados,
+        produtosMaisVendidos: topProdutos,
+        totalPedidos,
+        mediaAvaliacao // novo campo
+      });
+    } catch (err) {
+      console.error('[relatorioRestauranteAdmin] Erro ao gerar relatório individual:', err);
+      res.status(500).json({ error: 'Erro ao gerar relatório do restaurante', details: err.message });
     }
   },
 };

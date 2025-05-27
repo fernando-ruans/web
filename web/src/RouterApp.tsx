@@ -24,6 +24,7 @@ import LojistaProdutosPage from './pages/LojistaProdutosPage';
 import LojistaPedidosPage from './pages/LojistaPedidosPage';
 import LojistaPerfilPage from './pages/LojistaPerfilPage';
 import LojistaRelatoriosPage from './pages/LojistaRelatoriosPage';
+import AdminRestauranteRelatorioPage from './pages/AdminRestauranteRelatorioPage';
 
 interface PrivateRouteProps {
   children: ReactNode;
@@ -77,6 +78,7 @@ export default function RouterApp() {
           <Route path="/admin/restaurantes" element={<PrivateRoute admin><AdminRestaurantesPage /></PrivateRoute>} />
           <Route path="/admin/usuarios" element={<PrivateRoute admin><AdminUsuariosPage /></PrivateRoute>} />
           <Route path="/admin/relatorios" element={<PrivateRoute admin><AdminRelatoriosPage /></PrivateRoute>} />
+          <Route path="/admin/restaurantes/:id/relatorio" element={<PrivateRoute admin><AdminRestauranteRelatorioPage /></PrivateRoute>} />
 
           {/* Rotas de Lojista */}
           <Route path="/lojista" element={<PrivateRoute lojista><LojistaDashboardPage /></PrivateRoute>} />
