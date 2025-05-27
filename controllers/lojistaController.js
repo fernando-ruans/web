@@ -600,22 +600,54 @@ module.exports = {  getProfile: async (req, res) => {
 
   listReviews: async (req, res) => {
     try {
-      const { page = 1, limit = 10, orderBy = 'id', order = 'desc', notaMin, notaMax } = req.query;
+      const { page = 1, limit = 10, orderBy = 'id', order = 'desc', notaMin, notaMax, restauranteId, restaurantId } = req.query;
+      const filtroRestaurante = restauranteId || restaurantId;
       const where = {
-        restaurant: { userId: req.user.id },
+        ...(filtroRestaurante ? { restaurantId: Number(filtroRestaurante) } : { restaurant: { userId: req.user.id } }),
         ...(notaMin && { nota: { gte: Number(notaMin) } }),
         ...(notaMax && { nota: { lte: Number(notaMax) } })
       };
       const total = await prisma.review.count({ where });
-      const reviews = await prisma.review.findMany({
-        where,
-        include: { order: true },
-        skip: (Number(page) - 1) * Number(limit),
-        take: Number(limit),
-        orderBy: { [orderBy]: order }
-      });
+      let reviews;
+      // Corrige a ordenação: se orderBy=createdAt, ordena por order.data_criacao
+      if (orderBy === 'createdAt') {
+        reviews = await prisma.review.findMany({
+          where,
+          include: {
+            order: {
+              include: {
+                user: { select: { nome: true } },
+                restaurant: { select: { nome: true } }
+              }
+            }
+          },
+          skip: (Number(page) - 1) * Number(limit),
+          take: Number(limit),
+          orderBy: {
+            order: {
+              data_criacao: order
+            }
+          }
+        });
+      } else {
+        reviews = await prisma.review.findMany({
+          where,
+          include: {
+            order: {
+              include: {
+                user: { select: { nome: true } },
+                restaurant: { select: { nome: true } }
+              }
+            }
+          },
+          skip: (Number(page) - 1) * Number(limit),
+          take: Number(limit),
+          orderBy: { [orderBy]: order }
+        });
+      }
       res.json({ total, page: Number(page), limit: Number(limit), data: reviews });
     } catch (err) {
+      console.error('[listReviews] Erro ao listar avaliações:', err);
       res.status(500).json({ error: 'Erro ao listar avaliações' });
     }
   },

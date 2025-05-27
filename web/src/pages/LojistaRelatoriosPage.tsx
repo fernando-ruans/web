@@ -1274,7 +1274,7 @@ export default function LojistaRelatoriosPage() {
                   
                   <div className="bg-green-50 rounded-xl p-6 flex flex-col items-center gap-3 shadow-md">
                     <FaShoppingBag size={32} color="#22c55e" />
-                    <div className="text-2xl font-bold text-green-700">R$ {dados.ticketMedio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+                    <div className="text-2xl font-bold text-green-700">R$ {dados.ticketMedio.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                     <div className="text-gray-600 text-sm">Ticket Médio</div>
                   </div>
                   
