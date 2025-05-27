@@ -150,7 +150,7 @@ export default function DetalhePedidoPage() {
     
     setEnviandoAvaliacao(true);
     try {
-      const res = await fetch('/api/cliente/orders/review', {
+      const res = await fetch('/api/cliente/reviews', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

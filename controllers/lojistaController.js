@@ -1377,7 +1377,8 @@ module.exports = {  getProfile: async (req, res) => {
               }
             }
           },
-          address: true
+          address: true,
+          review: true // <-- Adicionado para incluir avaliação
         }
       });
       if (!order) {
@@ -1410,7 +1411,11 @@ module.exports = {  getProfile: async (req, res) => {
         })),
         endereco: order.address,
         observacao: order.observacao,
-        total: order.total
+        total: order.total,
+        review: order.review ? {
+          nota: order.review.nota,
+          comentario: order.review.comentario
+        } : undefined
       };
       res.json(formattedOrder);
     } catch (err) {

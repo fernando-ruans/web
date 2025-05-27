@@ -658,20 +658,11 @@ module.exports = {
       const review = await prisma.review.create({
         data: {
           orderId,
-          userId: req.user.id,
           restaurantId: order.restaurantId,
           nota,
           comentario
         },
-        include: {
-          user: {
-            select: {
-              id: true,
-              nome: true,
-              avatarUrl: true
-            }
-          }
-        }
+        // Não há relação direta com user, então não inclui user
       });
 
       res.status(201).json(review);
@@ -1023,7 +1014,8 @@ module.exports = {
               }
             }
           },
-          address: true
+          address: true,
+          review: true // <-- Adicionado para incluir avaliação
         }
       });
 
@@ -1069,10 +1061,12 @@ module.exports = {
 
       // Formatar a resposta mantendo a consistência
       let status = (order.status || '').toLowerCase();
-      if (status === 'em_entrega' || status === 'em-entrega') status = 'em entrega';
-      if (status === 'em preparo' || status === 'em_preparo' || status === 'em-preparo') status = 'em preparo';
-      if (status === 'em rota' || status === 'em_rota' || status === 'em-rota') status = 'em entrega';
-      // Mantém os demais status como estão
+      if (status === 'entregue') status = 'Entregue';
+      else if (status === 'em entrega') status = 'Em Entrega';
+      else if (status === 'em preparo') status = 'Em Preparo';
+      else if (status === 'pendente') status = 'Pendente';
+      else if (status === 'cancelado') status = 'Cancelado';
+      else status = order.status; // fallback para status original
       const formattedOrder = {
         id: order.id,
         status,
@@ -1099,7 +1093,11 @@ module.exports = {
           estado: order.address.estado,
           complemento: order.address.complemento,
           cep: order.address.cep
-        }
+        },
+        review: order.review ? {
+          nota: order.review.nota,
+          comentario: order.review.comentario
+        } : undefined
       };
 
       res.json(formattedOrder);

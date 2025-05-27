@@ -142,7 +142,8 @@ const DetalhePedidoModalWrapper: React.FC<DetalhePedidoModalProps> = ({ pedido, 
         taxa_entrega: pedido.taxa_entrega || 0,
         observacao: pedido.observacao,
         endereco: pedido.endereco || undefined,
-        formaPagamento: (pedido as any).formaPagamento || undefined // <-- Adicionado repasse do campo
+        formaPagamento: (pedido as any).formaPagamento || undefined,
+        review: (pedido as any).review || undefined // <-- repassa review se existir
       }}
       statusNomes={statusNomes}
     />

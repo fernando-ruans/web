@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import theme from '../theme';
-import { FaChartBar, FaMoneyBillWave, FaUtensils, FaReceipt, FaSpinner, FaTimesCircle, FaStar, FaUsers, FaShoppingBag, FaTrophy, FaCalendarAlt, FaFilePdf, FaDownload, FaCheckCircle } from 'react-icons/fa';
+import { FaChartBar, FaMoneyBillWave, FaUtensils, FaReceipt, FaSpinner, FaTimesCircle, FaStar, FaUsers, FaShoppingBag, FaTrophy, FaCalendarAlt, FaFilePdf, FaDownload, FaCheckCircle, FaCommentDots } from 'react-icons/fa';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, PointElement, LineElement } from 'chart.js';
 import { Bar, Pie, Line } from 'react-chartjs-2';
 import { format, subDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, parse } from 'date-fns';
@@ -116,6 +116,7 @@ export default function LojistaRelatoriosPage() {
   const [erroDataInicio, setErroDataInicio] = useState<string>('');
   const [erroDataFim, setErroDataFim] = useState<string>('');
   const [ultimoPeriodoSalvo, setUltimoPeriodoSalvo] = useState<string | null>(null);
+  const [ultimasAvaliacoes, setUltimasAvaliacoes] = useState<any[]>([]);
 
   // Carregar preferência de período salva ao iniciar
   useEffect(() => {
@@ -937,6 +938,15 @@ export default function LojistaRelatoriosPage() {
     ],
   };
 
+  // Buscar últimas avaliações ao carregar dados do restaurante ou trocar período
+  useEffect(() => {
+    if (!restaurante?.id) return;
+    fetch(`/api/lojista/reviews?limit=5&orderBy=createdAt&order=desc&restauranteId=${restaurante.id}`, { credentials: 'include' })
+      .then(res => res.ok ? res.json() : Promise.reject(res))
+      .then(data => setUltimasAvaliacoes(data.data || []))
+      .catch(() => setUltimasAvaliacoes([]));
+  }, [restaurante, filtroCustomizado]);
+
   return (
     <div className={theme.bg + ' flex flex-col items-center pb-8 sm:pb-12'}>      {/* Toast de feedback */}
       {mostrarToast && (
@@ -1290,6 +1300,32 @@ export default function LojistaRelatoriosPage() {
                     <span className="text-2xl font-bold text-cyan-700">{dados.totalTaxasEntrega !== undefined ? `R$ ${dados.totalTaxasEntrega.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'R$ 0,00'}</span>
                     <span className="text-gray-600 text-sm">Faturamento em Taxas de Entrega</span>
                   </div>
+                </div>
+
+                {/* Bloco de últimas avaliações dos clientes */}
+                <div className="mb-8">
+                  <h3 className="text-xl font-bold text-gray-700 mb-4 flex items-center gap-2">
+                    <span style={{ display: 'inline-flex', alignItems: 'center' }}><FaCommentDots color="#fb923c" /></span>
+                    <span className="-mb-[2px]">Últimas Avaliações dos Clientes</span>
+                  </h3>
+                  {ultimasAvaliacoes.length === 0 ? (
+                    <div className="text-gray-400 text-sm">Nenhuma avaliação recente encontrada.</div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {ultimasAvaliacoes.map((review, idx) => (
+                        <div key={review.id || idx} className="bg-gray-50 rounded-xl p-4 shadow border border-orange-100 flex flex-col gap-2">
+                          <div className="flex items-center gap-2 mb-1">
+                            {[...Array(5)].map((_, i) => (
+                              <FaStar key={i} size={18} color={i < review.nota ? '#fbbf24' : '#e5e7eb'} />
+                            ))}
+                            <span className="ml-2 text-sm text-gray-600 font-semibold">{review.nota} / 5</span>
+                          </div>
+                          <div className="text-gray-700 text-sm mb-1">{review.comentario || <span className='italic text-gray-400'>Sem comentário</span>}</div>
+                          <div className="text-xs text-gray-400">Pedido #{review.order?.id}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 </div> {/* Fechando a div ref={relatorioRef} */}
