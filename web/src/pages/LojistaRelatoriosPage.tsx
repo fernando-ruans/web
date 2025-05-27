@@ -829,6 +829,14 @@ export default function LojistaRelatoriosPage() {
       
       currentY += 10;
       
+      // Ordem fixa dos dias da semana
+      const ordemDiasSemana = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+
+      // Reordena os diasMaisMovimentados para a ordem correta
+      const diasMaisMovimentadosOrdenados = ordemDiasSemana.map(dia =>
+        dados?.diasMaisMovimentados?.find(d => d.dia === dia) || { dia, pedidos: 0 }
+      );
+
       dados.diasMaisMovimentados.forEach((dia, index) => {
         const altRow = index % 2 === 0;
         if (altRow) {
@@ -925,12 +933,17 @@ export default function LojistaRelatoriosPage() {
     ],
   };
 
+  // Ordem fixa dos dias da semana para o gráfico Dias Mais Movimentados
+  const ordemDiasSemana = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+  const diasMaisMovimentadosOrdenados = ordemDiasSemana.map(dia =>
+    dados?.diasMaisMovimentados?.find(d => d.dia === dia) || { dia, pedidos: 0 }
+  );
   const diasMaisMovimentadosChart = {
-    labels: dados?.diasMaisMovimentados.map(d => d.dia) || [],
+    labels: diasMaisMovimentadosOrdenados.map(d => d.dia),
     datasets: [
       {
         label: 'Número de Pedidos',
-        data: dados?.diasMaisMovimentados.map(d => d.pedidos) || [],
+        data: diasMaisMovimentadosOrdenados.map(d => d.pedidos),
         backgroundColor: 'rgba(153, 102, 255, 0.7)',
         borderColor: 'rgba(153, 102, 255, 1)',
         borderWidth: 1,
