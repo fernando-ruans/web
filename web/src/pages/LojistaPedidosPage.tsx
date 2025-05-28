@@ -618,12 +618,11 @@ function LojistaPedidosPageContent() {
       if (lastPedidoCount > 0 && pedidos.length > lastPedidoCount) {
         console.log('Novo pedido detectado! Tocando som de notificação...');
         playSound();
-        
-        // Mostrar notificação toast interna
+          // Mostrar notificação toast interna
         showSuccess(
-          'Novo Pedido!', 
-          'Um novo pedido foi recebido e está aguardando seu atendimento.',
-          6000
+          '🛒 Novo Pedido Recebido!', 
+          'Você tem um novo pedido aguardando confirmação. Clique para visualizar os detalhes.',
+          8000
         );
       }
       setLastPedidoCount(pedidos.length);
