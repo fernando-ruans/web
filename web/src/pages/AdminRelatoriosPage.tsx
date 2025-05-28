@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import theme from '../theme';
-import { FaChartBar, FaStore, FaUser, FaMoneyBillWave, FaSpinner, FaReceipt, FaUserPlus, FaPercent, FaTrophy, FaTimesCircle, FaFilePdf, FaCalendar, FaBoxOpen, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { FaChartBar, FaStore, FaUser, FaMoneyBillWave, FaSpinner, FaReceipt, FaUserPlus, FaPercent, FaTrophy, FaTimesCircle, FaFilePdf, FaCalendar, FaBoxOpen, FaChevronLeft, FaChevronRight, FaArrowLeft } from 'react-icons/fa';
 
 interface RelatorioResumo {
   totalVendas: number;
@@ -154,6 +154,12 @@ export default function AdminRelatoriosPage() {
   return (
     <div className={theme.bg + ' min-h-screen flex flex-col items-center justify-center pb-24 sm:pb-32'}>
       <div className="w-full max-w-3xl mx-auto bg-white rounded-2xl shadow-xl p-8 flex flex-col gap-6 border-t-4 border-orange-400 mt-8">
+        <button
+          onClick={() => window.history.back()}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-orange-600 font-bold shadow hover:bg-orange-50 hover:text-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-300 transition-all border border-orange-100 w-fit mb-2"
+        >
+          <FaArrowLeft size={18} /> Voltar
+        </button>
         <h2 className="text-3xl font-extrabold text-orange-600 flex items-center gap-2 mb-2"><FaChartBar size={28} /> Relatórios Gerais</h2>
         
         {/* Filtros e botão de PDF */}

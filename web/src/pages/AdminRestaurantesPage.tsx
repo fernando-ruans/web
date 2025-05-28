@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import theme from '../theme';
-import { FaPlus, FaStore, FaCheckCircle, FaTrashAlt, FaTimesCircle, FaUserTie, FaEdit } from 'react-icons/fa';
+import { FaPlus, FaStore, FaCheckCircle, FaTrashAlt, FaTimesCircle, FaUserTie, FaEdit, FaArrowLeft } from 'react-icons/fa';
 import UploadImage from '../components/UploadImage';
 import { useLocation, Link } from 'react-router-dom';
 import { buscarCEP, formatarEndereco } from '../utils/cepUtils';
@@ -209,6 +209,12 @@ export default function AdminRestaurantesPage() {
   return (
     <div className={theme.bg + ' min-h-screen flex flex-col items-center justify-center pb-24 sm:pb-32'}>
       <div className="w-full max-w-3xl mx-auto bg-white rounded-2xl shadow-xl p-8 flex flex-col gap-6 border-t-4 border-orange-400 mt-8">
+        <button
+          onClick={() => window.history.back()}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-orange-600 font-bold shadow hover:bg-orange-50 hover:text-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-300 transition-all border border-orange-100 w-fit mb-2"
+        >
+          <FaArrowLeft size={18} /> Voltar
+        </button>
         <h2 className={theme.title + ' text-center flex items-center gap-2'}><FaStore size={28} color="#fb923c" /> Gerenciar Restaurantes</h2>
         <div className="text-gray-500 mb-2 text-center">Aqui você pode aprovar, editar, excluir restaurantes, delegar lojista e ver avaliações.</div>
         <button

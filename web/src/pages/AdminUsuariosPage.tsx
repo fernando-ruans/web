@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { FaUserEdit, FaTrashAlt, FaUser, FaUserShield, FaUserTie, FaUserPlus, FaEnvelope } from 'react-icons/fa';
+import { FaUserEdit, FaTrashAlt, FaUser, FaUserShield, FaUserTie, FaUserPlus, FaEnvelope, FaArrowLeft } from 'react-icons/fa';
 import theme from '../theme';
 import { useAuth } from '../context/AuthContext';
 
@@ -100,6 +100,12 @@ export default function AdminUsuariosPage() {
   return (
     <div className={theme.bg + ' flex flex-col items-center justify-center min-h-screen pb-24 sm:pb-32'}>
       <div className="w-full max-w-5xl mx-auto flex flex-col items-center gap-6 py-10">
+        <button
+          onClick={() => window.history.back()}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-orange-600 font-bold shadow hover:bg-orange-50 hover:text-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-300 transition-all border border-orange-100 w-fit mb-2"
+        >
+          <FaArrowLeft size={18} /> Voltar
+        </button>
         <div className="w-full flex flex-col items-center gap-4 shadow-xl bg-white rounded-2xl p-8 border-t-4 border-orange-100">
           <h2 className="text-3xl font-extrabold text-orange-500 mb-2 flex items-center gap-2"><FaUserShield size={28} color="#fb923c" /> Gerenciar Usuários</h2>
           <div className="text-gray-500 mb-4 text-center">Visualize e promova usuários do sistema.</div>
