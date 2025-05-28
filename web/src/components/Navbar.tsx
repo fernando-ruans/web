@@ -69,12 +69,11 @@ export default function Navbar() {
               </>
             )}
             {user && user.tipo === 'admin' && (
-              <li>
-                <Link to="/admin" className={
+              <li>                <Link to="/admin" className={
                   'px-4 py-2 rounded-lg font-semibold transition-all duration-150 flex items-center gap-2 ' +
                   (location.pathname.startsWith('/admin') ? 'bg-orange-50 text-orange-600 shadow' : 'text-orange-600 hover:bg-orange-50')
                 }>
-                  <FaUserShield size={16} /> Admin
+                  <FaUserShield className="w-4 h-4" /> Admin
                 </Link>
               </li>
             )}
@@ -107,7 +106,7 @@ export default function Navbar() {
                   {user.avatarUrl ? (
                     <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover rounded-full" />
                   ) : (
-                    <FaUserCircle size={28} color="#fb923c" />
+                    <FaUserCircle className="w-7 h-7" color="#fb923c" />
                   )}
                 </div>
                 <div className="flex flex-col items-start select-none max-w-[120px]">
@@ -122,7 +121,7 @@ export default function Navbar() {
                 {user?.tipo === 'cliente' && (
                   <button onClick={() => navigate('/pedidos')} className="w-full text-left px-4 py-2 hover:bg-orange-50 text-orange-600 font-semibold">Meus Pedidos</button>
                 )}
-                <button onClick={() => { logout(); navigate('/login'); }} className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-500 flex items-center gap-2"><FaSignOutAlt size={16} /> Sair</button>
+                <button onClick={() => { logout(); navigate('/login'); }} className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-500 flex items-center gap-2"><FaSignOutAlt className="w-4 h-4" /> Sair</button>
               </div>
             </div>
           )}
@@ -149,7 +148,7 @@ export default function Navbar() {
                 {user?.tipo === 'admin' && (
                   <li><Link to="/admin" className={
                     `flex items-center gap-2 px-4 py-3 rounded-lg font-semibold text-base transition ${location.pathname.startsWith('/admin') ? 'bg-orange-50 text-orange-600 shadow' : 'text-orange-600 hover:bg-orange-50'}`
-                  } onClick={() => setMenuOpen(false)}><FaUserShield size={16} /> Admin</Link></li>
+                  } onClick={() => setMenuOpen(false)}><FaUserShield className="w-4 h-4" /> Admin</Link></li>
                 )}
                 {(user?.tipo !== 'lojista' && user?.tipo !== 'admin') && (
                   <>
@@ -173,11 +172,11 @@ export default function Navbar() {
                   </>
                 ) : (
                   <>
-                    <button onClick={() => { setMenuOpen(false); navigate('/profile'); }} className="w-full text-left px-4 py-3 rounded-lg hover:bg-orange-50 text-orange-600 font-semibold text-base flex items-center gap-2"><FaUserCircle size={18} color="#fb923c" /> Meu Perfil</button>
+                    <button onClick={() => { setMenuOpen(false); navigate('/profile'); }} className="w-full text-left px-4 py-3 rounded-lg hover:bg-orange-50 text-orange-600 font-semibold text-base flex items-center gap-2"><FaUserCircle className="w-4.5 h-4.5" color="#fb923c" /> Meu Perfil</button>
                     {user.tipo === 'cliente' && (
                       <button onClick={() => { setMenuOpen(false); navigate('/pedidos'); }} className="w-full text-left px-4 py-3 rounded-lg hover:bg-orange-50 text-orange-600 font-semibold text-base flex items-center gap-2"><span className="text-lg">🧾</span> Meus Pedidos</button>
                     )}
-                    <button onClick={() => { setMenuOpen(false); logout(); navigate('/login'); }} className="w-full text-left px-4 py-3 rounded-lg hover:bg-red-50 text-red-500 flex items-center gap-2 text-base"><FaSignOutAlt size={16} /> Sair</button>
+                    <button onClick={() => { setMenuOpen(false); logout(); navigate('/login'); }} className="w-full text-left px-4 py-3 rounded-lg hover:bg-red-50 text-red-500 flex items-center gap-2 text-base"><FaSignOutAlt className="w-4 h-4" /> Sair</button>
                   </>
                 )}
               </div>

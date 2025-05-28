@@ -127,7 +127,7 @@ export default function RestaurantesPage() {
                     {typeof rest.avaliacaoMedia === 'number' && (
                       <span className="flex items-center gap-1 text-yellow-500 text-sm font-semibold mt-1">
                         {Array.from({ length: 5 }).map((_, i) => (
-                          <FaStar key={i} size={14} color={i < Math.round(rest.avaliacaoMedia!) ? '#fbbf24' : '#e5e7eb'} />
+                          <FaStar key={i} className="w-3.5 h-3.5" color={i < Math.round(rest.avaliacaoMedia!) ? '#fbbf24' : '#e5e7eb'} />
                         ))}
                         <span className="ml-1 text-gray-700">{rest.avaliacaoMedia.toFixed(1)}
                           <span className="text-xs text-gray-400 font-normal ml-2">({rest.totalAvaliacoes || 0} avaliações)</span>
@@ -137,26 +137,25 @@ export default function RestaurantesPage() {
                     {/* Horário de funcionamento resumido */}
                     {rest.horario_funcionamento && (
                       <span className="text-xs text-gray-500 font-medium mt-0.5 flex items-center gap-1">
-                        <FaClock size={12} color="#fb923c" />
+                        <FaClock className="w-3 h-3" color="#fb923c" />
                         {resumoHorarioFuncionamento(rest.horario_funcionamento)}
                       </span>
                     )}
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2 text-gray-500 text-xs mt-1">
-                    {rest.endereco ? (
+                  <div className="flex flex-wrap items-center gap-2 text-gray-500 text-xs mt-1">                    {rest.endereco ? (
                       <span className="flex items-center gap-1">
-                        <FaMapMarkerAlt size={12} color="#fb923c" /> 
+                        <FaMapMarkerAlt className="w-3 h-3" color="#fb923c" /> 
                         {rest.endereco} - {rest.cidade}
                       </span>
                     ) : (
                       <span className="flex items-center gap-1">
-                        <FaMapMarkerAlt size={12} color="#fb923c" /> 
+                        <FaMapMarkerAlt className="w-3 h-3" color="#fb923c" /> 
                         {rest.cidade}
                       </span>
                     )}
                     <span className="flex items-center gap-1">
-                      <FaClock size={12} color="#fb923c" /> {rest.tempo_entrega} min
+                      <FaClock className="w-3 h-3" color="#fb923c" /> {rest.tempo_entrega} min
                     </span>
                     <span className="flex items-center gap-1">
                       • Entrega: R$ {rest.taxa_entrega.toFixed(2)}

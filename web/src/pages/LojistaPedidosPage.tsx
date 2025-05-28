@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import DetalhePedidoModal from '../components/DetalhePedidoModal';
-import { NotificationSettings } from '../components/NotificationSettings';
+import NotificationSettings, { NotificationSettingsConfig } from '../components/NotificationSettings';
+import { ToastProvider, useToast } from '../components/ToastProvider';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import axios from 'axios';
@@ -488,8 +489,17 @@ interface ApiResponse {
   data?: Pedido[];
 }
 
-export function LojistaPedidosPage() {  
+export function LojistaPedidosPage() {
+  return (
+    <ToastProvider>
+      <LojistaPedidosPageContent />
+    </ToastProvider>
+  );
+}
+
+function LojistaPedidosPageContent() {  
   const { pedidos: pedidosWS, connected } = useWebSocket();
+  const { showSuccess } = useToast();
   const [pedidosLocal, setPedidosLocal] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -499,12 +509,10 @@ export function LojistaPedidosPage() {
   const [termoBusca, setTermoBusca] = useState('');
   const [loadingStatus, setLoadingStatus] = useState<number | null>(null);
   const [filtroPersonalizado, setFiltroPersonalizado] = useState({ inicio: '', fim: '' });
-  
-  // Estados para sistema de notificação
-  const [notificationSettings, setNotificationSettings] = useState({
+    // Estados para sistema de notificação
+  const [notificationSettings, setNotificationSettings] = useState<NotificationSettingsConfig>({
     soundEnabled: true,
-    volume: 0.8,
-    showDesktopNotifications: true
+    volume: 0.8
   });
   const [lastPedidoCount, setLastPedidoCount] = useState(0);
   
@@ -603,7 +611,6 @@ export function LojistaPedidosPage() {
   }, [buscarPedidos]);
 
   const pedidos = connected ? (pedidosWS as any[]) : pedidosLocal;
-
   // Detectar novos pedidos e tocar som
   useEffect(() => {
     if (pedidos.length > 0) {
@@ -612,28 +619,16 @@ export function LojistaPedidosPage() {
         console.log('Novo pedido detectado! Tocando som de notificação...');
         playSound();
         
-        // Opcional: Notificação desktop se habilitada
-        if (notificationSettings.showDesktopNotifications && 'Notification' in window) {
-          if (Notification.permission === 'granted') {
-            new Notification('Novo Pedido!', {
-              body: 'Um novo pedido foi recebido.',
-              icon: '/favicon.ico'
-            });
-          } else if (Notification.permission !== 'denied') {
-            Notification.requestPermission().then(permission => {
-              if (permission === 'granted') {
-                new Notification('Novo Pedido!', {
-                  body: 'Um novo pedido foi recebido.',
-                  icon: '/favicon.ico'
-                });
-              }
-            });
-          }
-        }
+        // Mostrar notificação toast interna
+        showSuccess(
+          'Novo Pedido!', 
+          'Um novo pedido foi recebido e está aguardando seu atendimento.',
+          6000
+        );
       }
       setLastPedidoCount(pedidos.length);
     }
-  }, [pedidos.length, lastPedidoCount, playSound, notificationSettings.showDesktopNotifications]);
+  }, [pedidos.length, lastPedidoCount, playSound, showSuccess]);
 
   const pedidosFiltrados = pedidos.filter(pedido => {
     // Filtro por status
