@@ -399,59 +399,64 @@ export default function LojistaProdutosPage() {
               <div className="flex gap-2">
                 <button type="submit" className={theme.primary + ' w-full font-bold py-2 rounded'} disabled={!restaurante}>{editId ? 'Salvar' : 'Cadastrar'}</button>
                 <button type="button" className={theme.secondary + ' w-full font-bold py-2 rounded'} onClick={handleCloseForm} disabled={!restaurante}>Cancelar</button>
-              </div>
-
-              <div className="bg-white rounded-xl border border-orange-200 p-4 mt-2">
+              </div>              <div className="bg-white rounded-xl border border-orange-200 p-4 mt-2">
                 <h4 className="font-bold text-orange-500 mb-2">Adicionais</h4>
-                <div className="flex flex-wrap gap-2 items-end mb-2">
-                  <input
-                    className="border rounded px-2 py-1 text-sm"
-                    placeholder="Nome do adicional"
-                    value={adicionalNome}
-                    onChange={e => setAdicionalNome(e.target.value)}
-                  />
-                  <input
-                    className="border rounded px-2 py-1 text-sm"
-                    placeholder="Preço"
-                    type="number"
-                    min="0"
-                    step="0.01" 
-                    value={adicionalPreco}
-                    onChange={e => setAdicionalPreco(e.target.value)}
-                  />
-                  <input
-                    className="border rounded px-2 py-1 text-sm"
-                    placeholder="Qtd. máxima"
-                    type="number"
-                    min="1"
-                    value={adicionalQuantidadeMax}
-                    onChange={e => setAdicionalQuantidadeMax(e.target.value)}
-                  />
-                  <button 
-                    type="button"
-                    onClick={e => {
-                      e.preventDefault();
-                      handleAddAdicional(e);
-                    }}
-                    className="bg-orange-500 hover:bg-orange-600 text-white text-sm px-3 py-1 rounded"
-                    disabled={!showForm}
-                  >
-                    {adicionalEditId ? 'Salvar' : 'Adicionar'}
-                  </button>
-                  {adicionalEditId && (
+                <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-end mb-2">
+                  <div className="w-full sm:w-auto">
+                    <input
+                      className="border rounded px-2 py-1 text-sm w-full"
+                      placeholder="Nome do adicional"
+                      value={adicionalNome}
+                      onChange={e => setAdicionalNome(e.target.value)}
+                    />
+                  </div>
+                  <div className="w-full sm:w-auto">
+                    <input
+                      className="border rounded px-2 py-1 text-sm w-full"
+                      placeholder="Preço"
+                      type="number"
+                      min="0"
+                      step="0.01" 
+                      value={adicionalPreco}
+                      onChange={e => setAdicionalPreco(e.target.value)}
+                    />
+                  </div>
+                  <div className="w-full sm:w-auto">
+                    <input
+                      className="border rounded px-2 py-1 text-sm w-full"
+                      placeholder="Qtd. máxima"
+                      type="number"
+                      min="1"
+                      value={adicionalQuantidadeMax}
+                      onChange={e => setAdicionalQuantidadeMax(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex gap-2 w-full sm:w-auto">
                     <button 
                       type="button"
-                      onClick={() => {
-                        setAdicionalEditId(null);
-                        setAdicionalNome('');
-                        setAdicionalPreco('');
-                        setAdicionalQuantidadeMax('');
+                      onClick={e => {
+                        e.preventDefault();
+                        handleAddAdicional(e);
                       }}
-                      className="bg-gray-500 hover:bg-gray-600 text-white text-sm px-3 py-1 rounded"
+                      className="bg-orange-500 hover:bg-orange-600 text-white text-sm px-3 py-2 rounded flex-1 sm:flex-none"
+                      disabled={!showForm}
                     >
-                      Cancelar
-                    </button>
-                  )}
+                      {adicionalEditId ? 'Salvar' : 'Adicionar'}                    </button>
+                    {adicionalEditId && (
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          setAdicionalEditId(null);
+                          setAdicionalNome('');
+                          setAdicionalPreco('');
+                          setAdicionalQuantidadeMax('');
+                        }}
+                        className="bg-gray-500 hover:bg-gray-600 text-white text-sm px-3 py-2 rounded flex-1 sm:flex-none"
+                      >
+                        Cancelar
+                      </button>
+                    )}
+                  </div>
                 </div>
                 {adicionalError && (
                   <div className="text-red-500 text-sm mt-2">{adicionalError}</div>

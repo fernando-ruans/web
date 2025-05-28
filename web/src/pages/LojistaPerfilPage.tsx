@@ -403,7 +403,7 @@ export default function LojistaPerfilPage() {
                         <FaClock size={20} color="#f97316" />
                         <div className="flex-1">
                           <p className="text-sm text-gray-600 mb-1">Horário de Funcionamento</p>
-                          <div className="grid grid-cols-2 gap-x-8 gap-y-2">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
                             {/* Coluna 1: segunda, terça, quarta, quinta */}
                             <div className="flex flex-col gap-2">
                               {['segunda', 'terca', 'quarta', 'quinta'].map((dia) => (
@@ -556,7 +556,7 @@ export default function LojistaPerfilPage() {
                         <FaClock size={20} color="#f97316" />
                         <div>
                           <p className="text-sm text-gray-600 mb-1">Horário de Funcionamento</p>
-                          <div className="grid grid-cols-2 gap-x-8 gap-y-1">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1">
                             {/* Coluna 1: segunda, terça, quarta, quinta */}
                             <div className="flex flex-col gap-1">
                               {['segunda', 'terca', 'quarta', 'quinta'].map((dia) => (

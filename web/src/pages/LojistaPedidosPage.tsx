@@ -456,24 +456,24 @@ const Filtros = ({
               {periodo.charAt(0).toUpperCase() + periodo.slice(1)}
             </button>
           ))}
-          <div className="flex items-center gap-2 ml-2">
+          <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-2 sm:gap-2 ml-0 sm:ml-2 mt-2 sm:mt-0">
             <input
               ref={refInicio}
               type="date"
-              className="px-2 py-2 rounded border border-gray-300 text-gray-700 text-sm"
+              className="px-2 py-2 rounded border border-gray-300 text-gray-700 text-sm w-full sm:w-auto"
               value={filtroPersonalizado.inicio}
               onChange={e => setFiltroPersonalizado({ ...filtroPersonalizado, inicio: e.target.value })}
             />
-            <span className="text-gray-500">até</span>
+            <span className="text-gray-500 flex items-center justify-center">até</span>
             <input
               ref={refFim}
               type="date"
-              className="px-2 py-2 rounded border border-gray-300 text-gray-700 text-sm"
+              className="px-2 py-2 rounded border border-gray-300 text-gray-700 text-sm w-full sm:w-auto"
               value={filtroPersonalizado.fim}
               onChange={e => setFiltroPersonalizado({ ...filtroPersonalizado, fim: e.target.value })}
             />
             <button
-              className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded font-semibold text-sm"
+              className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded font-semibold text-sm w-full sm:w-auto"
               onClick={aplicarFiltroPersonalizado}
               type="button"
             >Aplicar</button>

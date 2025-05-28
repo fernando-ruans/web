@@ -277,22 +277,21 @@ export default function CarrinhoPage() {
             >Explorar Restaurantes</button>
           </div>
         ) : (
-          <>
-            <ul className="divide-y divide-orange-100 mb-8">
+          <>            <ul className="divide-y divide-orange-100 mb-8">
               {items.map(item => (
                 <li key={item.id} className="py-4">
-                  <div className="flex flex-col sm:flex-row justify-between items-center sm:items-start gap-4 bg-white/90 rounded-xl shadow-lg p-4">
-                    <div className="flex gap-4 items-center w-full sm:w-auto">
+                  <div className="flex flex-col gap-4 bg-white/90 rounded-xl shadow-lg p-4">
+                    <div className="flex gap-3 sm:gap-4 items-start w-full">
                       {item.imagem && (
                         <img
                           src={item.imagem}
                           alt={item.nome}
-                          className="w-20 h-20 object-cover rounded-lg shadow"
+                          className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg shadow flex-shrink-0"
                         />
                       )}
-                      <div>
-                        <h3 className="font-bold text-lg text-gray-900 mb-1">{item.nome}</h3>
-                        <div className="text-orange-600 font-semibold mb-1">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-base sm:text-lg text-gray-900 mb-1">{item.nome}</h3>
+                        <div className="text-orange-600 font-semibold mb-1 text-sm sm:text-base">
                           Quantidade: {item.quantidade} × R$ {item.preco.toFixed(2)}
                         </div>
                         {item.adicionais && item.adicionais.length > 0 && (
@@ -305,12 +304,11 @@ export default function CarrinhoPage() {
                                 </li>
                               ))}
                             </ul>
-                          </div>
-                        )}
+                          </div>                        )}
                       </div>
                     </div>
-                    <div className="flex flex-col items-end gap-2 w-full sm:w-auto">
-                      <div className="font-bold text-green-600 text-lg">
+                    <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 w-full sm:w-auto border-t sm:border-t-0 pt-3 sm:pt-0">
+                      <div className="font-bold text-green-600 text-base sm:text-lg">
                         R$ {(
                           item.preco * item.quantidade +
                           (item.adicionais?.reduce((total, a) => total + (a.preco * a.quantidade), 0) || 0)
@@ -318,7 +316,7 @@ export default function CarrinhoPage() {
                       </div>
                       <button
                         onClick={() => removeItem(item.id)}
-                        className="text-red-500 hover:text-white hover:bg-red-500 border border-red-200 px-3 py-1 rounded-lg font-semibold transition-colors"
+                        className="text-red-500 hover:text-white hover:bg-red-500 border border-red-200 px-3 py-2 sm:py-1 rounded-lg font-semibold transition-colors text-sm"
                       >Remover</button>
                     </div>
                   </div>
@@ -382,9 +380,7 @@ export default function CarrinhoPage() {
                         className="w-full px-4 py-2 border rounded-lg focus:border-orange-300 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
                         required
                       />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
+                    </div>                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <div className="flex items-center mb-2">                        <div className="text-orange-400 mr-2">
                             <FaHashtag />
@@ -483,25 +479,24 @@ export default function CarrinhoPage() {
                       onClick={() => setSelectedAddressId(address.id)}
                     >
                       <FaMapMarkerAlt size={20} color={selectedAddressId === address.id ? '#f97316' : '#9ca3af'} />
-                      <div className="flex-1">
-                        {editandoEnderecoId === address.id ? (
-                          <form onClick={e => e.stopPropagation()} onSubmit={salvarEdicaoEndereco} className="space-y-2">
-                            <div className="grid grid-cols-2 gap-2">
-                              <input className="border rounded px-2 py-1" value={enderecoEdicao.rua||''} onChange={e=>setEnderecoEdicao({...enderecoEdicao,rua:e.target.value})} placeholder="Rua" required />
-                              <input className="border rounded px-2 py-1" value={enderecoEdicao.numero||''} onChange={e=>setEnderecoEdicao({...enderecoEdicao,numero:e.target.value})} placeholder="Número" required />
+                      <div className="flex-1">                        {editandoEnderecoId === address.id ? (
+                          <form onClick={e => e.stopPropagation()} onSubmit={salvarEdicaoEndereco} className="space-y-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              <input className="border rounded px-2 py-1 text-sm" value={enderecoEdicao.rua||''} onChange={e=>setEnderecoEdicao({...enderecoEdicao,rua:e.target.value})} placeholder="Rua" required />
+                              <input className="border rounded px-2 py-1 text-sm" value={enderecoEdicao.numero||''} onChange={e=>setEnderecoEdicao({...enderecoEdicao,numero:e.target.value})} placeholder="Número" required />
                             </div>
-                            <div className="grid grid-cols-2 gap-2">
-                              <input className="border rounded px-2 py-1" value={enderecoEdicao.bairro||''} onChange={e=>setEnderecoEdicao({...enderecoEdicao,bairro:e.target.value})} placeholder="Bairro" required />
-                              <input className="border rounded px-2 py-1" value={enderecoEdicao.cidade||''} onChange={e=>setEnderecoEdicao({...enderecoEdicao,cidade:e.target.value})} placeholder="Cidade" required />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              <input className="border rounded px-2 py-1 text-sm" value={enderecoEdicao.bairro||''} onChange={e=>setEnderecoEdicao({...enderecoEdicao,bairro:e.target.value})} placeholder="Bairro" required />
+                              <input className="border rounded px-2 py-1 text-sm" value={enderecoEdicao.cidade||''} onChange={e=>setEnderecoEdicao({...enderecoEdicao,cidade:e.target.value})} placeholder="Cidade" required />
                             </div>
-                            <div className="grid grid-cols-2 gap-2">
-                              <input className="border rounded px-2 py-1" value={enderecoEdicao.estado||''} onChange={e=>setEnderecoEdicao({...enderecoEdicao,estado:e.target.value})} placeholder="Estado" required />
-                              <input className="border rounded px-2 py-1" value={enderecoEdicao.cep||''} onChange={e=>setEnderecoEdicao({...enderecoEdicao,cep:e.target.value})} placeholder="CEP" required />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              <input className="border rounded px-2 py-1 text-sm" value={enderecoEdicao.estado||''} onChange={e=>setEnderecoEdicao({...enderecoEdicao,estado:e.target.value})} placeholder="Estado" required />
+                              <input className="border rounded px-2 py-1 text-sm" value={enderecoEdicao.cep||''} onChange={e=>setEnderecoEdicao({...enderecoEdicao,cep:e.target.value})} placeholder="CEP" required />
                             </div>
-                            <input className="border rounded px-2 py-1 w-full" value={enderecoEdicao.complemento||''} onChange={e=>setEnderecoEdicao({...enderecoEdicao,complemento:e.target.value})} placeholder="Complemento" />
-                            <div className="flex gap-2 mt-2">
-                              <button type="submit" className="bg-green-500 text-white px-3 py-1 rounded" disabled={loadingEdicaoEndereco}>{loadingEdicaoEndereco?'Salvando...':'Salvar'}</button>
-                              <button type="button" className="bg-gray-200 px-3 py-1 rounded" onClick={e=>{e.stopPropagation();setEditandoEnderecoId(null);}}>Cancelar</button>
+                            <input className="border rounded px-2 py-1 w-full text-sm" value={enderecoEdicao.complemento||''} onChange={e=>setEnderecoEdicao({...enderecoEdicao,complemento:e.target.value})} placeholder="Complemento" />
+                            <div className="flex flex-col sm:flex-row gap-2 mt-2">
+                              <button type="submit" className="bg-green-500 text-white px-3 py-2 rounded text-sm font-medium" disabled={loadingEdicaoEndereco}>{loadingEdicaoEndereco?'Salvando...':'Salvar'}</button>
+                              <button type="button" className="bg-gray-200 px-3 py-2 rounded text-sm font-medium" onClick={e=>{e.stopPropagation();setEditandoEnderecoId(null);}}>Cancelar</button>
                             </div>
                           </form>
                         ) : (
@@ -544,34 +539,32 @@ export default function CarrinhoPage() {
                 className="w-full p-3 border rounded-lg focus:border-orange-300 focus:ring focus:ring-orange-200 focus:ring-opacity-50"
                 rows={3}
               />
-            </div>
-
-            <div className="bg-white/90 rounded-xl shadow-lg p-6 mb-8">
-              <h2 className="text-lg font-bold text-gray-700 mb-4">Forma de Pagamento</h2>
-              <div className="flex flex-row flex-wrap gap-2 mb-4 justify-center items-center">
-                <label className={`flex items-center gap-2 px-3 py-2 min-w-[120px] rounded-lg border-2 font-semibold text-base cursor-pointer transition-all duration-200 shadow-sm select-none text-center justify-center
+            </div>            <div className="bg-white/90 rounded-xl shadow-lg p-4 sm:p-6 mb-8">
+              <h2 className="text-base sm:text-lg font-bold text-gray-700 mb-4">Forma de Pagamento</h2>
+              <div className="grid grid-cols-2 sm:flex sm:flex-row gap-2 mb-4">
+                <label className={`flex items-center gap-2 px-2 sm:px-3 py-2 rounded-lg border-2 font-semibold text-sm sm:text-base cursor-pointer transition-all duration-200 shadow-sm select-none text-center justify-center
                   ${formaPagamento === 'dinheiro' ? 'bg-orange-100 border-orange-500 text-orange-700 ring-2 ring-orange-200' : 'bg-gray-50 border-gray-200 text-gray-700 hover:border-orange-300 hover:bg-orange-50'}`}
                 >
                   <input type="radio" className="hidden" name="pagamento" value="dinheiro" checked={formaPagamento === 'dinheiro'} onChange={() => setFormaPagamento('dinheiro')} />
-                  <FaMoneyBillWave size={18} /> Dinheiro
+                  <FaMoneyBillWave size={16} className="sm:w-[18px] sm:h-[18px]" /> <span className="hidden sm:inline">Dinheiro</span><span className="sm:hidden">💵</span>
                 </label>
-                <label className={`flex items-center gap-2 px-3 py-2 min-w-[120px] rounded-lg border-2 font-semibold text-base cursor-pointer transition-all duration-200 shadow-sm select-none text-center justify-center
+                <label className={`flex items-center gap-2 px-2 sm:px-3 py-2 rounded-lg border-2 font-semibold text-sm sm:text-base cursor-pointer transition-all duration-200 shadow-sm select-none text-center justify-center
                   ${formaPagamento === 'debito' ? 'bg-orange-100 border-orange-500 text-orange-700 ring-2 ring-orange-200' : 'bg-gray-50 border-gray-200 text-gray-700 hover:border-orange-300 hover:bg-orange-50'}`}
                 >
                   <input type="radio" className="hidden" name="pagamento" value="debito" checked={formaPagamento === 'debito'} onChange={() => setFormaPagamento('debito')} />
-                  <FaRegCreditCard size={18} /> Débito
+                  <FaRegCreditCard size={16} className="sm:w-[18px] sm:h-[18px]" /> <span className="hidden sm:inline">Débito</span><span className="sm:hidden">💳</span>
                 </label>
-                <label className={`flex items-center gap-2 px-3 py-2 min-w-[120px] rounded-lg border-2 font-semibold text-base cursor-pointer transition-all duration-200 shadow-sm select-none text-center justify-center
+                <label className={`flex items-center gap-2 px-2 sm:px-3 py-2 rounded-lg border-2 font-semibold text-sm sm:text-base cursor-pointer transition-all duration-200 shadow-sm select-none text-center justify-center
                   ${formaPagamento === 'credito' ? 'bg-orange-100 border-orange-500 text-orange-700 ring-2 ring-orange-200' : 'bg-gray-50 border-gray-200 text-gray-700 hover:border-orange-300 hover:bg-orange-50'}`}
                 >
                   <input type="radio" className="hidden" name="pagamento" value="credito" checked={formaPagamento === 'credito'} onChange={() => setFormaPagamento('credito')} />
-                  <FaCreditCard size={18} /> Crédito
+                  <FaCreditCard size={16} className="sm:w-[18px] sm:h-[18px]" /> <span className="hidden sm:inline">Crédito</span><span className="sm:hidden">💴</span>
                 </label>
-                <label className={`flex items-center gap-2 px-3 py-2 min-w-[120px] rounded-lg border-2 font-semibold text-base cursor-pointer transition-all duration-200 shadow-sm select-none text-center justify-center
+                <label className={`flex items-center gap-2 px-2 sm:px-3 py-2 rounded-lg border-2 font-semibold text-sm sm:text-base cursor-pointer transition-all duration-200 shadow-sm select-none text-center justify-center
                   ${formaPagamento === 'pix' ? 'bg-orange-100 border-orange-500 text-orange-700 ring-2 ring-orange-200' : 'bg-gray-50 border-gray-200 text-gray-700 hover:border-orange-300 hover:bg-orange-50'}`}
                 >
                   <input type="radio" className="hidden" name="pagamento" value="pix" checked={formaPagamento === 'pix'} onChange={() => setFormaPagamento('pix')} />
-                  <FaPix size={18} /> Pix
+                  <FaPix size={16} className="sm:w-[18px] sm:h-[18px]" /> <span className="hidden sm:inline">Pix</span><span className="sm:hidden">📱</span>
                 </label>
               </div>
               {formaPagamento === 'dinheiro' && (
