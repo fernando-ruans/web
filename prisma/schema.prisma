@@ -91,6 +91,7 @@ model Order {
   observacao   String?
   taxa_entrega Float?
   formaPagamento String? @db.VarChar(20) // NOVO: método de pagamento
+  trocoPara     Float?      // Valor para troco informado pelo cliente
   address      Address     @relation(fields: [addressId], references: [id])
   restaurant   Restaurant  @relation(fields: [restaurantId], references: [id])
   user         User        @relation(fields: [userId], references: [id])

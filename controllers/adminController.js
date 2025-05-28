@@ -1074,7 +1074,8 @@ module.exports = {
         })),
         taxa_entrega: Number(order.taxa_entrega),
         observacao: order.observacao,
-        endereco: order.address || null
+        endereco: order.address || null,
+        trocoPara: order.trocoPara || null, // <-- Adicionado trocoPara
       }));
 
       res.json({

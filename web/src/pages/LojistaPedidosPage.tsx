@@ -143,7 +143,8 @@ const DetalhePedidoModalWrapper: React.FC<DetalhePedidoModalProps> = ({ pedido, 
         observacao: pedido.observacao,
         endereco: pedido.endereco || undefined,
         formaPagamento: (pedido as any).formaPagamento || undefined,
-        review: (pedido as any).review || undefined // <-- repassa review se existir
+        review: (pedido as any).review || undefined,
+        trocoPara: (pedido as any).trocoPara || null // <-- repassa trocoPara se existir
       }}
       statusNomes={statusNomes}
     />

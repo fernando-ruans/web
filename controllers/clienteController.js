@@ -495,7 +495,7 @@ module.exports = {
       // Loga o body recebido para debug
       console.log('[createOrder] Body recebido:', req.body);
 
-      const { restaurantId, addressId, observacao, items, formaPagamento } = req.body;
+      const { restaurantId, addressId, observacao, items, formaPagamento, trocoPara } = req.body;
 
       // Validar se o restaurante existe
       const restaurant = await prisma.restaurant.findUnique({
@@ -570,6 +570,7 @@ module.exports = {
             total: Number(total),
             taxa_entrega: taxaEntrega,
             formaPagamento: formaPagamento || null,
+            trocoPara: trocoPara !== undefined ? Number(trocoPara) : null,
             orderItems: {
               create: items.map(item => ({
                 productId: item.productId,
@@ -943,7 +944,10 @@ module.exports = {
           status,
           total: Number(order.total),
           data_criacao: order.data_criacao,
-          formaPagamento: order.formaPagamento || null, // <-- Inclui método de pagamento
+          taxa_entrega: order.taxa_entrega,
+          observacao: order.observacao,
+          formaPagamento: order.formaPagamento || null,
+          trocoPara: order.trocoPara || null,
           restaurant: {
             nome: order.restaurant?.nome,
             imagem: order.restaurant?.imagem
@@ -1001,7 +1005,7 @@ module.exports = {
               imagem: true,
               telefone: true,
               endereco: true,
-              horario_funcionamento: true // Adicionado aqui
+              horario_funcionamento: true
             }
           },
           orderItems: {
@@ -1015,7 +1019,7 @@ module.exports = {
             }
           },
           address: true,
-          review: true // <-- Adicionado para incluir avaliação
+          review: true
         }
       });
 
@@ -1072,10 +1076,10 @@ module.exports = {
         status,
         data_criacao: order.data_criacao,
         total: Number(order.total), // Usa o valor salvo no pedido
-        items,
         taxa_entrega: Number(order.taxa_entrega), // Usa o valor salvo no pedido
         observacao: order.observacao,
-        formaPagamento: order.formaPagamento || null, // <-- Adiciona o campo formaPagamento
+        formaPagamento: order.formaPagamento || null,
+        trocoPara: order.trocoPara || null,
         restaurant: {
           ...order.restaurant,
           horario_funcionamento: order.restaurant?.horario_funcionamento

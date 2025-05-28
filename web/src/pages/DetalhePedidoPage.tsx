@@ -44,6 +44,7 @@ interface Pedido {
     cep: string;
   };
   formaPagamento?: string;
+  trocoPara?: number;
 }
 
 // Novo tipo de status para integração total com o painel do lojista
@@ -326,7 +327,7 @@ export default function DetalhePedidoPage() {
         <div>
           <h3 className="font-medium text-gray-900 mb-2 sm:mb-3 text-sm sm:text-base">Itens do Pedido</h3>
           <div className="space-y-3 sm:space-y-4">
-            {pedido.items.map((item) => (
+            {(pedido.items || []).map((item) => (
               <div key={item.id} className="bg-gray-50 rounded-xl p-3 sm:p-4">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0">
                   <div>
@@ -381,6 +382,12 @@ export default function DetalhePedidoPage() {
             <div className="flex justify-between text-xs sm:text-sm text-gray-600 mb-2">
               <span>Forma de Pagamento:</span>
               <span className="text-gray-900 font-semibold">{pedido.formaPagamento.charAt(0).toUpperCase() + pedido.formaPagamento.slice(1)}</span>
+            </div>
+          )}
+          {pedido.formaPagamento && pedido.trocoPara && (
+            <div className="flex justify-between text-gray-600 mb-2">
+              <span>Troco para:</span>
+              <span className="font-semibold">R$ {Number(pedido.trocoPara).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
             </div>
           )}
           <div className="flex justify-between text-xs sm:text-sm text-gray-600 mb-2">

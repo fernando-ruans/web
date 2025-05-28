@@ -110,7 +110,8 @@ export default function CarrinhoPage() {
         restaurantId: items[0].restauranteId,
         addressId: selectedAddressId,
         observacao: observacao || undefined,
-        formaPagamento, // <-- Adicionado para enviar ao backend
+        formaPagamento, // <-- já enviado
+        trocoPara: formaPagamento === 'dinheiro' ? Number(trocoPara) : null, // <-- Envia trocoPara se for dinheiro
         items: items.map(item => ({
             productId: item.id,
             quantidade: item.quantidade,

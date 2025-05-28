@@ -466,6 +466,7 @@ module.exports = {  getProfile: async (req, res) => {
         createdAt: order.data_criacao,
         taxa_entrega: order.restaurant?.taxa_entrega || 0,
         formaPagamento: order.formaPagamento || null, // <-- Inclui método de pagamento
+        trocoPara: order.trocoPara || null, // <-- Adicionado trocoPara
         observacao: order.observacao, // <-- Corrigido: repassa observacao para o frontend
         usuario: {
           id: order.user.id,
@@ -1428,6 +1429,7 @@ module.exports = {  getProfile: async (req, res) => {
         createdAt: order.data_criacao,
         taxa_entrega: order.restaurant?.taxa_entrega || 0,
         formaPagamento: order.formaPagamento || null,
+        trocoPara: order.trocoPara || null, // <-- Adicionado trocoPara
         usuario: {
           id: order.user.id,
           nome: order.user.nome,

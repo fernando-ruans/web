@@ -37,6 +37,7 @@ interface DetalhePedidoModalProps {
       cep: string;
     };
     formaPagamento?: string;
+    trocoPara?: number;
     review?: {
       nota: number;
       comentario: string;
@@ -241,6 +242,12 @@ const DetalhePedidoModal: React.FC<DetalhePedidoModalProps> = ({ open, onClose, 
             <div className="flex justify-between text-gray-600 mb-2">
               <span>Forma de Pagamento:</span>
               <span className="font-semibold">{pedido.formaPagamento.charAt(0).toUpperCase() + pedido.formaPagamento.slice(1)}</span>
+            </div>
+          )}
+          {pedido.formaPagamento && pedido.trocoPara && (
+            <div className="flex justify-between text-gray-600 mb-2">
+              <span>Troco para:</span>
+              <span className="font-semibold">R$ {Number(pedido.trocoPara).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
             </div>
           )}
           <div className="flex justify-between text-gray-600 mb-2">
