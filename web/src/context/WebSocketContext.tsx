@@ -82,13 +82,18 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
           switch (message.type) {
             case 'pedidos':
-              // Compatibilizar campos de data
+              // Compatibilizar campos de data para ambos os nomes
               const pedidosCorrigidos = (message.data || []).map((pedido: any) => ({
                 ...pedido,
+                status: (pedido.status || '').toLowerCase(),
+                createdAt: pedido.createdAt || pedido.data_criacao || '',
                 data_criacao: pedido.data_criacao || pedido.createdAt || '',
               }));
               setPedidos(pedidosCorrigidos);
               console.log('Pedidos processados:', pedidosCorrigidos);
+              (pedidosCorrigidos as any[]).forEach((p: any) => {
+                console.log(`[WS][Pedido] id=${p.id} createdAt=${p.createdAt} data_criacao=${p.data_criacao}`);
+              });
               break;
             case 'order-update':
               if (message.data.type === 'status-update') {

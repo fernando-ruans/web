@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import axios from 'axios';
 import { formatCurrency } from '../utils/format';
+import { useWebSocket } from '../context/WebSocketContext';
 
 type PeriodoFiltro = 'hoje' | 'ontem' | 'semana' | 'mes';
 
@@ -486,7 +487,8 @@ interface ApiResponse {
 }
 
 export function LojistaPedidosPage() {  
-  const [pedidos, setPedidos] = useState<Pedido[]>([]);
+  const { pedidos: pedidosWS, connected } = useWebSocket();
+  const [pedidosLocal, setPedidosLocal] = useState<Pedido[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filtro, setFiltro] = useState<PeriodoFiltro>('hoje');
@@ -502,7 +504,6 @@ export function LojistaPedidosPage() {
       const res = await fetch('/api/lojista/orders', {
         credentials: 'include'
       });
-
       if (!res.ok) {
         if (res.status === 401) {
           setError('Sessão expirada. Por favor, faça login novamente.');
@@ -510,11 +511,8 @@ export function LojistaPedidosPage() {
         }
         throw new Error('Erro ao carregar pedidos');
       }
-
       const data = await res.json();
       let pedidosData: Pedido[] = [];
-      
-      // Normalizar a estrutura da resposta
       if (Array.isArray(data)) {
         pedidosData = data;
       } else if (data?.pedidos) {
@@ -522,8 +520,6 @@ export function LojistaPedidosPage() {
       } else if (data?.data) {
         pedidosData = data.data;
       }
-
-      // Garantir que todos os pedidos tenham os campos necessários
       const statusValidos = ['pendente','preparando','em_entrega','entregue','cancelado'];
       pedidosData = pedidosData.map(pedido => {
         let status = (pedido.status || '').toLowerCase();
@@ -534,24 +530,32 @@ export function LojistaPedidosPage() {
           ...pedido,
           status: status as Pedido['status'],
           taxa_entrega: pedido.taxa_entrega || 0,
-          observacao: pedido.observacao || '', // Garante que observacao sempre é repassada
+          observacao: pedido.observacao || '',
           items: pedido.items?.map(item => ({
             ...item,
             adicionais: item.adicionais || []
           })) || []
         };
       });
-      
-      setPedidos(pedidosData);
+      setPedidosLocal(pedidosData);
       setError(null);
     } catch (err) {
       console.error('Erro ao buscar pedidos:', err);
       setError('Erro ao carregar pedidos. Por favor, tente novamente.');
-      setPedidos([]);
+      setPedidosLocal([]);
     } finally {
       setLoading(false);
     }
   }, []);
+
+  // Polling periódico igual ao painel do cliente
+  useEffect(() => {
+    buscarPedidos();
+    const interval = setInterval(() => {
+      buscarPedidos();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [buscarPedidos]);
 
   const atualizarStatusPedido = async (pedidoId: number, novoStatus: Pedido['status']) => {
     try {
@@ -581,6 +585,8 @@ export function LojistaPedidosPage() {
   useEffect(() => {
     buscarPedidos();
   }, [buscarPedidos]);
+
+  const pedidos = connected ? (pedidosWS as any[]) : pedidosLocal;
 
   const pedidosFiltrados = pedidos.filter(pedido => {
     // Filtro por status

@@ -607,6 +607,68 @@ module.exports = {
           });
           return order;
         });
+        // --- INÍCIO: Envio de atualização em tempo real para o lojista ---
+        try {
+          const sendWebSocketUpdate = req.app.get('sendWebSocketUpdate');
+          if (sendWebSocketUpdate) {
+            // Buscar restaurante do pedido
+            const restaurante = await prisma.restaurant.findUnique({ where: { id: order.restaurantId } });
+            if (restaurante && restaurante.userId) {
+              // Buscar pedidos ativos do restaurante
+              const pedidos = await prisma.order.findMany({
+                where: { restaurantId: order.restaurantId },
+                include: {
+                  user: { select: { id: true, nome: true, email: true, telefone: true } },
+                  restaurant: { select: { taxa_entrega: true } },
+                  orderItems: {
+                    include: {
+                      product: { select: { id: true, nome: true, preco: true } },
+                      adicionais: { include: { adicional: true } }
+                    }
+                  },
+                  review: true
+                },
+                orderBy: { data_criacao: 'desc' }
+              });
+              // Formatar pedidos igual ao controller do lojista
+              const formattedOrders = pedidos.map(order => ({
+                id: order.id,
+                status: (order.status || '').toLowerCase(),
+                createdAt: order.data_criacao,
+                taxa_entrega: order.restaurant?.taxa_entrega || 0,
+                formaPagamento: order.formaPagamento || null,
+                trocoPara: order.trocoPara || null,
+                observacao: order.observacao,
+                usuario: {
+                  id: order.user.id,
+                  nome: order.user.nome,
+                  email: order.user.email,
+                  telefone: order.user.telefone
+                },
+                items: order.orderItems.map(item => ({
+                  id: item.id,
+                  quantidade: item.quantidade,
+                  produto: item.product,
+                  adicionais: item.adicionais.map(a => ({
+                    id: a.adicional.id,
+                    nome: a.adicional.nome,
+                    preco: a.adicional.preco,
+                    quantidade: a.quantidade
+                  }))
+                })),
+                review: order.review ? {
+                  nota: order.review.nota,
+                  comentario: order.review.comentario
+                } : undefined
+              }));
+              // Enviar para o lojista responsável
+              sendWebSocketUpdate(restaurante.userId, 'pedidos', formattedOrders);
+            }
+          }
+        } catch (err) {
+          console.error('[createOrder][WebSocket] Erro ao enviar atualização para lojista:', err);
+        }
+        // --- FIM: Envio de atualização em tempo real para o lojista ---
         res.status(201).json(order);
       } catch (errTx) {
         console.error('[createOrder] Erro PRISMA transação:', errTx);
