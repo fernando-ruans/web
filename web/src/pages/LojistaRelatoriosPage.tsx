@@ -1009,54 +1009,51 @@ export default function LojistaRelatoriosPage() {
                       <span className="text-orange-600 ml-2">{filtroCustomizado.label}</span>
                     </h3>
                     
-                    <div className="flex flex-wrap gap-2 mb-2">
+                    <div className="flex flex-col gap-2 w-full md:flex-row md:flex-wrap md:w-auto mb-2">
                       <button 
-                        className={`px-3 py-1 rounded-full text-sm ${periodoSelecionado === '7dias' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+                        className={`px-3 py-1 rounded-full text-sm w-full md:w-auto ${periodoSelecionado === '7dias' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700'}`}
                         onClick={() => mudarPeriodo('7dias')}
                       >
                         Últimos 7 dias
                       </button>
                       <button 
-                        className={`px-3 py-1 rounded-full text-sm ${periodoSelecionado === '30dias' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+                        className={`px-3 py-1 rounded-full text-sm w-full md:w-auto ${periodoSelecionado === '30dias' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700'}`}
                         onClick={() => mudarPeriodo('30dias')}
                       >
                         Últimos 30 dias
                       </button>
                       <button 
-                        className={`px-3 py-1 rounded-full text-sm ${periodoSelecionado === 'semana' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+                        className={`px-3 py-1 rounded-full text-sm w-full md:w-auto ${periodoSelecionado === 'semana' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700'}`}
                         onClick={() => mudarPeriodo('semana')}
                       >
                         Semana atual
                       </button>
                       <button 
-                        className={`px-3 py-1 rounded-full text-sm ${periodoSelecionado === 'mes' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+                        className={`px-3 py-1 rounded-full text-sm w-full md:w-auto ${periodoSelecionado === 'mes' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700'}`}
                         onClick={() => mudarPeriodo('mes')}
                       >
                         Mês atual
                       </button>
-                    </div>
-                    
-                    <div className="flex flex-wrap gap-2">
                       <button 
-                        className={`px-3 py-1 rounded-full text-sm ${periodoSelecionado === 'trimestre' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+                        className={`px-3 py-1 rounded-full text-sm w-full md:w-auto ${periodoSelecionado === 'trimestre' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700'}`}
                         onClick={() => mudarPeriodo('trimestre')}
                       >
                         Trimestre atual
                       </button>
                       <button 
-                        className={`px-3 py-1 rounded-full text-sm ${periodoSelecionado === 'semestre' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+                        className={`px-3 py-1 rounded-full text-sm w-full md:w-auto ${periodoSelecionado === 'semestre' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700'}`}
                         onClick={() => mudarPeriodo('semestre')}
                       >
                         Semestre atual
                       </button>
                       <button 
-                        className={`px-3 py-1 rounded-full text-sm ${periodoSelecionado === 'ano' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+                        className={`px-3 py-1 rounded-full text-sm w-full md:w-auto ${periodoSelecionado === 'ano' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700'}`}
                         onClick={() => mudarPeriodo('ano')}
                       >
                         Ano atual
                       </button>
                       <button 
-                        className={`px-3 py-1 rounded-full text-sm ${periodoSelecionado === 'personalizado' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700'}`}
+                        className={`px-3 py-1 rounded-full text-sm w-full md:w-auto ${periodoSelecionado === 'personalizado' ? 'bg-orange-500 text-white' : 'bg-gray-200 text-gray-700'}`}
                         onClick={() => setMostrarDatePicker(!mostrarDatePicker)}
                       >
                         Personalizado
