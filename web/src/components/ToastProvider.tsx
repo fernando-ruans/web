@@ -1,5 +1,6 @@
 import React, { useState, useCallback, createContext, useContext } from 'react';
-import Toast, { ToastData } from './Toast';
+import Toast from './Toast';
+import type { ToastData } from './Toast';
 
 interface ToastContextType {
   addToast: (toast: Omit<ToastData, 'id'>) => void;
@@ -77,18 +78,19 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
       showError, 
       showInfo, 
       showWarning 
-    }}>
-      {children}
+    }}>      {children}
       
       {/* Container de Toasts */}
-      <div className="fixed top-4 right-4 z-50 space-y-2 pointer-events-none">
-        {toasts.map(toast => (
-          <Toast
-            key={toast.id}
-            toast={toast}
-            onRemove={removeToast}
-          />
-        ))}
+      <div className="fixed top-4 right-4 z-50 pointer-events-none max-w-sm w-full">
+        <div className="space-y-3">
+          {toasts.map(toast => (
+            <Toast
+              key={toast.id}
+              toast={toast}
+              onRemove={removeToast}
+            />
+          ))}
+        </div>
       </div>
     </ToastContext.Provider>
   );

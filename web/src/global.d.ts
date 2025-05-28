@@ -1,0 +1,64 @@
+import { ComponentType, SVGProps } from 'react';
+
+declare module 'react-icons/*' {
+  const content: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export default content;
+  export const FaUserCircle: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaSignOutAlt: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaUserShield: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaCheckCircle: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaInfoCircle: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaExclamationTriangle: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaTimesCircle: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaTimes: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaVolumeMute: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaVolumeUp: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaBell: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaCog: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaEdit: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaTrash: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaPlus: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaEye: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaEyeSlash: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaMapMarkerAlt: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaPhone: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaEnvelope: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaUser: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaSearch: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaFilter: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaDownload: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaCalendar: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaStar: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaStarHalf: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaRegStar: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaShoppingCart: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaCreditCard: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaMoneyBill: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaClock: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaCheck: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaSpinner: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaBars: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaChevronDown: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaChevronUp: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaArrowLeft: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaArrowRight: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaHome: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaUtensils: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaMotorcycle: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaClipboardList: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaChartBar: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaUsers: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaStore: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const FaReceipt: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  
+  export const MdNotifications: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const MdNotificationsOff: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const MdVolumeOff: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const MdVolumeUp: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const MdSettings: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  
+  export const IoClose: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const IoCheckmark: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const IoWarning: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+  export const IoInformation: ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
+}
