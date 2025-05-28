@@ -27,7 +27,7 @@ interface Pedido {
 }
 
 interface WebSocketMessage {
-  type: 'pedidos' | 'order-update';
+  type: 'pedidos' | 'order-update' | 'new-order';
   data: any;
 }
 
@@ -78,9 +78,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       websocket.onmessage = (event) => {
         try {
           const message: WebSocketMessage = JSON.parse(event.data);
-          console.log('Mensagem recebida:', message);
-
-          switch (message.type) {
+          console.log('Mensagem recebida:', message);          switch (message.type) {
             case 'pedidos':
               // Compatibilizar campos de data para ambos os nomes
               const pedidosCorrigidos = (message.data || []).map((pedido: any) => ({
@@ -105,6 +103,19 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                   )
                 );
               }
+              break;
+            case 'new-order':
+              // Tratar especificamente novos pedidos
+              console.log('Novo pedido recebido via WebSocket:', message.data);
+              setPedidos(prevPedidos => {
+                const novoPedido = {
+                  ...message.data,
+                  status: (message.data.status || '').toLowerCase(),
+                  createdAt: message.data.createdAt || message.data.data_criacao || '',
+                  data_criacao: message.data.data_criacao || message.data.createdAt || '',
+                };
+                return [novoPedido, ...prevPedidos];
+              });
               break;
             default:
               console.log('Tipo de mensagem não tratado:', message.type);

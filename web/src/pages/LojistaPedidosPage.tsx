@@ -1,10 +1,12 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import DetalhePedidoModal from '../components/DetalhePedidoModal';
+import { NotificationSettings } from '../components/NotificationSettings';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import axios from 'axios';
 import { formatCurrency } from '../utils/format';
 import { useWebSocket } from '../context/WebSocketContext';
+import { useNotificationSound } from '../hooks/useNotificationSound';
 
 type PeriodoFiltro = 'hoje' | 'ontem' | 'semana' | 'mes';
 
@@ -497,6 +499,20 @@ export function LojistaPedidosPage() {
   const [termoBusca, setTermoBusca] = useState('');
   const [loadingStatus, setLoadingStatus] = useState<number | null>(null);
   const [filtroPersonalizado, setFiltroPersonalizado] = useState({ inicio: '', fim: '' });
+  
+  // Estados para sistema de notificação
+  const [notificationSettings, setNotificationSettings] = useState({
+    soundEnabled: true,
+    volume: 0.8,
+    showDesktopNotifications: true
+  });
+  const [lastPedidoCount, setLastPedidoCount] = useState(0);
+  
+  // Hook para reprodução de som
+  const { playSound } = useNotificationSound({
+    enabled: notificationSettings.soundEnabled,
+    volume: notificationSettings.volume
+  });
 
   const buscarPedidos = useCallback(async () => {
     try {
@@ -588,6 +604,37 @@ export function LojistaPedidosPage() {
 
   const pedidos = connected ? (pedidosWS as any[]) : pedidosLocal;
 
+  // Detectar novos pedidos e tocar som
+  useEffect(() => {
+    if (pedidos.length > 0) {
+      // Se não é o primeiro carregamento e há mais pedidos que antes
+      if (lastPedidoCount > 0 && pedidos.length > lastPedidoCount) {
+        console.log('Novo pedido detectado! Tocando som de notificação...');
+        playSound();
+        
+        // Opcional: Notificação desktop se habilitada
+        if (notificationSettings.showDesktopNotifications && 'Notification' in window) {
+          if (Notification.permission === 'granted') {
+            new Notification('Novo Pedido!', {
+              body: 'Um novo pedido foi recebido.',
+              icon: '/favicon.ico'
+            });
+          } else if (Notification.permission !== 'denied') {
+            Notification.requestPermission().then(permission => {
+              if (permission === 'granted') {
+                new Notification('Novo Pedido!', {
+                  body: 'Um novo pedido foi recebido.',
+                  icon: '/favicon.ico'
+                });
+              }
+            });
+          }
+        }
+      }
+      setLastPedidoCount(pedidos.length);
+    }
+  }, [pedidos.length, lastPedidoCount, playSound, notificationSettings.showDesktopNotifications]);
+
   const pedidosFiltrados = pedidos.filter(pedido => {
     // Filtro por status
     if (filtroStatus !== 'todos' && pedido.status !== filtroStatus) {
@@ -666,12 +713,14 @@ export function LojistaPedidosPage() {
             <h1 className="text-3xl font-bold text-gray-900">Painel de Pedidos</h1>
             <p className="mt-1 text-gray-500">Gerencie os pedidos dos seus clientes</p>
           </div>
-          
-          <div className="mt-4 md:mt-0">
+            <div className="mt-4 md:mt-0 flex items-center gap-4">
             <div className="flex items-center gap-2 text-sm text-gray-500">
               <div className="w-2 h-2 rounded-full bg-green-500"></div>
               Sistema atualizado em tempo real
             </div>
+            
+            {/* Componente de configurações de notificação */}
+            <NotificationSettings onSettingsChange={setNotificationSettings} />
           </div>
         </div>
 
