@@ -70,7 +70,7 @@ export default function AdminRestauranteRelatorioPage() {
           </div>
           <div className="bg-yellow-50 rounded-xl p-6 flex flex-col items-center gap-2 shadow">
             <div className="text-gray-500 text-sm">Ticket Médio</div>
-            <div className="text-2xl font-bold text-yellow-700">R$ {relatorio.ticketMedio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+            <div className="text-2xl font-bold text-yellow-700">R$ {Number(relatorio.ticketMedio).toFixed(2)}</div>
           </div>
           <div className="bg-red-50 rounded-xl p-6 flex flex-col items-center gap-2 shadow">
             <div className="text-gray-500 text-sm">Pedidos Cancelados</div>
