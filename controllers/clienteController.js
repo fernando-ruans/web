@@ -619,13 +619,13 @@ module.exports = {
                 where: { restaurantId: order.restaurantId },
                 include: {
                   user: { select: { id: true, nome: true, email: true, telefone: true } },
-                  restaurant: { select: { taxa_entrega: true } },
-                  orderItems: {
+                  restaurant: { select: { taxa_entrega: true } },                  orderItems: {
                     include: {
                       product: { select: { id: true, nome: true, preco: true } },
                       adicionais: { include: { adicional: true } }
                     }
                   },
+                  address: true, // <-- Incluir endereço de entrega
                   review: true
                 },
                 orderBy: { data_criacao: 'desc' }
@@ -654,8 +654,17 @@ module.exports = {
                     nome: a.adicional.nome,
                     preco: a.adicional.preco,
                     quantidade: a.quantidade
-                  }))
-                })),
+                  }))                })),
+                endereco: order.address ? {
+                  id: order.address.id,
+                  rua: order.address.rua,
+                  numero: order.address.numero,
+                  bairro: order.address.bairro,
+                  cidade: order.address.cidade,
+                  estado: order.address.estado,
+                  complemento: order.address.complemento,
+                  cep: order.address.cep
+                } : null, // <-- Incluir endereço de entrega
                 review: order.review ? {
                   nota: order.review.nota,
                   comentario: order.review.comentario

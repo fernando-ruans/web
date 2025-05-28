@@ -437,8 +437,7 @@ module.exports = {  getProfile: async (req, res) => {
             select: {
               taxa_entrega: true
             }
-          },
-          orderItems: {
+          },          orderItems: {
             include: {
               product: {
                 select: {
@@ -454,6 +453,7 @@ module.exports = {  getProfile: async (req, res) => {
               }
             }
           },
+          address: true, // <-- Incluir endereço de entrega
           review: true // <-- Adicionado para incluir avaliação
         },
         orderBy: { data_criacao: 'desc' }
@@ -483,8 +483,17 @@ module.exports = {  getProfile: async (req, res) => {
             nome: a.adicional.nome,
             preco: a.adicional.preco,
             quantidade: a.quantidade
-          }))
-        })),
+          }))        })),
+        endereco: order.address ? {
+          id: order.address.id,
+          rua: order.address.rua,
+          numero: order.address.numero,
+          bairro: order.address.bairro,
+          cidade: order.address.cidade,
+          estado: order.address.estado,
+          complemento: order.address.complemento,
+          cep: order.address.cep
+        } : null, // <-- Incluir endereço de entrega
         review: order.review ? {
           nota: order.review.nota,
           comentario: order.review.comentario
