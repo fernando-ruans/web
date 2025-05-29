@@ -13,6 +13,9 @@ const clienteRoutes = require('./routes/cliente');
 const lojistaRoutes = require('./routes/lojista');
 const adminRoutes = require('./routes/admin');
 
+// Middleware de manutenção
+const maintenanceMiddleware = require('./middlewares/maintenance');
+
 const app = express();
 const server = http.createServer(app);
 
@@ -167,6 +170,9 @@ const sendWebSocketUpdate = (userId, type, data) => {
 
 // Disponibilizar a função sendWebSocketUpdate para outros módulos
 app.set('sendWebSocketUpdate', sendWebSocketUpdate);
+
+// Middleware de manutenção
+app.use(maintenanceMiddleware);
 
 // Rotas da API
 app.use('/api/auth', authRoutes);

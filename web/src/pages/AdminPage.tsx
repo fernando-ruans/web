@@ -3,10 +3,14 @@ import theme from '../theme';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { FaStore, FaUserCog, FaPlus, FaUserTie } from 'react-icons/fa';
+import { useMaintenanceStatus } from '../hooks/useMaintenanceStatus';
+import { useState } from 'react';
 
 export default function AdminPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { maintenance, loading: loadingMaintenance } = useMaintenanceStatus();
+  const [toggleLoading, setToggleLoading] = useState(false);
 
   console.log('AdminPage - User:', user); // Para depuração
 
@@ -20,9 +24,34 @@ export default function AdminPage() {
     return <div className="text-center mt-10 text-red-500 font-bold">Acesso negado - você não tem permissão de administrador</div>;
   }
 
+  const handleToggleMaintenance = async () => {
+    setToggleLoading(true);
+    try {
+      const endpoint = maintenance ? '/api/admin/maintenance/disable' : '/api/admin/maintenance/enable';
+      await fetch(endpoint, { method: 'POST', credentials: 'include' });
+      window.location.reload(); // Força atualização do status
+    } catch {
+      alert('Erro ao alternar modo manutenção');
+    } finally {
+      setToggleLoading(false);
+    }
+  };
+
   return (
     <div className={theme.bg + ' flex flex-col items-center justify-center min-h-screen pb-24 sm:pb-32'}>
       <div className="w-full max-w-5xl flex flex-col items-center gap-8 py-10">
+        {/* Switch de manutenção */}
+        <div className="flex items-center gap-4 mb-6 bg-yellow-100 border border-yellow-300 rounded-lg px-4 py-2">
+          <span className="font-semibold text-yellow-700">Modo manutenção:</span>
+          <button
+            className={`px-4 py-2 rounded font-bold transition text-white ${maintenance ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-gray-400 hover:bg-gray-500'}`}
+            onClick={handleToggleMaintenance}
+            disabled={toggleLoading || loadingMaintenance}
+          >
+            {maintenance ? 'Desativar' : 'Ativar'}
+          </button>
+          {toggleLoading && <span className="ml-2 text-xs text-gray-500">Salvando...</span>}
+        </div>
         <h2 className="text-4xl font-extrabold text-orange-500 mb-2 flex items-center gap-3">
           <FaUserCog size={32} color="#fb923c" /> Painel do Administrador
         </h2>

@@ -25,6 +25,8 @@ import LojistaPedidosPage from './pages/LojistaPedidosPage';
 import LojistaPerfilPage from './pages/LojistaPerfilPage';
 import LojistaRelatoriosPage from './pages/LojistaRelatoriosPage';
 import AdminRestauranteRelatorioPage from './pages/AdminRestauranteRelatorioPage';
+import MaintenancePage from './pages/MaintenancePage';
+import { useMaintenanceStatus } from './hooks/useMaintenanceStatus';
 
 interface PrivateRouteProps {
   children: ReactNode;
@@ -55,6 +57,14 @@ function PrivateRoute({ children, admin = false, lojista = false }: PrivateRoute
 }
 
 export default function RouterApp() {
+  const { maintenance, loading: loadingMaintenance } = useMaintenanceStatus();
+  const auth = useAuth();
+  const isAdmin = auth?.user?.tipo === 'admin';
+
+  if (!loadingMaintenance && maintenance && !isAdmin) {
+    return <MaintenancePage />;
+  }
+
   return (
     <BrowserRouter>
       <MenuProvider>

@@ -4,6 +4,19 @@ const PDFDocument = require('pdfkit');
 const moment = require('moment');
 const path = require('path');
 const fs = require('fs');
+const maintenancePath = path.join(__dirname, '../maintenance.json');
+
+function setMaintenance(enabled) {
+  fs.writeFileSync(maintenancePath, JSON.stringify({ enabled }));
+}
+function getMaintenance() {
+  try {
+    return JSON.parse(fs.readFileSync(maintenancePath, 'utf-8')).enabled;
+  } catch {
+    return false;
+  }
+}
+
 moment.locale('pt-br');
 const SECRET = process.env.JWT_SECRET || 'segredo123';
 
@@ -1199,5 +1212,17 @@ module.exports = {
       console.error('[relatorioRestauranteAdmin] Erro ao gerar relatório individual:', err);
       res.status(500).json({ error: 'Erro ao gerar relatório do restaurante', details: err.message });
     }
+  },
+
+  getMaintenanceStatus: (req, res) => {
+    res.json({ enabled: getMaintenance() });
+  },
+  enableMaintenance: (req, res) => {
+    setMaintenance(true);
+    res.json({ enabled: true });
+  },
+  disableMaintenance: (req, res) => {
+    setMaintenance(false);
+    res.json({ enabled: false });
   },
 };

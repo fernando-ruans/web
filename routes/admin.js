@@ -4,6 +4,10 @@ const router = express.Router();
 const adminController = require('../controllers/adminController');
 const auth = require('../middlewares/auth');
 
+// Rota pública para status de manutenção
+router.get('/maintenance/status', adminController.getMaintenanceStatus);
+
+// Protege as demais rotas de admin
 router.use(auth(['admin']));
 
 router.get('/users', adminController.listUsers);
@@ -28,5 +32,8 @@ router.get('/relatorios/pdf', adminController.gerarRelatorioPDF);
 router.get('/relatorios/restaurante/:id', adminController.relatorioRestauranteAdmin);
 // Listar todos os pedidos do sistema (admin)
 router.get('/orders', adminController.listAllOrders);
+// Rotas de manutenção protegidas
+router.post('/maintenance/enable', adminController.enableMaintenance);
+router.post('/maintenance/disable', adminController.disableMaintenance);
 
 module.exports = router;
