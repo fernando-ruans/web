@@ -40,17 +40,29 @@ export default function AdminPage() {
   return (
     <div className={theme.bg + ' flex flex-col items-center justify-center min-h-screen pb-24 sm:pb-32'}>
       <div className="w-full max-w-5xl flex flex-col items-center gap-8 py-10">
-        {/* Switch de manutenção */}
-        <div className="flex items-center gap-4 mb-6 bg-yellow-100 border border-yellow-300 rounded-lg px-4 py-2">
-          <span className="font-semibold text-yellow-700">Modo manutenção:</span>
-          <button
-            className={`px-4 py-2 rounded font-bold transition text-white ${maintenance ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-gray-400 hover:bg-gray-500'}`}
-            onClick={handleToggleMaintenance}
-            disabled={toggleLoading || loadingMaintenance}
-          >
-            {maintenance ? 'Desativar' : 'Ativar'}
-          </button>
-          {toggleLoading && <span className="ml-2 text-xs text-gray-500">Salvando...</span>}
+        {/* Switch de manutenção mais discreto e moderno */}
+        <div className="flex items-center gap-4 mb-8 bg-white border border-gray-200 rounded-xl px-5 py-3 shadow w-full max-w-md">
+          <span className="font-semibold text-gray-600 flex items-center gap-2">
+            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" /></svg>
+            Modo manutenção
+          </span>
+          <label className="relative inline-flex items-center cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={maintenance}
+              onChange={handleToggleMaintenance}
+              disabled={toggleLoading || loadingMaintenance}
+              className="sr-only peer"
+            />
+            <div className="w-12 h-7 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:bg-blue-500 transition-all duration-300 shadow-inner"></div>
+            <div className="absolute left-1 top-1 bg-white w-5 h-5 rounded-full shadow-md transition-all duration-300 peer-checked:translate-x-5 flex items-center justify-center">
+              <span className={`transition-opacity duration-200 ${maintenance ? 'opacity-100 text-blue-500' : 'opacity-0'}`}>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+              </span>
+            </div>
+          </label>
+          <span className={`ml-2 text-sm font-bold ${maintenance ? 'text-blue-600' : 'text-gray-400'}`}>{maintenance ? 'Ativado' : 'Desativado'}</span>
+          {toggleLoading && <span className="ml-2 text-xs text-gray-400 animate-pulse">Salvando...</span>}
         </div>
         <h2 className="text-4xl font-extrabold text-orange-500 mb-2 flex items-center gap-3">
           <FaUserCog size={32} color="#fb923c" /> Painel do Administrador
