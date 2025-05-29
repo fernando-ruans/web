@@ -415,6 +415,15 @@ module.exports = {  getProfile: async (req, res) => {
         data: { aberto: !restaurante.aberto }
       });
 
+      // Envia atualização em tempo real para todos os clientes
+      const sendWebSocketUpdate = req.app.get('sendWebSocketUpdate');
+      if (sendWebSocketUpdate) {
+        sendWebSocketUpdate('broadcast', 'restaurant-status', {
+          id: restauranteAtualizado.id,
+          aberto: restauranteAtualizado.aberto
+        });
+      }
+
       res.json(restauranteAtualizado);
     } catch (err) {
       res.status(500).json({ error: 'Erro ao alterar status do restaurante' });

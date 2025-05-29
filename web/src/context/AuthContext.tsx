@@ -101,7 +101,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!data.user || !data.user.tipo) {
         throw new Error('Resposta inválida do servidor');
       }
-      
+      // Salva o token retornado no JSON no localStorage
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+      }
       setUser(data.user);
       return true;
       

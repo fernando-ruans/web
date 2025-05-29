@@ -56,8 +56,8 @@ app.use('/uploads', express.static('uploads'));
 // Configuração do WebSocket
 const wss = new WebSocket.Server({ server });
 
-// Mapear clientes conectados
-const clients = new Map();
+// Mapear clientes conectados (agora permite múltiplas conexões por usuário)
+const clients = new Map(); // Map<userId, Set<ws>>
 
 wss.on('connection', (ws, req) => {
   console.log('Nova conexão WebSocket');
@@ -76,8 +76,11 @@ wss.on('connection', (ws, req) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'segredo123');
     const userId = decoded.id;
     
-    // Armazenar a conexão
-    clients.set(userId, ws);
+    // Permitir múltiplas conexões por usuário
+    if (!clients.has(userId)) {
+      clients.set(userId, new Set());
+    }
+    clients.get(userId).add(ws);
     
     ws.on('message', async (message) => {
       try {
@@ -150,7 +153,12 @@ wss.on('connection', (ws, req) => {
     });
     
     ws.on('close', () => {
-      clients.delete(userId);
+      if (clients.has(userId)) {
+        clients.get(userId).delete(ws);
+        if (clients.get(userId).size === 0) {
+          clients.delete(userId);
+        }
+      }
       console.log('Cliente desconectado:', userId);
     });
     
@@ -162,9 +170,24 @@ wss.on('connection', (ws, req) => {
 
 // Função para enviar atualizações via WebSocket
 const sendWebSocketUpdate = (userId, type, data) => {
-  const client = clients.get(userId);
-  if (client && client.readyState === WebSocket.OPEN) {
-    client.send(JSON.stringify({ type, data }));
+  console.log('[WS][sendWebSocketUpdate] Enviando evento:', { userId, type, data }); // LOG para debug
+  if (userId === 'broadcast') {
+    for (const wsSet of clients.values()) {
+      for (const ws of wsSet) {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type, data }));
+        }
+      }
+    }
+  } else {
+    const wsSet = clients.get(userId);
+    if (wsSet) {
+      for (const ws of wsSet) {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type, data }));
+        }
+      }
+    }
   }
 };
 

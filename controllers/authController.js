@@ -159,7 +159,8 @@ module.exports = {
           endereco: userSemSenha.endereco || null,
           avatarUrl: userSemSenha.avatarUrl || null,
           addresses: userSemSenha.addresses || []
-        }
+        },
+        token // <-- Adiciona o token JWT na resposta
       });
 
     } catch (err) {

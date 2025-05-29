@@ -54,31 +54,27 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const connect = useCallback(() => {
     if (!token) return;
-
     try {
+      console.log('[WS][GLOBAL] Tentando conectar em:', `${apiUrl}?token=${token}`); // LOG de tentativa de conexão
       const websocket = new WebSocket(`${apiUrl}?token=${token}`);
-
       websocket.onopen = () => {
-        console.log('WebSocket conectado! Estado connected:', true);
+        console.log('[WS][GLOBAL] Conectado!');
         setConnected(true);
         websocket.send(JSON.stringify({ type: 'identify', data: { token } }));
       };
-
       websocket.onclose = () => {
-        console.log('WebSocket desconectado! Estado connected:', false);
+        console.log('[WS][GLOBAL] Desconectado!');
         setConnected(false);
-        // Tentar reconectar após 5 segundos
         setTimeout(connect, 5000);
       };
-
       websocket.onerror = (error) => {
-        console.error('Erro no WebSocket:', error);
+        console.error('[WS][GLOBAL] Erro no WebSocket:', error);
       };
-
       websocket.onmessage = (event) => {
         try {
           const message: WebSocketMessage = JSON.parse(event.data);
-          console.log('Mensagem recebida:', message);          switch (message.type) {
+          console.log('[WS][GLOBAL] Mensagem recebida no contexto:', message); // LOG GLOBAL
+          switch (message.type) {
             case 'pedidos':
               // Compatibilizar campos de data para ambos os nomes
               const pedidosCorrigidos = (message.data || []).map((pedido: any) => ({

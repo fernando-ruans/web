@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import Card from '../components/Card';
 import { FaMapMarkerAlt, FaClock, FaCheckCircle, FaTimesCircle, FaStar } from 'react-icons/fa';
 import { resumoHorarioFuncionamento } from '../utils/horarioResumo';
+import { useWebSocket } from '../context/WebSocketContext';
 
 interface Restaurante {
   id: number;
@@ -26,6 +27,7 @@ export default function RestaurantesPage() {
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState('');
   const [filtro, setFiltro] = useState('');
+  const { socket } = useWebSocket();
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -37,6 +39,26 @@ export default function RestaurantesPage() {
       .catch(() => setErro('Erro ao carregar restaurantes'))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!socket) return;
+    const handleMessage = (event: MessageEvent) => {
+      try {
+        const msg = JSON.parse(event.data);
+        console.log('[WS][RestaurantesPage] Mensagem recebida:', msg); // LOG DETALHADO
+        if (msg.type === 'restaurant-status' && msg.data && typeof msg.data.id === 'number') {
+          console.log('[WS][RestaurantesPage] Atualizando restaurante:', msg.data.id, 'Novo status aberto:', msg.data.aberto);
+          setRestaurantes(prev => prev.map(r => r.id === msg.data.id ? { ...r, aberto: msg.data.aberto } : r));
+        }
+      } catch (err) {
+        console.error('[WS][RestaurantesPage] Erro ao processar mensagem:', err);
+      }
+    };
+    socket.addEventListener('message', handleMessage);
+    return () => {
+      socket.removeEventListener('message', handleMessage);
+    };
+  }, [socket]);
 
   if (loading) return <div className="text-center text-white mt-10">Carregando...</div>;
   if (erro) return <div className="text-center text-red-400 mt-10">{erro}</div>;
