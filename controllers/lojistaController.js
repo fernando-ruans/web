@@ -509,6 +509,10 @@ module.exports = {  getProfile: async (req, res) => {
         } : undefined // <-- repassa review para o frontend
       }));
 
+      // Log de depuração para verificar telefone do usuário em cada pedido
+      formattedOrders.forEach(p => {
+        console.log(`[listOrders][DEBUG] Pedido #${p.id} - Cliente: ${p.usuario.nome} - Telefone:`, p.usuario.telefone);
+      });
       res.json({ data: formattedOrders });
     } catch (err) {
       console.error('Erro ao listar pedidos:', err);

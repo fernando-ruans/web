@@ -61,6 +61,11 @@ interface Pedido {
   formaPagamento?: string | null;
 }
 
+// Adiciona um tipo auxiliar para debug
+interface PedidoDebug extends Pedido {
+  original?: any;
+}
+
 const statusClasses: Record<Pedido['status'], string> = {
   'pendente': 'bg-yellow-100 text-yellow-800 transition-colors duration-200',
   'preparando': 'bg-blue-100 text-blue-800 transition-colors duration-200',
@@ -124,6 +129,16 @@ interface DetalhePedidoModalProps {
 }
 
 const DetalhePedidoModalWrapper: React.FC<DetalhePedidoModalProps> = ({ pedido, isOpen, onClose }) => {
+  // Garante que usuario sempre exista, inclusive para pedidos vindos do WebSocket
+  let usuario = pedido.usuario;
+  if (!usuario) {
+    usuario = {
+      id: 0,
+      nome: (pedido as any).user?.nome || (pedido as any).clienteNome || 'Cliente',
+      email: (pedido as any).user?.email || '',
+      telefone: (pedido as any).user?.telefone || (pedido as any).telefone || (pedido as any).clienteTelefone || ''
+    };
+  }
   return (
     <DetalhePedidoModal
       open={isOpen}
@@ -133,8 +148,8 @@ const DetalhePedidoModalWrapper: React.FC<DetalhePedidoModalProps> = ({ pedido, 
         status: pedido.status,
         createdAt: pedido.createdAt,
         usuario: {
-          nome: pedido.usuario?.nome || 'Nome não disponível',
-          telefone: pedido.usuario?.telefone || 'Telefone não disponível'
+          nome: usuario.nome || 'Nome não disponível',
+          telefone: usuario.telefone || 'Telefone não disponível'
         },
         items: pedido.items?.map(item => ({
           id: item.id,
@@ -147,7 +162,6 @@ const DetalhePedidoModalWrapper: React.FC<DetalhePedidoModalProps> = ({ pedido, 
         observacao: pedido.observacao,
         endereco: pedido.endereco || undefined,
         formaPagamento: (pedido as any).formaPagamento || undefined,
-        review: (pedido as any).review || undefined,
         trocoPara: (pedido as any).trocoPara || null // <-- repassa trocoPara se existir
       }}
       statusNomes={statusNomes}
@@ -550,8 +564,19 @@ function LojistaPedidosPageContent() {
         if (!statusValidos.includes(status)) {
           status = 'pendente';
         }
+        // Garante que usuario sempre exista corretamente, inclusive para pedidos vindos do WebSocket
+        let usuario = pedido.usuario;
+        if (!usuario) {
+          usuario = {
+            id: 0,
+            nome: (pedido as any).user?.nome || (pedido as any).clienteNome || 'Cliente',
+            email: (pedido as any).user?.email || '',
+            telefone: (pedido as any).user?.telefone || (pedido as any).telefone || (pedido as any).clienteTelefone || ''
+          };
+        }
         return {
           ...pedido,
+          usuario,
           status: status as Pedido['status'],
           taxa_entrega: pedido.taxa_entrega || 0,
           observacao: pedido.observacao || '',
@@ -610,7 +635,60 @@ function LojistaPedidosPageContent() {
     buscarPedidos();
   }, [buscarPedidos]);
 
-  const pedidos = connected ? (pedidosWS as any[]) : pedidosLocal;
+  function normalizarStatus(status: string): Pedido['status'] {
+    const s = (status || '').toLowerCase().replace(/\s|_/g, '');
+    if (s === 'pendente' || s === 'pending') return 'pendente';
+    if (s === 'preparando' || s === 'empreparo' || s === 'empreparo') return 'preparando';
+    if (s === 'ementrega' || s === 'emrota' || s === 'outfordelivery' || s === 'entregando') return 'em_entrega';
+    if (s === 'entregue' || s === 'delivered' || s === 'completed') return 'entregue';
+    if (s === 'cancelado' || s === 'canceled' || s === 'cancelled') return 'cancelado';
+    return 'pendente'; // fallback seguro
+  }
+
+  // Função utilitária para normalizar pedidos vindos do WebSocket ou API
+  function normalizarPedido(p: any): Pedido & { trocoPara?: number | null } {
+    // Prioriza telefone vindo de p.usuario.telefone, depois outros campos
+    let usuario = p.usuario || { nome: p.clienteNome || 'Cliente', telefone: p.clienteTelefone || '' };
+    if (usuario && (usuario.telefone === undefined || usuario.telefone === null)) {
+      usuario.telefone = '';
+    }
+    // NOVO: prioriza telefone do p.usuario.telefone se existir
+    if (p.usuario && p.usuario.telefone) {
+      usuario.telefone = p.usuario.telefone;
+    } else if (!usuario.telefone || usuario.telefone.trim() === '' || usuario.telefone === 'Telefone não disponível') {
+      usuario.telefone = p.telefone || p.clienteTelefone || '';
+    }
+    return {
+      id: p.id,
+      status: normalizarStatus(p.status),
+      createdAt: p.createdAt || p.data_criacao || '',
+      usuario,
+      items: (p.items || p.orderItems || []).map((item: any) => ({
+        id: item.id,
+        quantidade: item.quantidade,
+        produto: item.produto || item.product || { id: 0, nome: '', preco: 0 },
+        adicionais: (item.adicionais || []).map((a: any) => ({
+          id: a.id || a.adicionalId || (a.adicional && a.adicional.id) || 0,
+          nome: a.nome || (a.adicional && a.adicional.nome) || '',
+          preco: Number(a.preco || (a.adicional && a.adicional.preco) || 0),
+          quantidade: a.quantidade || 1
+        }))
+      })),
+      taxa_entrega: Number(p.taxa_entrega || (p.restaurant && p.restaurant.taxa_entrega) || 0),
+      observacao: p.observacao || '',
+      endereco: p.endereco || p.address || {
+        rua: '', numero: '', bairro: '', cidade: '', estado: '', cep: ''
+      },
+      formaPagamento: p.formaPagamento || p.forma_pagamento || null,
+      trocoPara: p.trocoPara !== undefined ? p.trocoPara : (p.troco_para !== undefined ? p.troco_para : null)
+    };
+  }
+
+  // Corrige para garantir que pedidos sempre seja array, normalizado e ordenado por data de criação (mais recente primeiro)
+  const pedidos = ((connected && Array.isArray(pedidosWS))
+    ? pedidosWS.map(p => { const n: PedidoDebug = normalizarPedido(p); n.original = p; return n; })
+    : (Array.isArray(pedidosLocal) ? pedidosLocal.map(p => { const n: PedidoDebug = normalizarPedido(p); n.original = p; return n; }) : []))
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   // Detectar novos pedidos e tocar som
   useEffect(() => {
     if (pedidos.length > 0) {

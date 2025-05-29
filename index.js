@@ -105,10 +105,8 @@ wss.on('connection', (ws, req) => {
               // Buscar pedidos ativos
               const pedidos = await prisma.order.findMany({
                 where: { 
-                  restaurantId: restaurant.id,
-                  status: {
-                    in: ['Pendente', 'Confirmado', 'Em Preparo', 'Pronto']
-                  }
+                  restaurantId: restaurant.id
+                  // Removido o filtro de status para trazer todos os pedidos
                 },
                 include: {
                   orderItems: {
