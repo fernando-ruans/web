@@ -53,4 +53,7 @@ router.post('/upload', upload.single('imagem'), (req, res) => {
   res.json({ url: `/uploads/${req.file.filename}` });
 });
 
+// Login/cadastro via Firebase
+router.post('/firebase-login', authController.firebaseLogin);
+
 module.exports = router;

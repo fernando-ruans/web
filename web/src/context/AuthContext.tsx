@@ -1,8 +1,13 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail, signOut } from 'firebase/auth';
+import { auth } from '../firebase';
 
 interface AuthContextType {
   user: any;
   login: (email: string, senha: string) => Promise<boolean>;
+  loginWithGoogle: () => Promise<boolean>;
+  register: (email: string, senha: string) => Promise<boolean>;
+  forgotPassword: (email: string) => Promise<boolean>;
   logout: () => Promise<void>;
   loading: boolean;
   error: string | null;
@@ -15,121 +20,137 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Função auxiliar para fazer requisições autenticadas
-  const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
-    try {
-      const res = await fetch(url, {
-        ...options,
-        credentials: 'include',
-        headers: {
-          ...options.headers,
-          'Content-Type': 'application/json',
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setLoading(true);
+      // Se existe token JWT salvo, busca perfil completo do backend
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          const res = await fetch('/api/auth/me', {
+            headers: { 'Authorization': `Bearer ${token}` },
+            credentials: 'include'
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.user) {
+              setUser(data.user);
+            } else {
+              setUser(null);
+            }
+          } else {
+            setUser(null);
+            localStorage.removeItem('token');
+          }
+        } catch (e) {
+          setUser(null);
+          localStorage.removeItem('token');
+        } finally {
+          setLoading(false);
         }
-      });
-
-      // Se a resposta não for ok, tenta ler o erro
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({ error: 'Erro desconhecido' }));
-        throw new Error(errorData.error || 'Erro na requisição');
+      } else {
+        setUser(firebaseUser);
+        setLoading(false);
       }
+    });
+    return () => unsubscribe();
+  }, []);
 
-      return res;
-    } catch (err) {
-      console.error('Erro na requisição:', err);
-      throw err;
+  const loginWithGoogle = async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const idToken = await result.user.getIdToken();
+      // Envia token para backend
+      const res = await fetch('/api/auth/firebase-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ idToken })
+      });
+      const data = await res.json();
+      if (res.ok && data.user) {
+        setUser(data.user);
+        if (data.token) {
+          localStorage.setItem('token', data.token);
+        }
+        return true;
+      } else {
+        setError(data.error || 'Erro ao autenticar com Google');
+        return false;
+      }
+    } catch (err: any) {
+      setError(err.message || 'Erro ao autenticar com Google');
+      return false;
+    } finally {
+      setLoading(false);
     }
   };
 
-  useEffect(() => {
-    let isMounted = true;
-
-    const fetchProfile = async () => {
-      try {
-        setError(null);
-        const res = await fetchWithAuth('/api/auth/me');
-        const data = await res.json();
-        
-        if (isMounted && data.user) {
-          setUser(data.user);
-        }
-      } catch (err: any) {
-        console.error('Erro ao buscar perfil:', err);
-        if (isMounted) {
-          setUser(null);
-          setError(err.message || 'Erro ao buscar perfil');
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    fetchProfile();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    const handleUserUpdated = (e: CustomEvent<any>) => {
-      if (e.detail?.user) {
-        // Verificar se os dados realmente mudaram para evitar atualizações desnecessárias
-        if (JSON.stringify(e.detail.user) !== JSON.stringify(user)) {
-          setUser(e.detail.user);
-        }
-      }
-    };
-
-    window.addEventListener('userUpdated', handleUserUpdated as EventListener);
-    return () => window.removeEventListener('userUpdated', handleUserUpdated as EventListener);
-  }, [user]);
-
   const login = async (email: string, senha: string): Promise<boolean> => {
+    setError(null);
+    setLoading(true);
     try {
-      setError(null);
-      setUser(null);
-      
-      const res = await fetchWithAuth('/api/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({ email, senha })
-      });
-      
-      const data = await res.json();
-      
-      if (!data.user || !data.user.tipo) {
-        throw new Error('Resposta inválida do servidor');
-      }
-      // Salva o token retornado no JSON no localStorage
-      if (data.token) {
-        localStorage.setItem('token', data.token);
-      }
-      setUser(data.user);
+      await signInWithEmailAndPassword(auth, email, senha);
+      // Após login, buscar o token do backend (se necessário)
+      // Aqui você pode adicionar lógica para buscar o token se o backend retornar
+      // Exemplo: fetch('/api/auth/me') e salvar o token se vier
       return true;
-      
     } catch (err: any) {
-      console.error('Erro durante login:', err);
-      setUser(null);
       setError(err.message || 'Erro ao fazer login');
       return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const register = async (email: string, senha: string): Promise<boolean> => {
+    setError(null);
+    setLoading(true);
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, senha);
+      await sendEmailVerification(userCredential.user);
+      return true;
+    } catch (err: any) {
+      setError(err.message || 'Erro ao cadastrar');
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const forgotPassword = async (email: string): Promise<boolean> => {
+    setError(null);
+    setLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, email);
+      return true;
+    } catch (err: any) {
+      setError(err.message || 'Erro ao enviar e-mail de recuperação');
+      return false;
+    } finally {
+      setLoading(false);
     }
   };
 
   const logout = async () => {
+    setError(null);
+    setLoading(true);
     try {
-      setError(null);
-      await fetchWithAuth('/api/auth/logout', { method: 'POST' });
+      await signOut(auth);
     } catch (err: any) {
-      console.error('Erro durante logout:', err);
       setError(err.message || 'Erro ao fazer logout');
     } finally {
       setUser(null);
+      localStorage.removeItem('token');
+      setLoading(false);
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading, error }}>
+    <AuthContext.Provider value={{ user, login, loginWithGoogle, register, forgotPassword, logout, loading, error }}>
       {children}
     </AuthContext.Provider>
   );

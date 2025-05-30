@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const prisma = new PrismaClient();
 const SECRET = process.env.JWT_SECRET || 'segredo123';
+const admin = require('../firebaseAdmin');
 
 module.exports = {
   // Busca perfil do usuário baseado no token
@@ -169,6 +170,48 @@ module.exports = {
         error: 'Erro ao realizar login',
         details: process.env.NODE_ENV === 'development' ? err.message : undefined
       });
+    }
+  },
+
+  // Login/cadastro via Firebase
+  firebaseLogin: async (req, res) => {
+    try {
+      const { idToken } = req.body;
+      if (!idToken) return res.status(400).json({ error: 'Token não fornecido' });
+      // Verifica o token do Firebase
+      const decoded = await admin.auth().verifyIdToken(idToken);
+      const { email, name, picture, uid } = decoded;
+      if (!email) return res.status(400).json({ error: 'E-mail não encontrado no token' });
+      // Busca ou cria usuário na base
+      let user = await prisma.user.findUnique({ where: { email } });
+      if (!user) {
+        user = await prisma.user.create({
+          data: {
+            nome: name || email.split('@')[0],
+            email,
+            avatarUrl: picture || null,
+            tipo: 'cliente', // padrão
+            firebaseUid: uid
+          }
+        });
+      } else if (!user.firebaseUid) {
+        // Atualiza firebaseUid se não existir
+        await prisma.user.update({ where: { id: user.id }, data: { firebaseUid: uid } });
+      }
+      // Gera JWT próprio
+      const token = jwt.sign({ id: user.id, tipo: user.tipo, nome: user.nome, email: user.email }, SECRET, { expiresIn: '24h' });
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 24 * 60 * 60 * 1000,
+        path: '/',
+        domain: undefined
+      });
+      res.json({ user, token });
+    } catch (err) {
+      console.error('Erro no firebase-login:', err);
+      res.status(500).json({ error: 'Erro ao autenticar com Firebase', details: err.message });
     }
   },
 

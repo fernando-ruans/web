@@ -69,10 +69,20 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       };
       websocket.onerror = (error) => {
         console.error('[WS][GLOBAL] Erro no WebSocket:', error);
+        // Força logout se erro de autenticação
+        localStorage.removeItem('token');
+        window.location.href = '/login';
       };
       websocket.onmessage = (event) => {
         try {
-          const message: WebSocketMessage = JSON.parse(event.data);
+          const message: any = JSON.parse(event.data);
+          // Se for mensagem de erro explícita
+          if (message.type === 'error' && typeof message.data === 'string' && message.data.includes('jwt expired')) {
+            console.warn('[WS] Token expirado detectado via mensagem. Fazendo logout automático.');
+            localStorage.removeItem('token');
+            window.location.href = '/login';
+            return;
+          }
           console.log('[WS][GLOBAL] Mensagem recebida no contexto:', message); // LOG GLOBAL
           switch (message.type) {
             case 'pedidos':

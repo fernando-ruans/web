@@ -3,10 +3,14 @@ import { useAuth } from '../context/AuthContext';
 import theme from '../theme';
 import { FaEnvelope, FaLock, FaUser } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
+import { auth } from '../firebase';
+
+// Adiciona opção de login/cadastro Google, email/senha, recuperação e verificação de e-mail
+// Interface moderna, clara e com feedbacks
 
 export default function LoginPage() {
-  const { login, user } = useAuth();
-  const [tab, setTab] = useState<'login' | 'register'>('login');
+  const { login, loginWithGoogle, register, forgotPassword, user } = useAuth();
+  const [tab, setTab] = useState<'login' | 'register' | 'forgot'>('login');
   // Login states
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
@@ -16,6 +20,9 @@ export default function LoginPage() {
   const [form, setForm] = useState({ nome: '', email: '', senha: '' });
   const [regError, setRegError] = useState('');
   const [success, setSuccess] = useState('');
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotSuccess, setForgotSuccess] = useState('');
+  const [forgotError, setForgotError] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -42,15 +49,29 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
     setLoading(true);
-    
     try {
       const ok = await login(email, senha);
       if (!ok) {
         setError('E-mail ou senha inválidos');
+      } else if (auth.currentUser && !auth.currentUser.emailVerified) {
+        setError('Confirme seu e-mail antes de acessar. Verifique sua caixa de entrada.');
+        await auth.signOut();
       }
-      // A navegação será feita automaticamente pelo useEffect quando o user for atualizado
     } catch (err) {
       setError('Erro ao realizar login. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      const ok = await loginWithGoogle();
+      if (!ok) setError('Erro ao entrar com Google');
+    } catch (err) {
+      setError('Erro ao entrar com Google.');
     } finally {
       setLoading(false);
     }
@@ -65,28 +86,38 @@ export default function LoginPage() {
     setRegError('');
     setSuccess('');
     setLoading(true);
-
     try {
-      const res = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ ...form, tipo: 'cliente' })
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        setSuccess('Cadastro realizado! Faça login.');
+      const ok = await register(form.email, form.senha);
+      if (ok) {
+        setSuccess('Cadastro realizado! Verifique seu e-mail para ativar a conta.');
         setTimeout(() => {
           setTab('login');
           setEmail(form.email);
-        }, 1500);
+        }, 2000);
       } else {
-        setRegError(data.error || 'Erro ao cadastrar');
+        setRegError('Erro ao cadastrar');
       }
     } catch (err) {
       setRegError('Erro ao cadastrar. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotError('');
+    setForgotSuccess('');
+    setLoading(true);
+    try {
+      const ok = await forgotPassword(forgotEmail);
+      if (ok) {
+        setForgotSuccess('E-mail de recuperação enviado!');
+      } else {
+        setForgotError('Erro ao enviar e-mail de recuperação');
+      }
+    } catch (err) {
+      setForgotError('Erro ao enviar e-mail de recuperação.');
     } finally {
       setLoading(false);
     }
@@ -173,14 +204,20 @@ export default function LoginPage() {
               >
                 {loading ? 'Entrando...' : 'Entrar'}
               </button>
+              <button
+                type="button"
+                onClick={handleGoogleLogin}
+                disabled={loading}
+                className="w-full mt-2 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2"
+              >
+                <img src="/google.svg" alt="Google" className="w-5 h-5" /> Entrar com Google
+              </button>
 
               <div className="text-center mt-4">
-                <a href="/forgot-password" className="text-orange-500 hover:text-orange-600 text-sm">
-                  Esqueceu sua senha?
-                </a>
+                <button type="button" className="text-orange-500 hover:text-orange-600 text-sm" onClick={() => setTab('forgot')}>Esqueceu sua senha?</button>
               </div>
             </form>
-          ) : (
+          ) : tab === 'register' ? (
             <form onSubmit={handleRegister} className="flex flex-col gap-4">
               {regError && (
                 <div className="bg-red-50 text-red-500 p-3 rounded-lg text-sm">
@@ -250,6 +287,39 @@ export default function LoginPage() {
               >
                 {loading ? 'Cadastrando...' : 'Cadastrar'}
               </button>
+            </form>
+          ) : (
+            <form onSubmit={handleForgotPassword} className="flex flex-col gap-4">
+              {forgotError && (
+                <div className="bg-red-50 text-red-500 p-3 rounded-lg text-sm">{forgotError}</div>
+              )}
+              {forgotSuccess && (
+                <div className="bg-green-50 text-green-500 p-3 rounded-lg text-sm">{forgotSuccess}</div>
+              )}
+              <div className="relative mb-2">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-400">
+                  <FaEnvelope size={18} color="#fb923c" />
+                </span>
+                <input
+                  className={theme.input + ' w-full pl-10 mb-0'}
+                  type="email"
+                  placeholder="E-mail para recuperação"
+                  value={forgotEmail}
+                  onChange={e => setForgotEmail(e.target.value)}
+                  required
+                  disabled={loading}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={loading}
+                className={`${theme.button} w-full mt-2 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {loading ? 'Enviando...' : 'Enviar e-mail de recuperação'}
+              </button>
+              <div className="text-center mt-4">
+                <button type="button" className="text-orange-500 hover:text-orange-600 text-sm" onClick={() => setTab('login')}>Voltar ao login</button>
+              </div>
             </form>
           )}
         </div>

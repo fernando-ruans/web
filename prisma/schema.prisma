@@ -8,19 +8,21 @@ datasource db {
 }
 
 model User {
-  id          Int          @id @default(autoincrement())
-  nome        String
-  email       String       @unique
-  senha_hash  String
-  tipo        String
-  avatarUrl   String?
-  endereco    String?
-  telefone    String?
-  createdAt   DateTime     @default(now())
-  ativo       Boolean      @default(true)
-  addresses   Address[]
-  orders      Order[]
-  restaurants Restaurant[]
+  id              Int               @id @default(autoincrement())
+  nome            String
+  email           String            @unique
+  senha_hash      String?           // Agora opcional para login social
+  tipo            String
+  avatarUrl       String?
+  endereco        String?
+  telefone        String?
+  createdAt       DateTime          @default(now())
+  ativo           Boolean           @default(true)
+  firebaseUid     String?           @unique // Adicionado para integração com Firebase
+  addresses       Address[]
+  orders          Order[]
+  restaurants     Restaurant[]
+  system_settings system_settings[]
 }
 
 model Address {
@@ -30,33 +32,33 @@ model Address {
   numero      String  @db.VarChar(20)
   bairro      String  @db.VarChar(100)
   cidade      String  @db.VarChar(100)
-  estado      String  @db.Char(2)
   complemento String? @db.VarChar(255)
   cep         String  @db.VarChar(9)
+  estado      String  @db.Char(2)
   user        User    @relation(fields: [userId], references: [id])
   orders      Order[]
-  
+
   @@index([userId])
 }
 
 model Restaurant {
-  id            Int        @id @default(autoincrement())
-  userId        Int
-  nome          String
-  taxa_entrega  Float
-  tempo_entrega Int
-  status        String
-  imagem        String
-  banner        String     @default("/banner-default.png")
-  endereco      String?
-  telefone      String?
-  aberto        Boolean    @default(false)
-  cep           String?
-  horario_funcionamento Json? // Horários de funcionamento por dia da semana
-  categories    Category[]
-  orders        Order[]
-  user          User       @relation(fields: [userId], references: [id])
-  reviews       Review[]
+  id                    Int        @id @default(autoincrement())
+  userId                Int
+  nome                  String
+  taxa_entrega          Float
+  tempo_entrega         Int
+  status                String
+  imagem                String
+  banner                String     @default("/banner-default.png")
+  endereco              String?
+  telefone              String?
+  aberto                Boolean    @default(false)
+  cep                   String?
+  horario_funcionamento Json?
+  categories            Category[]
+  orders                Order[]
+  user                  User       @relation(fields: [userId], references: [id])
+  reviews               Review[]
 }
 
 model Category {
@@ -81,22 +83,22 @@ model Product {
 }
 
 model Order {
-  id           Int         @id @default(autoincrement())
-  userId       Int
-  restaurantId Int
-  addressId    Int
-  status       String
-  total        Float
-  data_criacao DateTime    @default(now())
-  observacao   String?
-  taxa_entrega Float?
-  formaPagamento String? @db.VarChar(20) // NOVO: método de pagamento
-  trocoPara     Float?      // Valor para troco informado pelo cliente
-  address      Address     @relation(fields: [addressId], references: [id])
-  restaurant   Restaurant  @relation(fields: [restaurantId], references: [id])
-  user         User        @relation(fields: [userId], references: [id])
-  orderItems   OrderItem[]
-  review       Review?
+  id             Int         @id @default(autoincrement())
+  userId         Int
+  restaurantId   Int
+  addressId      Int
+  status         String
+  total          Float
+  data_criacao   DateTime    @default(now())
+  observacao     String?
+  taxa_entrega   Float?
+  formaPagamento String?     @db.VarChar(20)
+  trocoPara      Float?
+  address        Address     @relation(fields: [addressId], references: [id])
+  restaurant     Restaurant  @relation(fields: [restaurantId], references: [id])
+  user           User        @relation(fields: [userId], references: [id])
+  orderItems     OrderItem[]
+  review         Review?
 }
 
 model OrderItem {
@@ -138,4 +140,13 @@ model Adicional {
   quantidadeMax Int
   product       Product              @relation(fields: [productId], references: [id])
   orderItems    OrderItemAdicional[]
+}
+
+model system_settings {
+  id                 Int      @id @default(autoincrement())
+  maintenanceMode    Boolean  @default(false)
+  maintenanceMessage String?  @default("Sistema em manutenção. Tente novamente em alguns minutos.")
+  updatedAt          DateTime
+  updatedBy          Int?
+  User               User?    @relation(fields: [updatedBy], references: [id])
 }

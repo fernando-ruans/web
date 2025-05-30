@@ -168,7 +168,11 @@ export default function ProfilePage() {
     setError('');
 
     try {
-      const endpoint = `/api/${user?.tipo}/profile`;
+      if (!user?.tipo) {
+        setError('Seu perfil ainda não está completo. Faça logout e entre novamente após o cadastro ser finalizado pelo administrador.');
+        return;
+      }
+      const endpoint = `/api/${user.tipo}/profile`;
 
       // Validação dos campos obrigatórios
       if (!nome?.trim()) {
