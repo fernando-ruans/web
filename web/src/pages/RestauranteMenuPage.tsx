@@ -189,41 +189,49 @@ export default function RestauranteMenuPage() {
           <h2 className="text-base sm:text-xl font-bold text-orange-600 mb-2 sm:mb-4 pb-1 sm:pb-2 border-b border-orange-200">
             {categoria.nome}
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-5">
             {categoria.produtos.map(produto => (
               <div 
                 key={produto.id} 
-                className={`bg-white rounded-xl shadow p-2 sm:p-3 flex flex-col gap-1 sm:gap-1.5 border border-orange-100 ${
+                className={`bg-white rounded-2xl shadow-md p-2 sm:p-3 flex flex-col border border-orange-100 transition-all duration-150 ${
                   !restaurante?.aberto && 'opacity-50'
-                } ${restaurante?.aberto && 'cursor-pointer hover:shadow-lg transition'}`}
-                style={{ fontSize: '0.92em', maxWidth: 340, margin: '0 auto' }}
+                } ${restaurante?.aberto && 'cursor-pointer hover:shadow-lg hover:-translate-y-1'}`}
+                style={{ fontSize: '0.95em', maxWidth: 320, margin: '0 auto', minHeight: 340 }}
                 onClick={() => restaurante?.aberto && setModalProduto(produto)}
               >
                 {produto.imagem && (
-                  <img 
-                    src={produto.imagem} 
-                    alt={produto.nome} 
-                    className="w-full aspect-square object-cover rounded-t-xl mb-1"
-                    style={{minHeight: 0, minWidth: 0, maxHeight: '180px'}}
-                  />
+                  <div className="w-full aspect-square rounded-xl overflow-hidden mb-2 flex items-center justify-center bg-orange-50 border border-orange-100">
+                    <img 
+                      src={produto.imagem} 
+                      alt={produto.nome} 
+                      className="object-cover w-full h-full transition-transform duration-200 hover:scale-105"
+                      style={{minHeight: 0, minWidth: 0, maxHeight: '170px'}}
+                    />
+                  </div>
                 )}
-                <div className="font-bold text-base sm:text-lg text-orange-600">{produto.nome}</div>
-                <div className="text-gray-600 text-xs sm:text-sm break-words">{produto.descricao}</div>
-                <div className="font-bold text-green-600 text-base sm:text-lg">R$ {produto.preco.toFixed(2)}</div>
-                <button
-                  className={`w-full mt-1 sm:mt-2 py-2 rounded font-bold transition text-sm sm:text-base ${
-                    restaurante?.aberto
-                      ? 'bg-orange-500 text-white hover:bg-orange-600'
-                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  }`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    restaurante?.aberto && setModalProduto(produto);
-                  }}
-                  disabled={!restaurante?.aberto}
-                >
-                  {restaurante?.aberto ? 'Ver Detalhes' : 'Restaurante Fechado'}
-                </button>
+                <div className="flex-1 flex flex-col justify-between">
+                  <div>
+                    <div className="font-bold text-base sm:text-lg text-orange-700 mb-0.5 truncate" title={produto.nome}>{produto.nome}</div>
+                    <div className="text-gray-500 text-xs sm:text-sm mb-1 line-clamp-2 min-h-[32px]">{produto.descricao}</div>
+                  </div>
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="font-bold text-green-600 text-base sm:text-lg">R$ {produto.preco.toFixed(2)}</span>
+                    <button
+                      className={`ml-2 px-3 py-1.5 rounded-lg font-bold transition text-xs sm:text-sm shadow-sm border ${
+                        restaurante?.aberto
+                          ? 'bg-orange-500 text-white hover:bg-orange-600 border-orange-400'
+                          : 'bg-gray-200 text-gray-400 border-gray-200 cursor-not-allowed'
+                      }`}
+                      onClick={e => {
+                        e.stopPropagation();
+                        restaurante?.aberto && setModalProduto(produto);
+                      }}
+                      disabled={!restaurante?.aberto}
+                    >
+                      {restaurante?.aberto ? 'Ver Detalhes' : 'Fechado'}
+                    </button>
+                  </div>
+                </div>
               </div>
             ))}
           </div>

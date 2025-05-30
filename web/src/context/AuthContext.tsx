@@ -6,7 +6,7 @@ interface AuthContextType {
   user: any;
   login: (email: string, senha: string) => Promise<boolean>;
   loginWithGoogle: () => Promise<boolean>;
-  register: (email: string, senha: string) => Promise<boolean>;
+  register: (email: string, senha: string, nome?: string) => Promise<boolean>;
   forgotPassword: (email: string) => Promise<boolean>;
   logout: () => Promise<void>;
   loading: boolean;
@@ -93,11 +93,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setError(null);
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, senha);
-      // Após login, buscar o token do backend (se necessário)
-      // Aqui você pode adicionar lógica para buscar o token se o backend retornar
-      // Exemplo: fetch('/api/auth/me') e salvar o token se vier
-      return true;
+      const userCredential = await signInWithEmailAndPassword(auth, email, senha);
+      // Verifica se o e-mail está verificado
+      if (auth.currentUser && !auth.currentUser.emailVerified) {
+        await signOut(auth);
+        localStorage.removeItem('token');
+        setError('É necessário confirmar seu e-mail antes de acessar. Verifique sua caixa de entrada.');
+        return false;
+      }
+      // Se e-mail verificado, envia idToken para o backend
+      const idToken = await userCredential.user.getIdToken();
+      const res = await fetch('/api/auth/firebase-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ idToken })
+      });
+      const data = await res.json();
+      if (res.ok && data.user) {
+        setUser(data.user);
+        if (data.token) {
+          localStorage.setItem('token', data.token);
+        }
+        return true;
+      } else {
+        setError(data.error || 'Erro ao autenticar');
+        return false;
+      }
     } catch (err: any) {
       setError(err.message || 'Erro ao fazer login');
       return false;
@@ -106,15 +128,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const register = async (email: string, senha: string): Promise<boolean> => {
+  // Novo: recebe nome também
+  const register = async (email: string, senha: string, nome?: string): Promise<boolean> => {
     setError(null);
     setLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, senha);
       await sendEmailVerification(userCredential.user);
+      await signOut(auth);
       return true;
     } catch (err: any) {
-      setError(err.message || 'Erro ao cadastrar');
+      console.error('Erro detalhado no cadastro Firebase:', err);
+      let msg = '';
+      if (err.code) {
+        switch (err.code) {
+          case 'auth/email-already-in-use':
+            msg = 'E-mail já cadastrado.';
+            break;
+          case 'auth/invalid-email':
+            msg = 'E-mail inválido.';
+            break;
+          case 'auth/weak-password':
+            msg = 'A senha deve ter pelo menos 6 caracteres.';
+            break;
+          default:
+            msg = err.message || err.code;
+        }
+      } else if (err.message) {
+        msg = err.message;
+      } else if (typeof err === 'string') {
+        msg = err;
+      } else {
+        try {
+          msg = JSON.stringify(err);
+        } catch {
+          msg = 'Erro desconhecido';
+        }
+      }
+      setError(msg || 'Erro ao cadastrar');
       return false;
     } finally {
       setLoading(false);

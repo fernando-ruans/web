@@ -4,6 +4,7 @@ import theme from '../theme';
 import { FaEnvelope, FaLock, FaUser } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { auth } from '../firebase';
+import { signInWithEmailAndPassword, sendEmailVerification, signOut } from 'firebase/auth';
 
 // Adiciona opção de login/cadastro Google, email/senha, recuperação e verificação de e-mail
 // Interface moderna, clara e com feedbacks
@@ -23,14 +24,18 @@ export default function LoginPage() {
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotSuccess, setForgotSuccess] = useState('');
   const [forgotError, setForgotError] = useState('');
+  const [showVerifyEmail, setShowVerifyEmail] = useState(false);
+  const [verifyEmailMsg, setVerifyEmailMsg] = useState('');
+
   const navigate = useNavigate();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('tab') === 'register') setTab('register');
 
-    // Redireciona se o usuário já estiver logado
-    if (user) {
+    // Redireciona se o usuário já estiver logado (com JWT do backend)
+    const token = localStorage.getItem('token');
+    if (user && token) {
       switch (user.tipo) {
         case 'admin':
           navigate('/admin');
@@ -52,10 +57,8 @@ export default function LoginPage() {
     try {
       const ok = await login(email, senha);
       if (!ok) {
-        setError('E-mail ou senha inválidos');
-      } else if (auth.currentUser && !auth.currentUser.emailVerified) {
-        setError('Confirme seu e-mail antes de acessar. Verifique sua caixa de entrada.');
-        await auth.signOut();
+        // O erro já é tratado e setado pelo AuthContext
+        // Se for erro de e-mail não verificado, já será exibido
       }
     } catch (err) {
       setError('Erro ao realizar login. Tente novamente.');
@@ -87,13 +90,10 @@ export default function LoginPage() {
     setSuccess('');
     setLoading(true);
     try {
-      const ok = await register(form.email, form.senha);
+      const ok = await register(form.email, form.senha, form.nome);
       if (ok) {
-        setSuccess('Cadastro realizado! Verifique seu e-mail para ativar a conta.');
-        setTimeout(() => {
-          setTab('login');
-          setEmail(form.email);
-        }, 2000);
+        setShowVerifyEmail(true);
+        setVerifyEmailMsg('Cadastro realizado! Verifique seu e-mail para ativar a conta.');
       } else {
         setRegError('Erro ao cadastrar');
       }
@@ -118,6 +118,21 @@ export default function LoginPage() {
       }
     } catch (err) {
       setForgotError('Erro ao enviar e-mail de recuperação.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    setLoading(true);
+    setVerifyEmailMsg('');
+    try {
+      const user = await signInWithEmailAndPassword(auth, form.email, form.senha);
+      await sendEmailVerification(user.user);
+      await signOut(auth);
+      setVerifyEmailMsg('E-mail de verificação reenviado! Verifique sua caixa de entrada.');
+    } catch (err: any) {
+      setVerifyEmailMsg('Erro ao reenviar e-mail de verificação.');
     } finally {
       setLoading(false);
     }
@@ -218,76 +233,107 @@ export default function LoginPage() {
               </div>
             </form>
           ) : tab === 'register' ? (
-            <form onSubmit={handleRegister} className="flex flex-col gap-4">
-              {regError && (
-                <div className="bg-red-50 text-red-500 p-3 rounded-lg text-sm">
-                  {regError}
+            showVerifyEmail ? (
+              <div className="flex flex-col gap-4 items-center justify-center">
+                <div className="bg-white border border-orange-200 rounded-xl shadow p-6 max-w-md w-full text-center">
+                  <h2 className="text-2xl font-bold text-orange-600 mb-2">Confirme seu e-mail</h2>
+                  <p className="text-gray-700 mb-4">Enviamos um link de confirmação para <span className="font-semibold">{form.email}</span>.<br />Acesse sua caixa de entrada e clique no link para ativar sua conta.</p>
+                  {verifyEmailMsg && (
+                    <div className="bg-green-50 text-green-600 p-2 rounded mb-2 text-sm">{verifyEmailMsg}</div>
+                  )}
+                  <button
+                    type="button"
+                    className={`${theme.button} w-full mt-2`}
+                    onClick={handleResendVerification}
+                    disabled={loading}
+                  >
+                    {loading ? 'Enviando...' : 'Reenviar e-mail de verificação'}
+                  </button>
+                  <button
+                    type="button"
+                    className="text-orange-500 hover:text-orange-600 text-sm mt-4"
+                    onClick={() => { setTab('login'); setShowVerifyEmail(false); }}
+                  >
+                    Voltar ao login
+                  </button>
                 </div>
-              )}
+              </div>
+            ) : (
+              <form onSubmit={handleRegister} className="flex flex-col gap-4">
+                {regError && (
+                  <div className="bg-red-50 text-red-500 p-3 rounded-lg text-sm">
+                    {regError}
+                  </div>
+                )}
+                {error && !regError && (
+                  <div className="bg-red-50 text-red-500 p-3 rounded-lg text-sm">
+                    {error}
+                  </div>
+                )}
+                {success && (
+                  <div className="bg-green-50 text-green-500 p-3 rounded-lg text-sm">
+                    {success}
+                  </div>
+                )}
 
-              {success && (
-                <div className="bg-green-50 text-green-500 p-3 rounded-lg text-sm">
-                  {success}
+                <div className="relative mb-2">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-400">
+                    <FaUser size={18} color="#fb923c" />
+                  </span>
+                  <input
+                    className={theme.input + ' w-full pl-10 mb-0'}
+                    type="text"
+                    name="nome"
+                    placeholder="Nome completo"
+                    value={form.nome}
+                    onChange={handleChange}
+                    required
+                    autoFocus
+                    disabled={loading}
+                  />
                 </div>
-              )}
 
-              <div className="relative mb-2">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-400">
-                  <FaUser size={18} color="#fb923c" />
-                </span>
-                <input
-                  className={theme.input + ' w-full pl-10 mb-0'}
-                  type="text"
-                  name="nome"
-                  placeholder="Nome completo"
-                  value={form.nome}
-                  onChange={handleChange}
-                  required
-                  autoFocus
+                <div className="relative mb-2">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-400">
+                    <FaEnvelope size={18} color="#fb923c" />
+                  </span>
+                  <input
+                    className={theme.input + ' w-full pl-10 mb-0'}
+                    type="email"
+                    name="email"
+                    placeholder="E-mail"
+                    value={form.email}
+                    onChange={handleChange}
+                    required
+                    disabled={loading}
+                  />
+                </div>
+
+                <div className="relative mb-2">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-400">
+                    <FaLock size={18} color="#fb923c" />
+                  </span>
+                  <input
+                    className={theme.input + ' w-full pl-10 mb-0'}
+                    type="password"
+                    name="senha"
+                    placeholder="Senha"
+                    value={form.senha}
+                    onChange={handleChange}
+                    required
+                    disabled={loading}
+                  />
+                </div>
+
+                <button
+                  type="submit"
                   disabled={loading}
-                />
-              </div>
-
-              <div className="relative mb-2">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-400">
-                  <FaEnvelope size={18} color="#fb923c" />
-                </span>
-                <input
-                  className={theme.input + ' w-full pl-10 mb-0'}
-                  type="email"
-                  name="email"
-                  placeholder="E-mail"
-                  value={form.email}
-                  onChange={handleChange}
-                  required
-                  disabled={loading}
-                />
-              </div>
-
-              <div className="relative mb-2">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-400">
-                  <FaLock size={18} color="#fb923c" />
-                </span>
-                <input
-                  className={theme.input + ' w-full pl-10 mb-0'}
-                  type="password"
-                  name="senha"
-                  placeholder="Senha"
-                  value={form.senha}
-                  onChange={handleChange}
-                  required
-                  disabled={loading}
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className={`${theme.button} w-full mt-2 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                {loading ? 'Cadastrando...' : 'Cadastrar'}
-              </button>
-            </form>
+                  className={`${theme.button} w-full mt-2 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  {loading ? 'Cadastrando...' : 'Cadastrar'}
+                </button>
+              </form>
+            )
           ) : (
             <form onSubmit={handleForgotPassword} className="flex flex-col gap-4">
               {forgotError && (

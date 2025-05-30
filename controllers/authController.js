@@ -176,7 +176,7 @@ module.exports = {
   // Login/cadastro via Firebase
   firebaseLogin: async (req, res) => {
     try {
-      const { idToken } = req.body;
+      const { idToken, nome: nomeBody } = req.body;
       if (!idToken) return res.status(400).json({ error: 'Token não fornecido' });
       // Verifica o token do Firebase
       const decoded = await admin.auth().verifyIdToken(idToken);
@@ -187,7 +187,7 @@ module.exports = {
       if (!user) {
         user = await prisma.user.create({
           data: {
-            nome: name || email.split('@')[0],
+            nome: nomeBody || name || email.split('@')[0], // Prioriza nome do frontend
             email,
             avatarUrl: picture || null,
             tipo: 'cliente', // padrão
