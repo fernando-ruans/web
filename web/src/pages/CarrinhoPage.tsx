@@ -282,18 +282,19 @@ export default function CarrinhoPage() {
       msg += `\nTroco para: R$ ${trocoPara}`;
     }
     if (observacao) {
-      msg += `\n\n*OBSERVACOES:*\n"${observacao}"`;
-    }
+      msg += `\n\n*OBSERVACOES:*\n"${observacao}"`;    }
     msg += `\n\n*Via DeliveryX*\n${new Date().toLocaleString('pt-BR')}`;
     
-    // Usar apenas encodeURI que preserva melhor a formatação
-    return encodeURI(msg);
+    // Retornar mensagem sem codificação para evitar dupla codificação
+    return msg;
   }
 
   // Função para enviar pedido via WhatsApp
   function handleEnviarWhatsapp() {
     const msg = gerarMensagemWhatsapp();
-    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`, '_blank');
+    // Usar encodeURIComponent para codificar a mensagem
+    const msgCodificada = encodeURIComponent(msg);
+    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msgCodificada}`, '_blank');
   }
 
   const subtotal = getTotal();

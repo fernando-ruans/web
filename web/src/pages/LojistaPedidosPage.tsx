@@ -281,15 +281,24 @@ function CardPedido({ pedido, onAtualizarStatus, loadingStatus }: CardPedidoProp
     msg += '\n\n*Acompanhe pelo DeliveryX*';
     msg += `\n${new Date().toLocaleString('pt-BR')}`;
     
-    // Usar apenas encodeURI que preserva melhor a formatação
-    return encodeURI(msg);
+    // Retornar mensagem sem codificação para evitar dupla codificação
+    return msg;
   }
-
   function handleNotificarWhatsapp(pedido: Pedido, statusNomes: Record<string, string>) {
     const telefone = pedido.usuario?.telefone?.replace(/\D/g, '');
     if (!telefone) return;
-    const msg = gerarMensagemStatusWhatsapp(pedido, statusNomes);
-    window.open(`https://wa.me/55${telefone}?text=${msg}`, '_blank');
+    
+    const mensagem = gerarMensagemStatusWhatsapp(pedido, statusNomes);
+    
+    // Usar encodeURIComponent para codificar a mensagem, igual ao padrão do DetalhePedidoPage
+    const mensagemCodificada = encodeURIComponent(mensagem);
+    
+    // Log para debug
+    console.log('Mensagem de status original:', mensagem);
+    console.log('Mensagem de status codificada:', mensagemCodificada);
+    console.log('Tamanho da mensagem:', mensagem.length);
+    
+    window.open(`https://wa.me/55${telefone}?text=${mensagemCodificada}`, '_blank');
   }
 
   return (
