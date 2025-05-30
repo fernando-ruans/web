@@ -376,16 +376,43 @@ const ResumoCards = ({ pedidos = [], filtroPeriodo, pedidosFiltrados }: { pedido
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8" style={{gridAutoRows: '1fr'}}>
       {cards.map((card, index) => (
-        <div key={index} className="bg-white rounded-xl shadow-lg overflow-hidden transform transition-all duration-200 hover:scale-105">
-          <div className={`p-6 bg-gradient-to-r ${card.cor} text-white`}>
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-white/80 text-sm font-medium mb-1">{card.titulo}</p>
-                <p className="text-3xl font-bold">{card.valor}</p>
+        <div key={index} className="bg-white rounded-xl shadow-lg overflow-hidden transform transition-all duration-200 hover:scale-105 min-h-[120px] md:min-h-[140px] flex flex-col justify-center">
+          <div className={`p-5 md:p-6 bg-gradient-to-r ${card.cor} text-white h-full flex flex-col justify-center`}> 
+            {/* Conteúdo do card */}
+            <div className="flex flex-row items-center gap-4 w-full h-full">
+              <div className="flex-1 min-w-0 flex flex-col justify-center">
+                {card.titulo === 'Faturamento do Período' ? (
+                  <div className="flex flex-col justify-center h-full">
+                    <span className="text-white/80 text-base md:text-lg font-medium mb-2 inline-block">{card.titulo}</span>
+                    <span className="font-bold text-2xl md:text-4xl break-all flex items-baseline gap-1 mt-1" style={{wordBreak: 'break-all', lineHeight: 1.1}} title={String(card.valor)}>
+                      R$ {String(card.valor).replace('R$','').trim()}
+                    </span>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-white/80 text-base md:text-lg font-medium mb-2 whitespace-nowrap overflow-hidden text-ellipsis">{card.titulo}</p>
+                    <p
+                      className={`font-bold text-3xl md:text-5xl max-w-full leading-tight break-words truncate ${String(card.valor).length > 10 ? 'text-2xl md:text-4xl' : ''} ${String(card.valor).length > 15 ? 'text-xl md:text-3xl' : ''}`}
+                      style={{
+                        wordBreak: 'break-word',
+                        overflowWrap: 'break-word',
+                        maxWidth: '100%',
+                        lineHeight: 1.1
+                      }}
+                      title={String(card.valor)}
+                    >
+                      {card.valor}
+                    </p>
+                  </>
+                )}
               </div>
-              {card.icone && <div className="bg-white/20 p-3 rounded-lg">{card.icone}</div>}
+              {card.icone && card.titulo !== 'Faturamento do Período' && (
+                <div className="flex-shrink-0 bg-white/20 p-4 md:p-6 rounded-lg ml-2 flex items-center justify-center" style={{minWidth: 56, minHeight: 56}}>
+                  {React.cloneElement(card.icone, { className: 'w-10 h-10 md:w-14 md:h-14' })}
+                </div>
+              )}
             </div>
           </div>
         </div>
