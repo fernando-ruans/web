@@ -193,17 +193,18 @@ export default function RestauranteMenuPage() {
             {categoria.produtos.map(produto => (
               <div 
                 key={produto.id} 
-                className={`bg-white rounded-xl shadow p-3 sm:p-4 flex flex-col gap-1 sm:gap-2 border border-orange-100 ${
+                className={`bg-white rounded-xl shadow p-2 sm:p-3 flex flex-col gap-1 sm:gap-1.5 border border-orange-100 ${
                   !restaurante?.aberto && 'opacity-50'
                 } ${restaurante?.aberto && 'cursor-pointer hover:shadow-lg transition'}`}
+                style={{ fontSize: '0.92em', maxWidth: 340, margin: '0 auto' }}
                 onClick={() => restaurante?.aberto && setModalProduto(produto)}
               >
                 {produto.imagem && (
                   <img 
                     src={produto.imagem} 
                     alt={produto.nome} 
-                    className="w-full aspect-square object-cover rounded-t-xl mb-2"
-                    style={{minHeight: 0, minWidth: 0}}
+                    className="w-full aspect-square object-cover rounded-t-xl mb-1"
+                    style={{minHeight: 0, minWidth: 0, maxHeight: '180px'}}
                   />
                 )}
                 <div className="font-bold text-base sm:text-lg text-orange-600">{produto.nome}</div>
