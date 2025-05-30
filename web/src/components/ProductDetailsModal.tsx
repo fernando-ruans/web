@@ -134,7 +134,7 @@ export default function ProductDetailsModal({ product, isOpen, onClose, onAddToC
             <img
               src={product.imagem}
               alt={product.nome}
-              className="w-full h-48 object-cover rounded-lg mb-4 bg-orange-50"
+              className="w-full max-w-[240px] sm:max-w-[300px] aspect-square object-cover rounded-lg mx-auto mb-4 bg-orange-50"
             />
           )}
 

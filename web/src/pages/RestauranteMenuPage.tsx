@@ -202,11 +202,12 @@ export default function RestauranteMenuPage() {
                   <img 
                     src={produto.imagem} 
                     alt={produto.nome} 
-                    className="w-full h-24 sm:h-32 object-cover rounded mb-1 sm:mb-2"
+                    className="w-full aspect-square object-cover rounded-t-xl mb-2"
+                    style={{minHeight: 0, minWidth: 0}}
                   />
                 )}
                 <div className="font-bold text-base sm:text-lg text-orange-600">{produto.nome}</div>
-                <div className="text-gray-600 text-xs sm:text-sm flex-1">{produto.descricao}</div>
+                <div className="text-gray-600 text-xs sm:text-sm break-words">{produto.descricao}</div>
                 <div className="font-bold text-green-600 text-base sm:text-lg">R$ {produto.preco.toFixed(2)}</div>
                 <button
                   className={`w-full mt-1 sm:mt-2 py-2 rounded font-bold transition text-sm sm:text-base ${

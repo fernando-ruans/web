@@ -554,7 +554,7 @@ export default function LojistaProdutosPage() {
                     <div>
                       <div className="font-bold text-orange-600 text-lg">{produto.nome}</div>
                       <div className="text-gray-600 font-bold text-xl">R$ {produto.preco}</div>
-                      <div className="text-gray-500 text-sm mb-1">{produto.descricao}</div>
+                      <div className="text-gray-500 text-sm mb-1 break-words whitespace-pre-line">{produto.descricao}</div>
                       {produto.category && <div className="text-xs text-orange-400 font-semibold">Categoria: {produto.category.nome}</div>}
                       {produto.imagem && <div className="text-xs text-gray-400 break-all">{produto.imagem}</div>}
                     </div>
