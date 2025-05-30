@@ -8,6 +8,7 @@ import axios from 'axios';
 import { formatCurrency } from '../utils/format';
 import { useWebSocket } from '../context/WebSocketContext';
 import { useNotificationSound } from '../hooks/useNotificationSound';
+import { FaRegClock, FaUtensils, FaMotorcycle, FaCalendarDay, FaMoneyBillWave, FaCheckCircle } from 'react-icons/fa';
 
 type PeriodoFiltro = 'hoje' | 'ontem' | 'semana' | 'mes';
 
@@ -325,10 +326,7 @@ const ResumoCards = ({ pedidos = [], filtroPeriodo, pedidosFiltrados }: { pedido
       valor: contarPorStatus('pendente'),
       cor: 'from-yellow-400 to-yellow-600',
       icone: (
-        <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none">
-          <path d="M12 8V12L15 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2"/>
-        </svg>
+        <FaRegClock className="w-8 h-8" />
       )
     },
     {
@@ -336,10 +334,7 @@ const ResumoCards = ({ pedidos = [], filtroPeriodo, pedidosFiltrados }: { pedido
       valor: contarPorStatus('preparando'),
       cor: 'from-blue-400 to-blue-600',
       icone: (
-        <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none">
-          <path d="M15 15L21 21" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          <path d="M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z" stroke="currentColor" strokeWidth="2"/>
-        </svg>
+        <FaUtensils className="w-8 h-8" />
       )
     },
     {
@@ -347,10 +342,7 @@ const ResumoCards = ({ pedidos = [], filtroPeriodo, pedidosFiltrados }: { pedido
       valor: contarPorStatus('em_entrega'),
       cor: 'from-orange-400 to-orange-600',
       icone: (
-        <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none">
-          <path d="M9 17H6C4.89543 17 4 16.1046 4 15V5C4 3.89543 4.89543 3 6 3H14C15.1046 3 16 3.89543 16 5V7" stroke="currentColor" strokeWidth="2"/>
-          <path d="M16 13H19M19 13L17 11M19 13L17 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
+        <FaMotorcycle className="w-8 h-8" />
       )
     },
     {
@@ -362,25 +354,23 @@ const ResumoCards = ({ pedidos = [], filtroPeriodo, pedidosFiltrados }: { pedido
       }).length,
       cor: 'from-green-400 to-green-600',
       icone: (
-        <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none">
-          <path d="M8 9L11 12L14 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          <path d="M3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12Z" stroke="currentColor" strokeWidth="2"/>
-        </svg>
+        <FaCalendarDay className="w-8 h-8" />
       )
     },
     {
       titulo: 'Faturamento do Período',
       valor: formatCurrency(calcularFaturamentoPeriodo()),
-      cor: 'from-green-400 to-green-600'
+      cor: 'from-green-400 to-green-600',
+      icone: (
+        <FaMoneyBillWave className="w-8 h-8" />
+      )
     },
     {
       titulo: 'Concluídos',
       valor: contarPorStatus('entregue'),
       cor: 'from-purple-400 to-purple-600',
       icone: (
-        <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none">
-          <path d="M20 6L9 17L4 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
+        <FaCheckCircle className="w-8 h-8" />
       )
     }
   ];
