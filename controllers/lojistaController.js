@@ -593,24 +593,37 @@ module.exports = {  getProfile: async (req, res) => {
           },
           address: true
         }
-      });
-
-      // Enviar atualização via WebSocket
+      });      // Enviar atualização via WebSocket
       const sendWebSocketUpdate = req.app.get('sendWebSocketUpdate');
       
       if (sendWebSocketUpdate) {
+        // Normalizar o status antes de enviar via WebSocket para manter consistência
+        let normalizedStatus = (updatedOrder.status || '').toLowerCase();
+        if (normalizedStatus === 'entregue') normalizedStatus = 'Entregue';
+        else if (normalizedStatus === 'em_entrega' || normalizedStatus === 'em-entrega' || normalizedStatus === 'em entrega') normalizedStatus = 'Em Entrega';
+        else if (normalizedStatus === 'em preparo' || normalizedStatus === 'em_preparo' || normalizedStatus === 'em-preparo' || normalizedStatus === 'preparando') normalizedStatus = 'Em Preparo';
+        else if (normalizedStatus === 'pendente') normalizedStatus = 'Pendente';
+        else if (normalizedStatus === 'cancelado') normalizedStatus = 'Cancelado';
+        else if (normalizedStatus === 'em rota' || normalizedStatus === 'em_rota' || normalizedStatus === 'em-rota') normalizedStatus = 'Em Entrega';
+        else normalizedStatus = 'Pendente';
+
+        const formattedOrder = {
+          ...updatedOrder,
+          status: normalizedStatus
+        };
+
         // Notificar o cliente
         sendWebSocketUpdate(order.user.id, 'order-update', {
           type: 'status-update',
           orderId: order.id,
-          order: updatedOrder
+          order: formattedOrder
         });
 
         // Notificar o lojista
         sendWebSocketUpdate(req.user.id, 'order-update', {
           type: 'status-update',
           orderId: order.id,
-          order: updatedOrder
+          order: formattedOrder
         });
       }
 

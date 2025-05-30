@@ -5,6 +5,7 @@ import theme from '../theme';
 import { FaCheckCircle, FaClock, FaStar, FaUtensils, FaSearch, FaSpinner, FaMotorcycle, FaTruckLoading } from 'react-icons/fa';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useWebSocket } from '../context/WebSocketContext';
 
 interface Pedido {
   id: number;
@@ -102,6 +103,7 @@ export default function PedidosPage() {
   const [pagina, setPagina] = useState(1);
   const [totalPaginas, setTotalPaginas] = useState(1);
   const [totalPedidos, setTotalPedidos] = useState(0);
+  const { socket } = useWebSocket();
   const pageSize = 15;
 
   useEffect(() => {
@@ -109,6 +111,41 @@ export default function PedidosPage() {
     const interval = setInterval(() => buscarPedidos(pagina), 30000);
     return () => clearInterval(interval);
   }, [pagina]);
+
+  // Atualização em tempo real via WebSocket
+  useEffect(() => {
+    if (!socket) return;
+    
+    const handleMessage = (event: MessageEvent) => {
+      try {
+        const message = JSON.parse(event.data);
+        if (message.type === 'order-update' && message.data?.type === 'status-update') {
+          // Atualizar o status do pedido específico na lista
+          setPedidos(prevPedidos => 
+            prevPedidos.map(pedido => {
+              if (pedido.id === message.data.orderId) {
+                return { 
+                  ...pedido, 
+                  status: message.data.order.status as PedidoStatus,
+                  // Atualizar outros campos se necessário
+                  ...(message.data.order.review && { review: message.data.order.review })
+                };
+              }
+              return pedido;
+            })
+          );
+        }
+      } catch (err) {
+        // Ignorar erros de parse
+        console.warn('Erro ao processar mensagem WebSocket:', err);
+      }
+    };
+    
+    socket.addEventListener('message', handleMessage);
+    return () => {
+      socket.removeEventListener('message', handleMessage);
+    };
+  }, [socket]);
 
   const buscarPedidos = async (paginaAtual = 1) => {
     setLoading(true);

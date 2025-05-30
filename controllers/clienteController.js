@@ -1014,16 +1014,17 @@ module.exports = {
         },
         skip,
         take: pageSize
-      });
-
-      // Formatar a resposta para garantir compatibilidade
+      });      // Formatar a resposta para garantir compatibilidade
       const formattedOrders = orders.map(order => {
-        // Normaliza status para minúsculo e sem underscores
+        // Normaliza status para o padrão visual (primeira letra maiúscula)
         let status = (order.status || '').toLowerCase();
-        if (status === 'em_entrega' || status === 'em-entrega') status = 'em entrega';
-        if (status === 'em preparo' || status === 'em_preparo' || status === 'em-preparo') status = 'em preparo';
-        if (status === 'em rota' || status === 'em_rota' || status === 'em-rota') status = 'em entrega';
-        // Mantém os demais status como estão
+        if (status === 'entregue') status = 'Entregue';
+        else if (status === 'em_entrega' || status === 'em-entrega' || status === 'em entrega') status = 'Em Entrega';
+        else if (status === 'em preparo' || status === 'em_preparo' || status === 'em-preparo' || status === 'preparando') status = 'Em Preparo';
+        else if (status === 'pendente') status = 'Pendente';
+        else if (status === 'cancelado') status = 'Cancelado';
+        else if (status === 'em rota' || status === 'em_rota' || status === 'em-rota') status = 'Em Entrega';
+        else status = 'Pendente'; // fallback seguro
         return {
           id: order.id,
           status,
@@ -1146,15 +1147,15 @@ module.exports = {
             preco: a.adicional.preco
           }))
         };
-      });
-
-      // Formatar a resposta mantendo a consistência
+      });      // Formatar a resposta mantendo a consistência com listOrders
       let status = (order.status || '').toLowerCase();
       if (status === 'entregue') status = 'Entregue';
-      else if (status === 'em entrega') status = 'Em Entrega';
-      else if (status === 'em preparo') status = 'Em Preparo';      else if (status === 'pendente') status = 'Pendente';
+      else if (status === 'em_entrega' || status === 'em-entrega' || status === 'em entrega') status = 'Em Entrega';
+      else if (status === 'em preparo' || status === 'em_preparo' || status === 'em-preparo' || status === 'preparando') status = 'Em Preparo';
+      else if (status === 'pendente') status = 'Pendente';
       else if (status === 'cancelado') status = 'Cancelado';
-      else status = order.status; // fallback para status original
+      else if (status === 'em rota' || status === 'em_rota' || status === 'em-rota') status = 'Em Entrega';
+      else status = 'Pendente'; // fallback seguro
       
       const formattedOrder = {
         id: order.id,
