@@ -45,6 +45,9 @@ export default function CarrinhoPage() {
   const [enderecoEdicao, setEnderecoEdicao] = useState<Partial<Address>>({});
   const [loadingEdicaoEndereco, setLoadingEdicaoEndereco] = useState(false);
 
+  // Número do WhatsApp do estabelecimento (ajuste conforme necessário)
+  const WHATSAPP_NUMBER = '5599999999999'; // Exemplo: 55 + DDD + número
+
   // Carrega endereços do usuário
   useEffect(() => {
     if (user) {
@@ -248,7 +251,50 @@ export default function CarrinhoPage() {
     } finally {
       setLoadingEdicaoEndereco(false);
     }
-  };
+  };  // Função para gerar mensagem do pedido para o WhatsApp
+  function gerarMensagemWhatsapp() {
+    const endereco = addresses.find(a => a.id === selectedAddressId);
+    let msg = `*NOVO PEDIDO DELIVERYX*\n\n`;
+    msg += `*Cliente:* ${user?.nome || ''}\n`;
+    if (endereco) {
+      msg += `*ENDERECO DE ENTREGA:*\n`;
+      msg += `${endereco.rua}, ${endereco.numero}${endereco.complemento ? ' - ' + endereco.complemento : ''}\n`;
+      msg += `${endereco.bairro}, ${endereco.cidade} - ${endereco.estado}\n`;
+      msg += `CEP: ${endereco.cep}\n`;
+    }
+    msg += `\n*ITENS DO PEDIDO:*\n`;
+    items.forEach((item, idx) => {
+      msg += `• ${item.quantidade}x ${item.nome}`;
+      if (item.adicionais && item.adicionais.length > 0) {
+        msg += `\n  + Adicionais: ${item.adicionais.map(a => a.nome).join(', ')}`;
+      }
+      msg += `\n`;
+    });
+    
+    msg += `\n*RESUMO FINANCEIRO:*\n`;
+    msg += `Subtotal: R$ ${getTotal().toFixed(2)}\n`;
+    msg += `Taxa de entrega: R$ ${taxaEntrega.toFixed(2)}\n`;
+    msg += `*TOTAL: R$ ${(getTotal() + taxaEntrega).toFixed(2)}*\n\n`;
+    
+    msg += `*Forma de Pagamento:* ${formaPagamento === 'dinheiro' ? 'Dinheiro' : formaPagamento === 'debito' ? 'Cartao de Debito' : formaPagamento === 'credito' ? 'Cartao de Credito' : formaPagamento === 'pix' ? 'PIX' : 'Nao informado'}`;
+    
+    if (formaPagamento === 'dinheiro' && trocoPara) {
+      msg += `\nTroco para: R$ ${trocoPara}`;
+    }
+    if (observacao) {
+      msg += `\n\n*OBSERVACOES:*\n"${observacao}"`;
+    }
+    msg += `\n\n*Via DeliveryX*\n${new Date().toLocaleString('pt-BR')}`;
+    
+    // Usar apenas encodeURI que preserva melhor a formatação
+    return encodeURI(msg);
+  }
+
+  // Função para enviar pedido via WhatsApp
+  function handleEnviarWhatsapp() {
+    const msg = gerarMensagemWhatsapp();
+    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`, '_blank');
+  }
 
   const subtotal = getTotal();
   const total = subtotal + taxaEntrega;

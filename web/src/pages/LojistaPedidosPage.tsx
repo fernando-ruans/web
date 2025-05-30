@@ -243,7 +243,54 @@ function CardPedido({ pedido, onAtualizarStatus, loadingStatus }: CardPedidoProp
     if (novo !== pedido.status) {
       await onAtualizarStatus(pedido.id, novo);
     }
-  };
+  };  // Função para gerar mensagem de status para o cliente
+  function gerarMensagemStatusWhatsapp(pedido: Pedido, statusNomes: Record<string, string>) {
+    const nome = pedido.usuario?.nome || 'Cliente';
+    const status = statusNomes[pedido.status] || pedido.status;
+    let msg = `*ATUALIZACAO DO SEU PEDIDO*\n\n`;
+    msg += `Ola, ${nome}!\n\n`;
+    msg += `Seu pedido #${pedido.id} foi atualizado:\n`;
+    msg += `*Status atual: ${status}*\n\n`;
+    
+    switch (pedido.status) {
+      case 'preparando':
+        msg += '*SEU PEDIDO ESTA SENDO PREPARADO!*\n';
+        msg += 'Nossa equipe esta cozinhando com muito carinho\n';
+        msg += 'Em breve estara pronto para entrega!';
+        break;
+      case 'em_entrega':
+        msg += '*SEU PEDIDO SAIU PARA ENTREGA!*\n';
+        msg += 'Nosso entregador esta a caminho\n';
+        msg += 'Mantenha o telefone por perto!';
+        break;
+      case 'entregue':
+        msg += '*PEDIDO ENTREGUE COM SUCESSO!*\n';
+        msg += 'Bom apetite!\n';
+        msg += 'Que tal avaliar seu pedido?';
+        break;
+      case 'cancelado':
+        msg += '*PEDIDO CANCELADO*\n';
+        msg += 'Infelizmente seu pedido foi cancelado\n';
+        msg += 'Entre em contato para mais informacoes';
+        break;
+      default:
+        msg += '*SEU PEDIDO ESTA EM ANDAMENTO*\n';
+        msg += 'Acompanhe as atualizacoes em tempo real';
+    }
+    
+    msg += '\n\n*Acompanhe pelo DeliveryX*';
+    msg += `\n${new Date().toLocaleString('pt-BR')}`;
+    
+    // Usar apenas encodeURI que preserva melhor a formatação
+    return encodeURI(msg);
+  }
+
+  function handleNotificarWhatsapp(pedido: Pedido, statusNomes: Record<string, string>) {
+    const telefone = pedido.usuario?.telefone?.replace(/\D/g, '');
+    if (!telefone) return;
+    const msg = gerarMensagemStatusWhatsapp(pedido, statusNomes);
+    window.open(`https://wa.me/55${telefone}?text=${msg}`, '_blank');
+  }
 
   return (
     <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-200 p-4 sm:p-6 mb-4">
@@ -294,6 +341,16 @@ function CardPedido({ pedido, onAtualizarStatus, loadingStatus }: CardPedidoProp
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </select>
+          )}
+          {pedido.usuario?.telefone && (
+            <button
+              className="bg-green-500 hover:bg-green-600 text-white px-2 py-2 rounded-lg text-xs font-semibold flex items-center gap-1 mt-2 sm:mt-0"
+              title="Notificar cliente via WhatsApp"
+              onClick={() => handleNotificarWhatsapp(pedido, statusNomes)}
+              type="button"
+            >
+              <span role="img" aria-label="whatsapp">🟢</span> WhatsApp
+            </button>
           )}
         </div>
       </div>

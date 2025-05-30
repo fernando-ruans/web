@@ -172,7 +172,6 @@ export default function DetalhePedidoPage() {
       setEnviandoAvaliacao(false);
     }
   };
-
   const formatarData = (data: string) => {
     return format(new Date(data), "d 'de' MMMM 'às' HH:mm", { locale: ptBR });
   };
@@ -185,6 +184,75 @@ export default function DetalhePedidoPage() {
       case 'Entregue': return 100;
       default: return 0;
     }
+  };
+
+  // Função para gerar mensagem do WhatsApp com melhor codificação
+  const gerarMensagemWhatsappPedido = (pedido: Pedido): string => {
+    const items = Array.isArray(pedido.items) ? pedido.items : [];
+    
+    let msg = `*DETALHES DO PEDIDO*\n\n`;
+    msg += `*Restaurante:* ${pedido.restaurant?.nome || 'Não informado'}\n`;
+    msg += `*Pedido:* #${pedido.id}\n`;
+    msg += `*Data:* ${formatarData(pedido.data_criacao)}\n\n`;
+    
+    if (pedido.endereco) {
+      msg += `*ENDEREÇO DE ENTREGA:*\n`;
+      msg += `${pedido.endereco.rua}, ${pedido.endereco.numero}`;
+      if (pedido.endereco.complemento) {
+        msg += ` - ${pedido.endereco.complemento}`;
+      }
+      msg += `\n${pedido.endereco.bairro}, ${pedido.endereco.cidade} - ${pedido.endereco.estado}\n`;
+      msg += `CEP: ${pedido.endereco.cep}\n\n`;
+    }
+      msg += `*ITENS DO PEDIDO:*\n`;
+    if (items.length > 0) {
+      items.forEach((item) => {
+        msg += `• ${item.quantidade}x ${item.nome || 'Produto não encontrado'}\n`;
+        if (item.adicionais && item.adicionais.length > 0) {
+          msg += `  + Adicionais: ${item.adicionais.map(a => `${a.quantidade}x ${a.nome}`).join(', ')}\n`;
+        }
+      });
+    } else {
+      msg += 'Nenhum item encontrado.\n';
+    }
+    
+    msg += `\n*RESUMO FINANCEIRO:*\n`;
+    msg += `Subtotal: R$ ${(pedido.total - pedido.taxa_entrega).toFixed(2)}\n`;
+    msg += `Taxa de entrega: R$ ${pedido.taxa_entrega.toFixed(2)}\n`;
+    msg += `*TOTAL: R$ ${pedido.total.toFixed(2)}*\n\n`;
+    
+    if (pedido.formaPagamento) {
+      msg += `*Forma de Pagamento:* ${pedido.formaPagamento}\n`;
+      if (pedido.formaPagamento === 'dinheiro' && pedido.trocoPara) {
+        msg += `Troco para: R$ ${pedido.trocoPara}\n`;
+      }
+    }
+    
+    if (pedido.observacao) {
+      msg += `\n*OBSERVAÇÕES:*\n${pedido.observacao}\n`;
+    }
+    
+    msg += `\n_Via DeliveryX_\n`;
+    msg += `_${new Date().toLocaleString('pt-BR')}_`;
+    
+    return msg;
+  };
+
+  const handleEnviarWhatsappPedido = () => {
+    if (!pedido) return;
+    
+    const telefone = pedido.restaurant?.telefone?.replace(/\D/g, '') || '5599999999999';
+    const mensagem = gerarMensagemWhatsappPedido(pedido);
+    
+    // Usar encodeURIComponent para codificar a mensagem
+    const mensagemCodificada = encodeURIComponent(mensagem);
+    
+    // Log para debug
+    console.log('Mensagem original:', mensagem);
+    console.log('Tamanho:', mensagem.length);
+    console.log('URL final:', `https://wa.me/${telefone}?text=${mensagemCodificada}`);
+    
+    window.open(`https://wa.me/${telefone}?text=${mensagemCodificada}`, '_blank');
   };
 
   if (loading) {
@@ -219,6 +287,19 @@ export default function DetalhePedidoPage() {
         <button 
           onClick={() => navigate('/pedidos')}
           className="mt-4 px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 transition"
+        >
+          Voltar para Meus Pedidos
+        </button>
+      </div>
+    );  }
+
+  if (!pedido) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen pb-32">
+        <div className="text-red-500 text-lg">Pedido não encontrado</div>
+        <button 
+          onClick={() => navigate('/pedidos')}
+          className="mt-4 px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
         >
           Voltar para Meus Pedidos
         </button>
@@ -466,10 +547,20 @@ export default function DetalhePedidoPage() {
               </div>
               {pedido.review.comentario && (
                 <p className="text-gray-600 mt-1 sm:mt-2 text-xs sm:text-sm">{pedido.review.comentario}</p>
-              )}
-            </div>
+              )}            </div>
           </div>
         )}
+
+        {/* Botão WhatsApp após detalhes do pedido */}
+        <div className="flex justify-end mt-4">
+          <button
+            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 shadow-md"
+            onClick={handleEnviarWhatsappPedido}
+            type="button"
+          >
+            <span role="img" aria-label="whatsapp">🟢</span> Enviar pedido via WhatsApp
+          </button>
+        </div>
       </div>
     </div>
   );

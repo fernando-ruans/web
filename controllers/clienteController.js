@@ -1138,10 +1138,10 @@ module.exports = {
       let status = (order.status || '').toLowerCase();
       if (status === 'entregue') status = 'Entregue';
       else if (status === 'em entrega') status = 'Em Entrega';
-      else if (status === 'em preparo') status = 'Em Preparo';
-      else if (status === 'pendente') status = 'Pendente';
+      else if (status === 'em preparo') status = 'Em Preparo';      else if (status === 'pendente') status = 'Pendente';
       else if (status === 'cancelado') status = 'Cancelado';
       else status = order.status; // fallback para status original
+      
       const formattedOrder = {
         id: order.id,
         status,
@@ -1151,6 +1151,7 @@ module.exports = {
         observacao: order.observacao,
         formaPagamento: order.formaPagamento || null,
         trocoPara: order.trocoPara || null,
+        items: items, // ADICIONADO: incluir os itens formatados na resposta
         restaurant: {
           ...order.restaurant,
           horario_funcionamento: order.restaurant?.horario_funcionamento
