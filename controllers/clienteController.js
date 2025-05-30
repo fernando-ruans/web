@@ -695,25 +695,34 @@ module.exports = {
       });
     }
   },
-
   createReview: async (req, res) => {
     try {
+      console.log('[createReview] Início da função');
+      console.log('[createReview] req.user:', req.user);
+      console.log('[createReview] req.body:', req.body);
+      
       if (!req.user?.id) {
+        console.log('[createReview] Usuário não autenticado');
         return res.status(401).json({ error: "Usuário não autenticado" });
       }
 
       const { orderId, nota, comentario } = req.body;
+      console.log('[createReview] Dados extraídos:', { orderId, nota, comentario });
 
       // Verificar se o pedido existe e pertence ao usuário
       const order = await prisma.order.findUnique({
         where: { id: orderId }
       });
 
+      console.log('[createReview] Pedido encontrado:', order);
+
       if (!order) {
+        console.log('[createReview] Pedido não encontrado');
         return res.status(404).json({ error: "Pedido não encontrado" });
       }
 
       if (order.userId !== req.user.id) {
+        console.log('[createReview] Sem permissão - userId:', order.userId, 'req.user.id:', req.user.id);
         return res.status(403).json({ error: "Sem permissão para avaliar este pedido" });
       }
 
@@ -722,11 +731,15 @@ module.exports = {
         where: { orderId }
       });
 
+      console.log('[createReview] Avaliação existente:', existingReview);
+
       if (existingReview) {
+        console.log('[createReview] Pedido já foi avaliado');
         return res.status(400).json({ error: "Este pedido já foi avaliado" });
       }
 
       // Criar a avaliação
+      console.log('[createReview] Criando avaliação...');
       const review = await prisma.review.create({
         data: {
           orderId,
@@ -737,6 +750,7 @@ module.exports = {
         // Não há relação direta com user, então não inclui user
       });
 
+      console.log('[createReview] Avaliação criada com sucesso:', review);
       res.status(201).json(review);
     } catch (err) {
       console.error("[createReview] Erro ao criar avaliação:", err);

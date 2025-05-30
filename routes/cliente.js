@@ -64,7 +64,7 @@ const orderSchema = Joi.object({
 const reviewSchema = Joi.object({
   orderId: Joi.number().required(),
   nota: Joi.number().min(1).max(5).required(),
-  comentario: Joi.string().min(3).required()
+  comentario: Joi.string().min(1).allow('').optional()
 });
 
 // Validação para endereços
@@ -87,8 +87,13 @@ router.post('/orders', auth(['cliente']), async (req, res, next) => {
 }, clienteController.createOrder);
 
 router.post('/reviews', auth(['cliente']), async (req, res, next) => {
+  console.log('[POST /reviews] Body recebido:', req.body);
+  console.log('[POST /reviews] Usuário autenticado:', req.user);
   const { error } = reviewSchema.validate(req.body);
-  if (error) return res.status(400).json({ error: error.details[0].message });
+  if (error) {
+    console.log('[POST /reviews] Erro de validação:', error.details[0].message);
+    return res.status(400).json({ error: error.details[0].message });
+  }
   next();
 }, clienteController.createReview);
 

@@ -60,6 +60,10 @@ interface Pedido {
   observacao?: string;
   endereco: Endereco;
   formaPagamento?: string | null;
+  review?: {
+    nota: number;
+    comentario: string;
+  };
 }
 
 // Adiciona um tipo auxiliar para debug
@@ -158,12 +162,12 @@ const DetalhePedidoModalWrapper: React.FC<DetalhePedidoModalProps> = ({ pedido, 
           nome: item.produto?.nome || 'Produto não disponível',
           preco: item.produto?.preco || 0,
           adicionais: item.adicionais || []
-        })) || [],
-        taxa_entrega: pedido.taxa_entrega || 0,
+        })) || [],        taxa_entrega: pedido.taxa_entrega || 0,
         observacao: pedido.observacao,
         endereco: pedido.endereco || undefined,
         formaPagamento: (pedido as any).formaPagamento || undefined,
-        trocoPara: (pedido as any).trocoPara || null // <-- repassa trocoPara se existir
+        trocoPara: (pedido as any).trocoPara || null, // <-- repassa trocoPara se existir
+        review: (pedido as any).review || undefined // <-- Adiciona a avaliação se existir
       }}
       statusNomes={statusNomes}
     />
@@ -761,9 +765,9 @@ function LojistaPedidosPageContent() {
       observacao: p.observacao || '',
       endereco: p.endereco || p.address || {
         rua: '', numero: '', bairro: '', cidade: '', estado: '', cep: ''
-      },
-      formaPagamento: p.formaPagamento || p.forma_pagamento || null,
-      trocoPara: p.trocoPara !== undefined ? p.trocoPara : (p.troco_para !== undefined ? p.troco_para : null)
+      },      formaPagamento: p.formaPagamento || p.forma_pagamento || null,
+      trocoPara: p.trocoPara !== undefined ? p.trocoPara : (p.troco_para !== undefined ? p.troco_para : null),
+      review: p.review || undefined // <-- Adiciona avaliação na normalização
     };
   }
 

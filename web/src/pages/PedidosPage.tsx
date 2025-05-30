@@ -128,8 +128,7 @@ export default function PedidosPage() {
 
   const handleAvaliar = async (pedidoId: number) => {
     setEnviandoAvaliacao(true);
-    try {
-      const res = await fetch('/api/cliente/orders/review', {
+    try {      const res = await fetch('/api/cliente/reviews', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

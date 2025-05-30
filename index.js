@@ -107,8 +107,7 @@ wss.on('connection', (ws, req) => {
                 where: { 
                   restaurantId: restaurant.id
                   // Removido o filtro de status para trazer todos os pedidos
-                },
-                include: {
+                },                include: {
                   orderItems: {
                     include: {
                       product: true,
@@ -125,7 +124,8 @@ wss.on('connection', (ws, req) => {
                       telefone: true
                     }
                   },
-                  address: true
+                  address: true,
+                  review: true // <-- Adiciona avaliações no WebSocket
                 }
               });
 

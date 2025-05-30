@@ -114,9 +114,14 @@ export default function LojistaRelatoriosPage() {
   const [dataInicio, setDataInicio] = useState<string>(format(subDays(hoje, 7), 'yyyy-MM-dd'));
   const [dataFim, setDataFim] = useState<string>(format(hoje, 'yyyy-MM-dd'));
   const [erroDataInicio, setErroDataInicio] = useState<string>('');
-  const [erroDataFim, setErroDataFim] = useState<string>('');
-  const [ultimoPeriodoSalvo, setUltimoPeriodoSalvo] = useState<string | null>(null);
+  const [erroDataFim, setErroDataFim] = useState<string>('');  const [ultimoPeriodoSalvo, setUltimoPeriodoSalvo] = useState<string | null>(null);
   const [ultimasAvaliacoes, setUltimasAvaliacoes] = useState<any[]>([]);
+  
+  // Estados para paginação das avaliações
+  const [paginaAtualAvaliacoes, setPaginaAtualAvaliacoes] = useState<number>(1);
+  const [totalPaginasAvaliacoes, setTotalPaginasAvaliacoes] = useState<number>(1);
+  const [carregandoAvaliacoes, setCarregandoAvaliacoes] = useState<boolean>(false);
+  const [totalAvaliacoes, setTotalAvaliacoes] = useState<number>(0);
 
   // Carregar preferência de período salva ao iniciar
   useEffect(() => {
@@ -950,14 +955,39 @@ export default function LojistaRelatoriosPage() {
       },
     ],
   };
-
+  // Função para buscar avaliações com paginação
+  const fetchAvaliacoesPaginadas = async (restauranteId: number, pagina: number = 1) => {
+    if (!restauranteId) return;
+    
+    setCarregandoAvaliacoes(true);
+    try {
+      const response = await fetch(
+        `/api/lojista/reviews?limit=20&page=${pagina}&orderBy=createdAt&order=desc&restauranteId=${restauranteId}`, 
+        { credentials: 'include' }
+      );
+      
+      if (!response.ok) {
+        throw new Error('Erro ao buscar avaliações');
+      }
+      
+      const data = await response.json();
+      setUltimasAvaliacoes(data.data || []);
+      setTotalAvaliacoes(data.total || 0);
+      setTotalPaginasAvaliacoes(Math.ceil((data.total || 0) / 20));
+      setPaginaAtualAvaliacoes(pagina);
+    } catch (error) {
+      console.error('Erro ao buscar avaliações:', error);
+      setUltimasAvaliacoes([]);
+      setTotalAvaliacoes(0);
+      setTotalPaginasAvaliacoes(1);
+    } finally {
+      setCarregandoAvaliacoes(false);
+    }
+  };
   // Buscar últimas avaliações ao carregar dados do restaurante ou trocar período
   useEffect(() => {
     if (!restaurante?.id) return;
-    fetch(`/api/lojista/reviews?limit=5&orderBy=createdAt&order=desc&restauranteId=${restaurante.id}`, { credentials: 'include' })
-      .then(res => res.ok ? res.json() : Promise.reject(res))
-      .then(data => setUltimasAvaliacoes(data.data || []))
-      .catch(() => setUltimasAvaliacoes([]));
+    fetchAvaliacoesPaginadas(restaurante.id, 1);
   }, [restaurante, filtroCustomizado]);
 
   return (
@@ -1310,31 +1340,104 @@ export default function LojistaRelatoriosPage() {
                     <span className="text-2xl font-bold text-cyan-700">{dados.totalTaxasEntrega !== undefined ? `R$ ${dados.totalTaxasEntrega.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'R$ 0,00'}</span>
                     <span className="text-gray-600 text-sm">Faturamento em Taxas de Entrega</span>
                   </div>
-                </div>
-
-                {/* Bloco de últimas avaliações dos clientes */}
+                </div>                {/* Bloco de últimas avaliações dos clientes */}
                 <div className="mb-8">
-                  <h3 className="text-xl font-bold text-gray-700 mb-4 flex items-center gap-2">
-                    <span style={{ display: 'inline-flex', alignItems: 'center' }}><FaCommentDots color="#fb923c" /></span>
-                    <span className="-mb-[2px]">Últimas Avaliações dos Clientes</span>
-                  </h3>
-                  {ultimasAvaliacoes.length === 0 ? (
-                    <div className="text-gray-400 text-sm">Nenhuma avaliação recente encontrada.</div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {ultimasAvaliacoes.map((review, idx) => (
-                        <div key={review.id || idx} className="bg-gray-50 rounded-xl p-4 shadow border border-orange-100 flex flex-col gap-2">
-                          <div className="flex items-center gap-2 mb-1">
-                            {[...Array(5)].map((_, i) => (
-                              <FaStar key={i} size={18} color={i < review.nota ? '#fbbf24' : '#e5e7eb'} />
-                            ))}
-                            <span className="ml-2 text-sm text-gray-600 font-semibold">{review.nota} / 5</span>
-                          </div>
-                          <div className="text-gray-700 text-sm mb-1">{review.comentario || <span className='italic text-gray-400'>Sem comentário</span>}</div>
-                          <div className="text-xs text-gray-400">Pedido #{review.order?.id}</div>
-                        </div>
-                      ))}
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+                    <h3 className="text-xl font-bold text-gray-700 flex items-center gap-2 mb-2 sm:mb-0">
+                      <span style={{ display: 'inline-flex', alignItems: 'center' }}><FaCommentDots color="#fb923c" /></span>
+                      <span className="-mb-[2px]">Avaliações dos Clientes</span>
+                    </h3>
+                    {totalAvaliacoes > 0 && (
+                      <div className="text-sm text-gray-500">
+                        {totalAvaliacoes} avaliação{totalAvaliacoes !== 1 ? 'ões' : ''} • Página {paginaAtualAvaliacoes} de {totalPaginasAvaliacoes}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {carregandoAvaliacoes ? (
+                    <div className="flex items-center justify-center py-8 text-orange-500">
+                      <FaSpinner className="animate-spin mr-2" />
+                      <span>Carregando avaliações...</span>
                     </div>
+                  ) : ultimasAvaliacoes.length === 0 ? (
+                    <div className="text-gray-400 text-sm">Nenhuma avaliação encontrada.</div>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                        {ultimasAvaliacoes.map((review, idx) => (
+                          <div key={review.id || idx} className="bg-gray-50 rounded-xl p-4 shadow border border-orange-100 flex flex-col gap-2">
+                            <div className="flex items-center gap-2 mb-1">
+                              {[...Array(5)].map((_, i) => (
+                                <FaStar key={i} size={18} color={i < review.nota ? '#fbbf24' : '#e5e7eb'} />
+                              ))}
+                              <span className="ml-2 text-sm text-gray-600 font-semibold">{review.nota} / 5</span>
+                            </div>
+                            <div className="text-gray-700 text-sm mb-1">{review.comentario || <span className='italic text-gray-400'>Sem comentário</span>}</div>
+                            <div className="text-xs text-gray-400">Pedido #{review.order?.id}</div>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {/* Controles de paginação */}
+                      {totalPaginasAvaliacoes > 1 && (
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => fetchAvaliacoesPaginadas(restaurante.id, paginaAtualAvaliacoes - 1)}
+                              disabled={paginaAtualAvaliacoes === 1 || carregandoAvaliacoes}
+                              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                paginaAtualAvaliacoes === 1 || carregandoAvaliacoes
+                                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                  : 'bg-orange-500 text-white hover:bg-orange-600'
+                              }`}
+                            >
+                              ← Anterior
+                            </button>
+                            <button
+                              onClick={() => fetchAvaliacoesPaginadas(restaurante.id, paginaAtualAvaliacoes + 1)}
+                              disabled={paginaAtualAvaliacoes === totalPaginasAvaliacoes || carregandoAvaliacoes}
+                              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                paginaAtualAvaliacoes === totalPaginasAvaliacoes || carregandoAvaliacoes
+                                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                  : 'bg-orange-500 text-white hover:bg-orange-600'
+                              }`}
+                            >
+                              Próxima →
+                            </button>
+                          </div>
+                          
+                          {/* Navegação por número de página */}                          <div className="flex items-center gap-1">
+                            {Array.from({ length: Math.min(5, totalPaginasAvaliacoes) }, (_, i) => {
+                              let pageNum: number;
+                              if (totalPaginasAvaliacoes <= 5) {
+                                pageNum = i + 1;
+                              } else if (paginaAtualAvaliacoes <= 3) {
+                                pageNum = i + 1;
+                              } else if (paginaAtualAvaliacoes >= totalPaginasAvaliacoes - 2) {
+                                pageNum = totalPaginasAvaliacoes - 4 + i;
+                              } else {
+                                pageNum = paginaAtualAvaliacoes - 2 + i;
+                              }
+                              
+                              return (
+                                <button
+                                  key={pageNum}
+                                  onClick={() => fetchAvaliacoesPaginadas(restaurante.id, pageNum)}
+                                  disabled={carregandoAvaliacoes}
+                                  className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                                    pageNum === paginaAtualAvaliacoes
+                                      ? 'bg-orange-500 text-white'
+                                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                  } ${carregandoAvaliacoes ? 'cursor-not-allowed opacity-50' : ''}`}
+                                >
+                                  {pageNum}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
 
